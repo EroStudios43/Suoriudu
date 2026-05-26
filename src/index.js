@@ -8,7 +8,7 @@ import {BrowserRouter, Routes, Route} from 'react-router-dom';
 import UserProvider from "./context/UserProvider.js";
 
 // screens
-import WelcomePage from "./screens/WelcomePage.js";
+import WelcomePage from "./screens/welcomepage.js";
 import Login from "./screens/Login.js";
 
 import ProtectedRoute from "./components/ProtectedRoute.js";

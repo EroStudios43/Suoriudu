@@ -7,8 +7,6 @@
     width: 100%;
     min-height: 100vh;
     overflow: hidden;
-
-
 }
 
 .container {
@@ -16,7 +14,7 @@
     text-align: center;
     color: white;
     text-shadow: 5px 5px 10px rgba(0, 0, 0, 0.6);
-
+    z-index: 1;
 }
 
 .buttons {
@@ -34,18 +32,18 @@
 
 
 .waves {
-        --wave-width: 500px; 
-
-    position: fixed;
+    --wave-width: 500px; 
+    position: absolute;
     left: 0;
     top: 0;
+    margin: 0;
     width: 100vh;
     height: var(--wave-width);
     transform: rotate(90deg)
                 translateY(calc(var(--wave-width) * -1));
     transform-origin: top left;
     pointer-events: none;
-    
+    z-index: 0;
 }
 
 
@@ -85,8 +83,8 @@
 
 @media (max-width: 768px) {
   .waves {
-    height: 40px;
-    min-height: 40px;
+    max-height: 50%;
+    --wave-width: 300px; 
   }
 
   .content {
