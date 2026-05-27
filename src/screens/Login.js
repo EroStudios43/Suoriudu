@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from "react-router-dom"
+
+
 
 function Login() {
   const [users, setUsers] = useState([]);
+  const navigate = useNavigate();
+
 
   useEffect(() => {
     fetch('http://localhost:3001/users')
@@ -15,6 +20,10 @@ function Login() {
   return (
     <div id="container">
       <h2>Login?</h2>
+
+          <button className="btn btn-link text-black fs-4 text-decoration-none" onClick={e => navigate("/")}>
+              Takaisin
+          </button>
 
       <form>
         <input type="text" placeholder="Username" />

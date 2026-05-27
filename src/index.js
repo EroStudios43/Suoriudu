@@ -10,6 +10,15 @@ import UserProvider from "./context/UserProvider.js";
 // screens
 import WelcomePage from "./screens/welcomepage.js";
 import Login from "./screens/Login.js";
+import Home from "./screens/Home.js"; 
+import Profile from "./screens/Profile.js";
+import CreateTask from "./screens/CreateTask.js";
+import CreateExam from "./screens/CreateExam.js";
+import CreateCourse from "./screens/CreateCourse.js";
+import CoursePage from "./screens/CoursePage.js";
+import TaskOverview from "./screens/TaskOverview.js";
+import TestOverview from "./screens/TestOverview.js";
+import TaskQuestions from "./screens/TaskQuestions.js";
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -22,11 +31,22 @@ root.render(
         <Routes>
 
           {/* PUBLIC */}
-          <Route path="/" element={<WelcomePage />} />
-          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<WelcomePage/>} />
+          <Route path="/login" element={<Login/>} />
+
+          <Route path="/home" element={<Home/>} />
+          <Route path="/profile" element={<Profile/>} />
+          <Route path="/CreateTask" element={<CreateTask/>} />
+          <Route path="/CreateExam" element={<CreateExam/>} />
+          <Route path="/CreateCourse" element={<CreateCourse/>} />
+          <Route path="/CoursePage" element={<CoursePage/>} />
+          <Route path="/TaskOverview" element={<TaskOverview/>} />
+          <Route path="/TestOverview" element={<TestOverview/>} />
+          <Route path="/TaskQuestions" element={<TaskQuestions/>} />
 
           {/* PROTECTED */}
           <Route element={<ProtectedRoute />}>
+
           </Route>
 
         </Routes>

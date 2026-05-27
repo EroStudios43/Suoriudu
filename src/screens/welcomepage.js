@@ -1,23 +1,10 @@
-import { useRef, useEffect, useState } from "react";
+import React from "react";
 import "./styles/welcome.css";
+import { useNavigate } from "react-router-dom"
 
 function WelcomePage() {
-  const bottomRef = useRef(null);
+  const navigate = useNavigate();
 
-  /* const [users, setUsers] = useState([]);
-  
-    useEffect(() => {
-      fetch('http://localhost:3001/users')
-        .then(res => res.json())
-        .then(data => {
-          console.log(data);
-          setUsers(data);
-        });
-    }, []); */
-
-  const scrollToBottom = () => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
 
   return (
     <div className="body">
@@ -26,23 +13,14 @@ function WelcomePage() {
             <p>Tehtävä ja koe palvelu</p>
 
             <div className="buttons">
-                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={scrollToBottom}>
+                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/home")}>
                     Opettajat
                 </button>
 
-                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={scrollToBottom}>
+                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/login")}>
                     Oppilaat
                 </button>
             </div>
-
-            {/* <ul>
-                {users.map(user => (
-                <li key={user.id}>
-                    {user.nimi}
-                </li>
-                ))}
-            </ul> */}
-
             
         </div>
         <div>

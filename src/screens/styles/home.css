@@ -1,0 +1,119 @@
+.home-container {
+    min-height: 100vh;
+    background-color: #1D283A;
+    color: white;
+    padding: 30px;
+    font-family: Arial, sans-serif;
+}
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.welcome-text {
+    font-size: 40px;
+    font-weight: 700;
+}
+
+.icon-button {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+.icon-button:hover {
+    transform: scale(1.2);
+}
+
+.divider {
+    width: 100%;
+    height: 3px;
+    background-color: #e8def8;
+    margin: 25px 0;
+}
+
+.calendar-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 40px;
+}
+
+.left-side {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.info-card {
+    background-color: #525D7D;
+    padding: 25px;
+    border-radius: 16px;
+}
+
+.marathon-btn {
+    width: fit-content;
+    background-color: #232859;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 22px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.marathon-btn:hover {
+    transform: scale(1.03);
+}
+
+.right-side {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+}
+
+.courses-header {
+    margin-top: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.create-course-btn {
+    background-color: #232859;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 18px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.courses-list {
+    margin-top: 25px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.course-card {
+    background-color: #2A2C3D;
+    padding: 30px;
+    border-radius: 16px;
+    font-size: 20px;
+    font-weight: 600;
+}
