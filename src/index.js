@@ -19,6 +19,7 @@ import CoursePage from "./screens/CoursePage.js";
 import TaskOverview from "./screens/TaskOverview.js";
 import TestOverview from "./screens/TestOverview.js";
 import TaskQuestions from "./screens/TaskQuestions.js";
+import TaskEvaluation from "./screens/TaskEvaluation.js";
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -43,7 +44,7 @@ root.render(
           <Route path="/TaskOverview" element={<TaskOverview/>} />
           <Route path="/TestOverview" element={<TestOverview/>} />
           <Route path="/TaskQuestions" element={<TaskQuestions/>} />
-
+          <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
           {/* PROTECTED */}
           <Route element={<ProtectedRoute />}>
 

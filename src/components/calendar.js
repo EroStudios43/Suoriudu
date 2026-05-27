@@ -2,9 +2,10 @@ import React, {useState} from "react";
 import "./calendar.css";
 import '@fortawesome/fontawesome-free/css/all.min.css';
  
-function Calendar() {
+function Calendar({ selectedDate = new Date(), onDateSelect }) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
+    const today = new Date();
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
 
@@ -27,10 +28,15 @@ function Calendar() {
 
     for(let i = 1; i <= totalDays; i++) {
         const date = new Date(currentYear, currentMonth, i);
-        const activeClass = date.toDateString() === new Date().toDateString() ? "active" : "";
+
+        const isSelected  = selectedDate && date.toDateString() === selectedDate.toDateString();
+
+        const isToday = date.toDateString() === today.toDateString()
+
+        const classNames = ["date", isSelected ? "selected" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
 
         dates.push(
-            <div key={i} className={`date ${activeClass}`}>
+            <div key={i} className={classNames} onClick={() => onDateSelect(date)}>
                 {i}
             </div>
         );
