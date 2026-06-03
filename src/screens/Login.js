@@ -34,8 +34,8 @@ function Login() {
 
       <ul>
         {users.map(user => (
-          <li key={user.id}>
-            {user.nimi}
+          <li key={user.idcourse}>
+            {user.coursename}
           </li>
         ))}
       </ul>
