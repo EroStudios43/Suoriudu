@@ -6,13 +6,13 @@ const url = process.env.REACT_APP_API_URL
 
 export default function UserProvider({ children }) {
   const userFromSessionStorage = sessionStorage.getItem("user")
-  const [user, setUser] = useState(userFromSessionStorage ? JSON.parse(userFromSessionStorage) : ({id: "", firstname: "", lastname: "", email: "", password: "", access_token: "", oldPassword: ""}))
+  const [user, setUser] = useState(userFromSessionStorage ? JSON.parse(userFromSessionStorage) : ({id: "", firstname: "", lastname: "", email: "", role: "", phone: "", password: "", passwordCheck: "", access_token: "", oldPassword: ""}))
 
   const signUp = async () => {
     try {
       console.log(user)
       await axios.post(url + "/users/register", user)
-      setUser({email: "", firstname: "", lastname: "", password: ""})
+      setUser({id: "", firstname: "", phone: "", lastname: "", email: "", password: "", role: "", passwordCheck: "", access_token: "", oldPassword: ""})
     } catch (error) {
       throw error
     }
@@ -22,7 +22,7 @@ export default function UserProvider({ children }) {
     try {
       const response = await axios.post(url + "/users/login", user)
       const token = readAuthorizationHeader(response)
-      const userData = { id: response.data.id, email: response.data.email, firstname: response.data.firstname, lastname: response.data.lastname, access_token: token }
+      const userData = { id: response.data.id, email: response.data.email, firstname: response.data.firstname, lastname: response.data.lastname, role: response.data.role, phone: response.data.phone, access_token: token }
       setUser(userData)
       sessionStorage.setItem("user", JSON.stringify(userData))
     } catch (error) {

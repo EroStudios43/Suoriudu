@@ -16,7 +16,7 @@ const fetchUsers = async (req, res) => {
 };
 
 const userRegistration = async(req, res, next) => {
-    console.log("REQ BODY:", req.body)
+    console.log("REQ BODY: ", req.body)
     try {
         // Check if the first name is empty
         if (!req.body.firstname || req.body.firstname.length === 0) {
@@ -53,6 +53,31 @@ const userRegistration = async(req, res, next) => {
             return next(error)
         }
 
+        // Check if the password confirmation is empty
+        if (!req.body.passwordCheck || req.body.passwordCheck.length === 0) {
+            const error = new Error("Password confirmation cannot be empty")
+            error.statusCode = 400
+            return next(error)
+        }
+
+        // Check if the role is empty
+        if (!req.body.role || req.body.role.length === 0) {
+            const error = new Error("Role cannot be empty")
+            error.statusCode = 400
+            return next(error)
+        }
+
+        // Checking if the phone number is valid, if empty -> OK
+        if (req.body.phone.length > 0) {
+            if (!validator.isMobilePhone(req.body.phone, "any", { strictMode: true })) {
+                const error = new Error("Phone number is not valid")
+                error.statusCode = 400
+                return next(error)
+            }
+        } else {
+            req.body.phone = null
+        }
+
         // Making the schema for password validation and setting the requirements
         const schema = new passwordValidator()
         schema.is().min(8).has().uppercase().has().digits()  
@@ -60,6 +85,13 @@ const userRegistration = async(req, res, next) => {
         // Check if the password meets the requirements
         if (!schema.validate(req.body.password)) {
             const error = new Error("Password does not meet the requirements (At least 8 characters, at least one uppercase letter and at least one digit)")
+            error.statusCode = 400
+            return next(error)
+        }
+
+        // Check if the password and password confirmation match
+        if (req.body.password !== req.body.passwordCheck) {
+            const error = new Error("Password and password confirmation do not match")
             error.statusCode = 400
             return next(error)
         }
@@ -75,8 +107,8 @@ const userRegistration = async(req, res, next) => {
 
         // No errors path, hashing the password and creating the user
         const hashedPassword = await hash(req.body.password, 10)
-        const user = await createUser(req.body.firstname, req.body.lastname, req.body.email, hashedPassword, "student")
-        return res.status(201).json({ id: user.iduser, email: user.email, firstname: user.firstname, lastname: user.lastname })
+        const user = await createUser(req.body.firstname, req.body.lastname, req.body.email, hashedPassword, req.body.phone, req.body.role)
+        return res.status(201).json({ id: user.iduser, email: user.email, firstname: user.firstname, lastname: user.lastname, phone: user.phone, role: user.role })
 
     } catch (error) {
         return next(error)

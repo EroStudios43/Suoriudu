@@ -8,6 +8,12 @@ function Register() {
   const { user, setUser, signUp } = useUser()
   const navigate = useNavigate();
 
+  // Setting the default role to student when registering, this can be changed by admin later, or here in code for testing purposes
+  useEffect(() => {
+    setUser({...user, role: "student"})
+    console.log(user)
+  }, [])
+
   const registerUser = async () => {
     try {
       await signUp()
@@ -36,16 +42,20 @@ function Register() {
 
         <form>
           <div className="form-floating mb-3 mt-3">
-            <input type="text" id="email" name="email" className="form-control" placeholder="Syötä sähköpostiosoitteesi" value={user.email} onChange={e => setUser({...user, email: e.target.value})}/>
-            <label for="email">Sähköposti</label>
-          </div>
-          <div className="form-floating mb-3 mt-3">
             <input type="text" id="firstname" name="firstname" className="form-control" placeholder="Syötä etunimesi" value={user.firstname} onChange={e => setUser({...user, firstname: e.target.value})}/>
             <label for="firstname">Etunimi</label>
           </div>
           <div className="form-floating mb-3 mt-3">
             <input type="text" id="lastname" name="lastname" className="form-control" placeholder="Syötä sukunimesi" value={user.lastname} onChange={e => setUser({...user, lastname: e.target.value})}/>
             <label for="lastname">Sukunimi</label>
+          </div>
+          <div className="form-floating mb-3 mt-3">
+            <input type="text" id="email" name="email" className="form-control" placeholder="Syötä sähköpostiosoitteesi" value={user.email} onChange={e => setUser({...user, email: e.target.value})}/>
+            <label for="email">Sähköposti</label>
+          </div>
+          <div className="form-floating mb-3 mt-3">
+            <input type="text" id="phone" name="phone" className="form-control" placeholder="Syötä puhelinnumero" value={user.phone} onChange={e => setUser({...user, phone: e.target.value})}/>
+            <label for="phone">Puhelinnumero</label>
           </div>
           <div className="form-floating mb-3 mt-3">
             <input type="password" id="password" name="password" className="form-control" placeholder="Syötä salasanasi" value={user.password} onChange={e => setUser({...user, password: e.target.value})}/>

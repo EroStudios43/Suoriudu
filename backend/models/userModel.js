@@ -8,8 +8,8 @@ const getUsers = async () => {
     return rows;
 }
 
-const createUser = async (firstname, lastname, email, hashedpassword, role) => {
-    const [result] = await pool.promise().query("INSERT INTO users (firstname, lastname, email, password, role) VALUES (?, ?, ?, ?, ?)", [firstname, lastname, email, hashedpassword, role])
+const createUser = async (firstname, lastname, email, hashedpassword, phone, role) => {
+    const [result] = await pool.promise().query("INSERT INTO users (firstname, lastname, email, password, phone, role) VALUES (?, ?, ?, ?, ?, ?)", [firstname, lastname, email, hashedpassword, phone, role])
     return result
 }
 
