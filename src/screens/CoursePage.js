@@ -1,5 +1,6 @@
 import React from "react";
 import "./styles/home.css";
+import "./styles/login.css";
 import { useNavigate } from "react-router-dom"
 
 function CoursePage() {

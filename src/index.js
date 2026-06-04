@@ -10,6 +10,7 @@ import UserProvider from "./context/UserProvider.js";
 // screens
 import WelcomePage from "./screens/welcomepage.js";
 import Login from "./screens/Login.js";
+import Register from "./screens/Register.js";
 import Home from "./screens/Home.js"; 
 import Profile from "./screens/Profile.js";
 import CreateTask from "./screens/CreateTask.js";
@@ -33,6 +34,7 @@ root.render(
           {/* PUBLIC */}
           <Route path="/" element={<WelcomePage/>} />
           <Route path="/login" element={<Login/>} />
+          <Route path="/register" element={<Register/>} />
 
           <Route path="/home" element={<Home/>} />
           <Route path="/profile" element={<Profile/>} />
