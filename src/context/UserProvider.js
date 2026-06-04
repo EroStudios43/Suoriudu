@@ -26,7 +26,7 @@ export default function UserProvider({ children }) {
       setUser(userData)
       sessionStorage.setItem("user", JSON.stringify(userData))
     } catch (error) {
-      setUser({email: "", firstname: "", lastname: "", password: ""})
+      setUser({email: "", firstname: "", lastname: "", password: "", role: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""})
       throw error
     }
   }
@@ -47,7 +47,7 @@ export default function UserProvider({ children }) {
 
   const signOut = () => {
     sessionStorage.clear()
-    setUser({id: "", firstname: "", lastname: "", email: "", password: "", access_token: ""})
+    setUser({id: "", firstname: "", lastname: "", email: "", password: "", role: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""})
   }
 
   return (
