@@ -115,4 +115,35 @@ const userRegistration = async(req, res, next) => {
     }
 }
 
-export { fetchUsers, userRegistration }
+const userLogin = async (req, res, next) => {
+    try {
+        // The user data from the database is fetched with the email address. This is needed to check the password and to create the token.
+        const userFromDb = await selectUserByEmail(req.body.email)
+        const user = userFromDb[0]
+
+        // Check if the user exists. Return an error with invalid email or password message if the user does not exist. This is done to prevent giving hints to the attacker about which part of the credentials is incorrect.
+        if (user.length === 0) {
+            const error = new Error("Invalid email or password")
+            error.statusCode = 401
+            return next(error)
+        }
+
+        // Check if the password is correct. Return an error with invalid email or password message if the password is incorrect. This is done to prevent giving hints to the attacker about which part of the credentials is incorrect.
+        if (!await compare(req.body.password, user.password)) {
+            const error = new Error("Invalid email or password")
+            error.statusCode = 401
+            return next(error)
+        }
+
+        // No errors path, creating the token and returning the user data and the token
+        return res
+            .authorizationHeader(req.body.email)
+            .status(200)
+            .json({ id: user.iduser, email: user.email, firstname: user.firstname, lastname: user.lastname, phone: user.phone, role: user.role })
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+export { fetchUsers, userRegistration, userLogin }

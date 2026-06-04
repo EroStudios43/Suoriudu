@@ -3,10 +3,17 @@ import "./styles/home.css";
 import { useNavigate } from "react-router-dom"
 import Calendar from "../components/calendar.js";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+import { useUser } from "../context/useUser.js" 
 
 
 function Home() {
   const navigate = useNavigate();
+  const {user, signOut} = useUser()
+
+  const logout = () => {
+    signOut()
+    navigate("/")
+  }
 
 
   return (
@@ -16,7 +23,7 @@ function Home() {
                 Takaisin
             </button>
             <h1 className="welcome-text">
-                Hei Sinä!*
+                Hei {user.firstname} {user.lastname}!
             </h1>       
 
             <div className="topbar-right">
@@ -26,6 +33,10 @@ function Home() {
 
                 <button className="icon-button" onClick={e => navigate("/Profile")}>
                     <i className="fa-solid fa-circle-user"></i>
+                </button>
+
+                <button className="icon-button" onClick={e => logout()}>
+                    <i className="fa-solid fa-sign-out-alt"></i>
                 </button>
 
             </div>

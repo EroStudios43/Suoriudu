@@ -67,7 +67,7 @@ function Register() {
           </div>
           <br />
           <div className="d-grid gap-2">
-           <button className="btn btn-dark" type="submit" onClick={registerUser}>Rekisteröidy</button>
+           <button type="button" className="btn btn-dark" id="registerButton" onClick={registerUser}>Rekisteröidy</button>
           </div>
         </form>
       </div>
