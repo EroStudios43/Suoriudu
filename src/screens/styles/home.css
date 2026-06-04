@@ -12,7 +12,7 @@
     align-items: center;
     width: 100%;
 }
-.topbar-right {
+.topbar-right-icons {
     display: flex;
     align-items: center;
     gap: 20px;

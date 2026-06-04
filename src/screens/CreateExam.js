@@ -9,7 +9,7 @@ function CreateExam() {
     <div className="body">
         <div className="container">
             <h1>Luo koe</h1>
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/CoursePage")}>
+            <button className="btn btn-link text-decoration-none task-back-button" onClick={() => navigate(-1)}>
                     Takaisin
             </button>
             

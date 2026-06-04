@@ -1,0 +1,78 @@
+.timepopup {
+    position: absolute;
+    top: 90px;
+    z-index: 200;
+    background: #979DAD;
+    padding: 15px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 320px;
+}
+
+.timepicker-header {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #525D7D;
+}
+
+.timepicker-value {
+    font-size: 1.5rem;
+    font-weight: 750;
+    color: white;
+}
+
+.timepicker-step {
+    font-size: 0.95rem;
+    color: #f2f2f2;
+}
+
+.timepopup .MuiPaper-root {
+    border-radius: 20px;
+}
+
+.timepopup .MuiClock-root {
+    background: #eee;
+}
+
+.timepopup .MuiPickersLayout-actionBar,
+.timepopup .MuiPickersActionBar-root,
+.timepopup .MuiTimeClock-arrowSwitcher,
+.timepopup .MuiPickersArrowSwitcher-root {
+    display: none !important;
+}
+
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.cancel-btn,
+.done-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+}
+
+.cancel-btn {
+    background: #525D7D;
+}
+
+.cancel-btn:hover {
+    background: #343b50;
+}
+
+.done-btn {
+    background: #20294A;
+}
+
+.done-btn:hover {
+    background: #394780;
+}

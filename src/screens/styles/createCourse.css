@@ -12,18 +12,43 @@
     align-items: center;
     width: 100%;
 }
+.topbar-left {
+    display: flex;
+    flex-direction: column;
+}
 .topbar-right {
     display: flex;
     align-items: center;
     gap: 20px;
 }
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.pen {
+    font-size: 40px;
+    color: #8b8b8b;
+}
+.back-icon {
+    font-size: 40px;
+    color: #ffffff;
+    cursor: pointer;
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8)
+}
+.back-icon:hover {
+    color: #f3f3f3;
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 1);
+    transform: translateX(-10px);
+
+}
 
 .course-input {
     padding: 10px;
-    font-size: 30px;
+    font-size: 40px;
     border: none;
     border-radius: 5px;
-    width: 300px;
+    width: 380px;
     color: #ffffff;
     background-color: transparent;
 }
@@ -45,4 +70,181 @@
     height: 3px;
     background-color: #4b4b4b;
     margin: 25px 0;
+}
+
+.date-container {
+    display: flex;
+    justify-content: center;
+    gap: 250px;
+    margin-top: 30px;
+}
+.date-box {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.date-title {
+    font-size: 28px;
+    margin-bottom: 10px;
+}
+
+
+.date-value {
+    font-size: 18px;
+    color: #d1d1d1;
+    cursor: pointer;
+}
+
+.date-value:hover {
+    color: #ffffff;
+}
+
+.popup {
+    position: absolute;
+    top: 90px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.popup input[type="time"] {
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+}
+
+
+.weekscontainer {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 30px;
+}
+.weekstitle {
+    font-size: 25px;
+}
+
+.weekstitle:hover {
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.weeks-header {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    gap: 20px;
+}
+
+.add-week-button {
+    display: inline-flex;
+    font-size: 20px;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: transparent;
+    color: white;
+    cursor: pointer;
+    border: transparent;
+    border-radius: 12px;
+}
+
+.add-week-button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-color: #6d6d6d;
+}
+
+.week-card {
+    margin-top: 20px;
+}
+
+.week-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+}
+
+.week-toggle-icon {
+    font-size: 18px;
+    color: #ffffff;
+}
+
+.week-title-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 25px;
+    font-weight: 600;
+    outline: none;
+    min-width: 150px;
+}
+
+.week-body {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    padding: 16px;
+    margin-top: 12px;
+    border-radius: 14px;
+    background-color: rgba(255, 255, 255, 0.05);
+    align-items: flex-start;
+}
+
+.week-textarea {
+    flex: 1;
+    min-width: 0;
+    min-height: 180px;
+    resize: vertical;
+    padding: 16px;
+    border-radius: 14px;
+    border: 1px solid #4b4b4b;
+    background-color: rgba(255, 255, 255, 0.03);
+    color: white;
+    font-size: 16px;
+    font-style: italic;
+}
+
+.week-textarea::placeholder {
+    color: #8b8b8b;
+}
+
+.week-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    width: 260px;
+}
+
+.week-button {
+    width: 100%;
+    max-width: 260px;
+    font-size: 20px;
+    padding: 14px 18px;
+    border: 1px solid #4b4b4b;
+    border-radius: 12px;
+    background-color: transparent;
+    color: white;
+    cursor: pointer;
+    text-align: left;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.week-button:hover {
+    border-color: #6d6d6d;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.week-divider {
+    height: 2px;
+    background-color: #4b4b4b;
+    margin: 20px 0;
+    border-radius: 2px;
 }
