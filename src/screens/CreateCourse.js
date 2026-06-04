@@ -255,10 +255,10 @@ function CreateCourse() {
                   />
 
                   <div className="week-actions">
-                    <button className="week-button" onClick={() => handleAddTask(index)}>
+                    <button className="week-button" onClick={() => navigate("/createTask")}>
                       Lisää tehtävä viikkoon +
                     </button>
-                    <button className="week-button" onClick={() => handleAddExam(index)}>
+                    <button className="week-button" onClick={() => navigate("/createExam")}>
                       Lisää koe viikkoon +
                     </button>
                   </div>

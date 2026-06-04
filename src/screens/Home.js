@@ -69,7 +69,7 @@ function Home() {
                 Moikka Sinä!*
             </h1>       
 
-            <div className="topbar-right">
+            <div className="topbar-right-icons">
                 <button className="icon-button" onClick={e => navigate("/TaskQuestions")}>
                     <i className="fa-solid fa-envelope"></i>
                 </button>
