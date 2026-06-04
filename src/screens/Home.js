@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import "./styles/home.css";
 import { useNavigate } from "react-router-dom"
 import Calendar from "../components/calendar.js";
@@ -7,13 +7,63 @@ import { useUser } from "../context/useUser.js"
 
 
 function Home() {
-  const navigate = useNavigate();
-  const {user, signOut} = useUser()
+    const navigate = useNavigate();
+    const {user, signOut} = useUser()
 
-  const logout = () => {
-    signOut()
-    navigate("/")
-  }
+    const logout = () => {
+      signOut()
+      navigate("/")
+    }
+
+    const courses = [
+    { name: "Kurssi 1" },
+    { name: "Kurssi 2" },
+    { name: "Kurssi 3" },
+    { name: "Kurssi 4" },
+    { name: "Kurssi 5" },
+    { name: "Kurssi 6" },
+    ];
+
+    const [selectedDate, setSelectedDate] = useState(new Date());
+
+
+    const formatDate = (date) => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const selected = new Date(date);
+        selected.setHours(0, 0, 0, 0);
+
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+
+        const yesterday = new Date(today);
+        yesterday.setDate(today.getDate() - 1);
+
+        const formattedDate = date.toLocaleDateString("fi-FI", {
+            day: "numeric",
+            month: "numeric",
+            year: "numeric",
+        });
+
+        if (selected.getTime() === today.getTime()) {
+            return `Tänään  ${formattedDate}`;
+        }
+
+        if (selected.getTime() === tomorrow.getTime()) {
+            return `Huomenna  ${formattedDate}`;
+        }
+
+        if (selected.getTime() === yesterday.getTime()) {
+            return `Eilen  ${formattedDate}`;
+        }
+        return date.toLocaleDateString("fi-FI", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+        });
+    };
 
 
   return (
@@ -26,7 +76,7 @@ function Home() {
                 Hei {user.firstname} {user.lastname}!
             </h1>       
 
-            <div className="topbar-right">
+            <div className="topbar-right-icons">
                 <button className="icon-button" onClick={e => navigate("/TaskQuestions")}>
                     <i className="fa-solid fa-envelope"></i>
                 </button>
@@ -43,22 +93,30 @@ function Home() {
         </div>
 
         <div className="divider"></div>
+        <p className="info-text">
+            Tehtävät ja kokeet 
+        </p>
 
         <div className="calendar-content">
-            <div className="left-side">
             
+            <div className="left-side">
+                           
                 <div className="info-card">
-                    <h2>Tänään</h2>
+                    <h2>{formatDate(selectedDate)}</h2>
                     <p>Tänne tulee myöhemmin backendistä tietoa.</p>
                 </div>
 
-                <button className="marathon-btn">
-                        Arviointimaraton
+                <button className="marathon-btn" onClick={e => navigate("/TaskEvaluation")}>
+                        <p>Arviointimaratoni</p>
+                        <p className="info-marathon">
+                            Arvioi anonyymisti opiskelijoiden tehtäviä satunnaisessa järjestyksessä 
+                            valitsemaltasi kurssilta!
+                        </p>
                 </button>
             </div>
 
             <div className="right-side">
-                <Calendar />
+                <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate}/>
             </div>
         </div>
 
@@ -71,18 +129,17 @@ function Home() {
         </div>
 
         <div className="courses-content">
-            <div className="course-card">
-                <h2>Kurssi 1</h2>
-            </div>
-            <div className="course-card">
-                <h2>Kurssi 2</h2>
-            </div>
-            <div className="course-card">
-                <h2>Kurssi 3</h2>
-            </div>
-            <div className="course-card">
-                <h2>Kurssi 4</h2>
-            </div>
+            {courses.map((course, index) => (
+                <div
+                    key={index}
+                    className={`course-card course-color-${index % 4}`}
+                    >
+                    <h2>{course.name}</h2>
+                    <button className="course-arrow" onClick={() => navigate("/CoursePage")}>
+                        <i class="fa-regular fa-circle-right arrow-icon"></i>
+                    </button>
+                </div>
+            ))}
 
         </div>
 
