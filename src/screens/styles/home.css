@@ -19,15 +19,18 @@
 }
 
 .welcome-text {
-    font-size: 40px;
+    font-size: 50px;
     font-weight: 700;
+    color: #f3f3f3;
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 0.4);
+
 }
 
 .icon-button {
     background: transparent;
     border: none;
     color: white;
-    font-size: 28px;
+    font-size: 40px;
     cursor: pointer;
     transition: transform 0.2s ease;
 }
@@ -38,8 +41,14 @@
 .divider {
     width: 100%;
     height: 3px;
-    background-color: #e8def8;
+    background-color: #4b4b4b;
     margin: 25px 0;
+}
+.info-text {
+    font-size: 26px;
+    font-weight: 500;
+    margin-bottom: 20px;
+    color:#757575;
 }
 
 .calendar-content {
@@ -60,22 +69,32 @@
     background-color: #525D7D;
     padding: 25px;
     border-radius: 16px;
+    box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
 }
 
 .marathon-btn {
-    width: fit-content;
+    width: 30%;
     background-color: #232859;
     color: white;
     border: none;
     border-radius: 12px;
-    padding: 14px 22px;
+    padding: 20px;
     font-size: 18px;
     font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
+    text-align: left;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 .marathon-btn:hover {
     transform: scale(1.03);
+}
+
+.info-marathon {
+    font-size: 14px;
+    font-weight: 400;
+    color: #c1c1c1;
+    margin-top: 8px;
 }
 
 .right-side {
@@ -103,17 +122,42 @@
     transition: 0.2s;
 }
 
-.courses-list {
+.courses-content {
     margin-top: 25px;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 20px;
+    display: -ms-inline-grid;
+    justify-content: space-between;
+ 
 }
 
 .course-card {
-    background-color: #2A2C3D;
-    padding: 30px;
-    border-radius: 16px;
-    font-size: 20px;
-    font-weight: 600;
+    margin-top: 20px;
+    display: flex;
+    gap: 20px;
+    padding: 25px;
+    border-radius: 12px;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.course-color-0 { background-color: #979DAD; }
+.course-color-1 { background-color: #525D7D; }
+.course-color-2 { background-color: #2B385B; }
+.course-color-3 { background-color: #20294A; }
+
+.course-arrow {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.course-arrow:hover {
+    transform: translateX(8px);
+}
+
+.arrow-icon {
+    font-size: 35px;
 }
