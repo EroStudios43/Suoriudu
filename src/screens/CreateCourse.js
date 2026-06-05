@@ -3,12 +3,17 @@ import "./styles/createCourse.css";
 import { useNavigate } from "react-router-dom"
 import Calendar from "../components/calendar.js";
 import TimePicker from "../components/timepicker.js";
+import axios from "axios";
+import { useUser } from "../context/useUser.js";
+
+const url = process.env.REACT_APP_API_URL;
 
 
 function CreateCourse() {
   const navigate = useNavigate();
-  const [courseName, setCourseName] = useState(localStorage.getItem("courseName") || "Anna kurssille nimi..");
-  const [courseDescription, setCourseDescription] = useState(localStorage.getItem("courseDescription") );
+  const { user } = useUser();
+  const [courseName, setCourseName] = useState("");
+  const [courseDescription, setCourseDescription] = useState("");
 
   const [startDate, setStartDate] = useState(() =>{
     const now = new Date();
@@ -28,11 +33,6 @@ function CreateCourse() {
   const [showEndTime, setShowEndTime] = useState(false);
 
   const [startTime, setStartTime] = useState("12:00");
-
-  useEffect(() => {
-    localStorage.setItem("courseName", courseName);
-    localStorage.setItem("courseDescription", courseDescription);
-  }, [courseName, courseDescription]);
 
   const [weeks, setWeeks] = useState([{
     id: 1,
@@ -137,6 +137,30 @@ function CreateCourse() {
         minute: "2-digit"
     });
   };
+
+  // Save course to backend 
+
+  const createCourse = async () => {
+    console.log("CREATE COURSE CLICKED");
+    const courseObj = {
+      name: courseName || "",
+      course_description: courseDescription  || "",
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      weeks: weeks.map(w => ({ title: w.title, content: w.content }))
+    };
+
+    try {
+      const res = await axios.post(url + "/courses", courseObj, { headers: {Authorization: "Bearer " + user.access_token }});
+      console.log("Course created with ID:", res.data.idcourse);
+      setCourseName("");
+      setCourseDescription("");
+      navigate("/home", {state: { refresh: true }});
+    } catch (error) {
+      console.error("Error creating course:", error);
+    }
+  }
+
   return (
     <div className="createCourse-container">
       <div className="topbar">
@@ -268,6 +292,11 @@ function CreateCourse() {
               {index !== weeks.length - 1 && <div className="week-divider"></div>}
             </div>
           ))}
+        </div>
+        <div className="create-course-footer">
+          <button className="create-course-submit" onClick={createCourse}>
+            Luo kurssi
+          </button>
         </div>
     </div>
   );

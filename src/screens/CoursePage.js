@@ -1,12 +1,47 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles/coursePage.css";
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
+import { useUser } from "../context/useUser.js";
+import axios from "axios";
+
+const url = process.env.REACT_APP_API_URL;
 
 function CoursePage() {
   const navigate = useNavigate();
+  const { courseId } = useParams();
+  const { user } = useUser();
+  const [courseName, setCourseName] = useState("");
+  const [courseDescription, setCourseDescription] = useState("");
   const [showRoster, setShowRoster] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  useEffect(() => {
+    if (!user || !user.access_token) {
+      console.log("No user or token yet");
+      return;
+    }
+
+    console.log("Fetching course data for courseId:", courseId);
+    console.log("API URL:", url);
+    console.log("Full URL:", url + "/courses/" + courseId);
+
+    const getCourseData = async () => {
+      try {
+        const response = await axios.get(
+          url + "/courses/" + courseId,
+          { headers: { Authorization: "Bearer " + user.access_token } }
+        );
+        console.log("Course data response:", response.data);
+        setCourseName(response.data.coursename || "");
+        setCourseDescription(response.data.course_description || "");
+      } catch (error) {
+        console.error("Error fetching course data:", error.response?.data || error.message);
+      }
+    };
+
+    getCourseData();
+  }, [courseId, user]);
 
   const availablePeople = [
     "Aino Aalto",
@@ -52,10 +87,10 @@ function CoursePage() {
                 <div className="topbar-left">
                         <div className="course-title">
                                 <i className="fa-regular fa-circle-left back-icon" onClick={e => navigate("/home")}></i>
-                                <h2 className="course-name">Kurssin nimi</h2>
+                                <h2 className="course-name">{courseName}</h2>
 
                         </div>  
-                        <p className="course-description">Kurssin kuvaus</p>
+                        <p className="course-description">{courseDescription}</p>
                 </div>
 
                 <div className="topbar-right">

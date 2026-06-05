@@ -37,19 +37,19 @@ root.render(
           <Route path="/login" element={<Login/>} />
           <Route path="/register" element={<Register/>} />
 
-          <Route path="/home" element={<Home/>} />
-          <Route path="/profile" element={<Profile/>} />
-          <Route path="/CreateTask" element={<CreateTask/>} />
-          <Route path="/CreateExam" element={<CreateExam/>} />
-          <Route path="/CreateCourse" element={<CreateCourse/>} />
-          <Route path="/CoursePage" element={<CoursePage/>} />
-          <Route path="/TaskOverview" element={<TaskOverview/>} />
-          <Route path="/TestOverview" element={<TestOverview/>} />
-          <Route path="/TaskQuestions" element={<TaskQuestions/>} />
-          <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
           {/* PROTECTED */}
           <Route element={<ProtectedRoute />}>
 
+            <Route path="/home" element={<Home/>} />
+            <Route path="/profile" element={<Profile/>} />
+            <Route path="/CreateTask" element={<CreateTask/>} />
+            <Route path="/CreateExam" element={<CreateExam/>} />
+            <Route path="/CreateCourse" element={<CreateCourse/>} />
+            <Route path="/CoursePage/:courseId" element={<CoursePage/>} />
+            <Route path="/TaskOverview" element={<TaskOverview/>} />
+            <Route path="/TestOverview" element={<TestOverview/>} />
+            <Route path="/TaskQuestions" element={<TaskQuestions/>} />
+            <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
           </Route>
 
         </Routes>

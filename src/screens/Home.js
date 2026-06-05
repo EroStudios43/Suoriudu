@@ -1,28 +1,29 @@
-import React, {useState} from "react";
+import React, {useState, useEffect, useCallback} from "react";
 import "./styles/home.css";
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import Calendar from "../components/calendar.js";
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import { useUser } from "../context/useUser.js" 
+import { useUser } from "../context/useUser.js";
+import axios from "axios";
 
+const url = process.env.REACT_APP_API_URL;
 
-function Home() {
+export default function Home() {
     const navigate = useNavigate();
-    const {user, signOut} = useUser()
+    const location = useLocation();
+    const {user, updateToken, signOut} = useUser()
+    const [courses, setCourses] = useState([]);
+    const [refresh, setRefresh] = useState(0);
 
     const logout = () => {
       signOut()
       navigate("/")
     }
 
-    const courses = [
-    { name: "Kurssi 1" },
-    { name: "Kurssi 2" },
-    { name: "Kurssi 3" },
-    { name: "Kurssi 4" },
-    { name: "Kurssi 5" },
-    { name: "Kurssi 6" },
-    ];
+    useEffect(() => {
+        console.log("USER CHANGED:", user);
+    }, [user]);
+        
 
     const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -65,13 +66,44 @@ function Home() {
         });
     };
 
+    useEffect(() => {
+        if (location.state?.refresh) {
+            setRefresh(prev => prev + 1);
+        }
+    }, [location.state])
+
+    
+    useEffect(() => {
+        if (!user || !user.access_token) {
+        console.log("NO TOKEN YET", user);
+        return;
+    }
+
+    const getCourses = async () => {
+        try {
+            console.log("CALLING API");
+
+            const response = await axios.get(
+                url + "/courses/myCourses",
+                { headers: { Authorization: "Bearer " + user.access_token } }
+            );
+
+            console.log("COURSES RESPONSE:", response.data);
+            setCourses(response.data);
+
+        } catch (error) {
+            console.error("API ERROR:", error.response?.data || error.message);
+        }
+    };
+
+    getCourses();
+}, [user, refresh]);
+
+    
 
   return (
     <div className="home-container">
         <div className="topbar">
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/")}>
-                Takaisin
-            </button>
             <h1 className="welcome-text">
                 Hei {user.firstname} {user.lastname}!
             </h1>       
@@ -129,17 +161,21 @@ function Home() {
         </div>
 
         <div className="courses-content">
-            {courses.map((course, index) => (
-                <div
-                    key={index}
-                    className={`course-card course-color-${index % 4}`}
-                    >
-                    <h2>{course.name}</h2>
-                    <button className="course-arrow" onClick={() => navigate("/CoursePage")}>
-                        <i class="fa-regular fa-circle-right arrow-icon"></i>
-                    </button>
-                </div>
-            ))}
+            {courses && courses.length > 0 ? (
+                courses.map((course, index) => (
+                    <div
+                        key={index}
+                        className={`course-card course-color-${index % 4}`}
+                        >
+                        <h2>{course.coursename}</h2>
+                        <button className="course-arrow" onClick={() => navigate(`/CoursePage/${course.idcourse}`)}>
+                            <i class="fa-regular fa-circle-right arrow-icon"></i>
+                        </button>
+                    </div>
+                ))
+            ) : (
+                <p className="no-courses">et ole luonut vielä yhtään kurssia</p>
+            )}
 
         </div>
 
@@ -147,4 +183,3 @@ function Home() {
   );
 }
 
-export default Home;

@@ -39,9 +39,12 @@ export default function UserProvider({ children }) {
   }
 
   const readAuthorizationHeader = (response) => {
-      if (response.headers.get("authorization") &&
-          response.headers.get("authorization").split(" ")[0] === "Bearer") {
-          return response.headers.get("authorization").split(" ")[1]
+      const authHeader =
+        response.headers?.authorization || response.headers?.Authorization ||
+        (typeof response.headers?.get === "function" ? response.headers.get("authorization") : undefined)
+
+      if (authHeader && authHeader.split(" ")[0] === "Bearer") {
+          return authHeader.split(" ")[1]
       }
   }
 

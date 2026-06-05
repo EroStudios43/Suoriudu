@@ -1,9 +1,9 @@
+import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
+import { useUser } from "../context/useUser.js";
 
-function ProtectedRoute() {
-  const user = null; // myöhemmin  oikea auth
-
-  return user ? <Outlet /> : <Navigate to="/login" />;
+export default function ProtectedRoute() {
+  const { user } = useUser();
+  return user?.access_token ? <Outlet /> : <Navigate to="/login" />;
 }
 
-export default ProtectedRoute;

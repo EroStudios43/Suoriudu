@@ -4,6 +4,7 @@ import cors from "cors";
 import jwt from "jsonwebtoken";
 
 import userRouter from "./routers/userRouter.js";
+import coursesRouter from "./routers/coursesRouter.js";
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use((req,res,next) => {
 })
 
 app.use("/users", userRouter);
+app.use("/courses", coursesRouter);
 
 app.listen(3001, () => {
     console.log("Server running on port 3001");
