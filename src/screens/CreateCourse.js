@@ -12,14 +12,18 @@ const url = process.env.REACT_APP_API_URL;
 function CreateCourse() {
   const navigate = useNavigate();
   const { user } = useUser();
-  const [courseName, setCourseName] = useState("");
-  const [courseDescription, setCourseDescription] = useState("");
+  const [courseName, setCourseName] = useState(() => {return localStorage.getItem("draftcourseName") || "";});
+  const [courseDescription, setCourseDescription] = useState(() => {return localStorage.getItem("draftcourseDescription") || "";});
 
   const [startDate, setStartDate] = useState(() =>{
-    const now = new Date();
-    return now;
+    const saved = localStorage.getItem("draftStartDate");
+    return saved ? new Date(saved) : new Date();
   });
   const [endDate, setEndDate] = useState(() =>{
+    const saved = localStorage.getItem("draftEndDate");
+    if (saved) {
+      return new Date(saved);
+    }
     const future = new Date();
     future.setDate(future.getDate() + 49);
     return future;
@@ -34,12 +38,37 @@ function CreateCourse() {
 
   const [startTime, setStartTime] = useState("12:00");
 
-  const [weeks, setWeeks] = useState([{
-    id: 1,
-    title: "Viikko 1",
-    expanded: true,
-    content: ""
-  }]);
+  const [weeks, setWeeks] = useState(() => {
+    const savedWeeks = localStorage.getItem("draftcourseWeeks");
+    return savedWeeks ? JSON.parse(savedWeeks) :
+    [{
+      id: 1,
+      title: "Viikko 1",
+      expanded: true,
+      content: ""
+    }];
+  });
+
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseName", courseName);
+  }, [courseName]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseDescription", courseDescription);
+  }, [courseDescription]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseWeeks", JSON.stringify(weeks));
+  }, [weeks]);
+
+  useEffect(() => {
+    localStorage.setItem("draftStartDate", startDate.toISOString());
+  }, [startDate]);
+
+  useEffect(() => {
+    localStorage.setItem("draftEndDate", endDate.toISOString());
+  }, [endDate]);
 
   const handleAddWeek = () => {
     setWeeks((prevWeeks) => {
@@ -141,7 +170,12 @@ function CreateCourse() {
   // Save course to backend 
 
   const createCourse = async () => {
-    console.log("CREATE COURSE CLICKED");
+
+
+    if (!courseName.trim()) {
+      alert("Kurssin nimi on pakollinen");
+      return;
+    }
     const courseObj = {
       name: courseName || "",
       course_description: courseDescription  || "",
@@ -155,6 +189,12 @@ function CreateCourse() {
       console.log("Course created with ID:", res.data.idcourse);
       setCourseName("");
       setCourseDescription("");
+
+      localStorage.removeItem("draftcourseName");
+      localStorage.removeItem("draftcourseDescription");
+      localStorage.removeItem("draftcourseWeeks");
+      localStorage.removeItem("draftcourseStartDate");
+      localStorage.removeItem("draftcourseEndDate");
       navigate("/home", {state: { refresh: true }});
     } catch (error) {
       console.error("Error creating course:", error);

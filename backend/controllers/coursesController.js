@@ -31,8 +31,11 @@ const getUsersCourses = async(req, res, next) => {
 
 const createCourse = async (req, res, next) => {
     try {
-        // Allow empty name/description for now
+        // Do not allow empty course name
         const { name, course_description } = req.body;
+        if (!name.trim() || !name) {
+            return res.status(400).json({ error: "Course name is required" });
+        }
 
         const token = req.headers.authorization?.split(' ')[1];
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
