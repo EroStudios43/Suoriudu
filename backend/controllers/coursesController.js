@@ -1,4 +1,5 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById } from '../models/coursesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks } from '../models/coursesModel.js'
+import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
@@ -32,7 +33,7 @@ const getUsersCourses = async(req, res, next) => {
 const createCourse = async (req, res, next) => {
     try {
         // Do not allow empty course name
-        const { name, course_description } = req.body;
+        const { name, course_description, startDate, endDate, weeks } = req.body;
         if (!name.trim() || !name) {
             return res.status(400).json({ error: "Course name is required" });
         }
@@ -51,6 +52,56 @@ const createCourse = async (req, res, next) => {
 
         await insertCourseMember(iduser, idcourse, "teacher");
 
+
+        for (const week of weeks) {
+            const idweek = await insertWeek(idcourse,week.title,week.content);
+
+            if (week.exercises) {
+                for (const exercise of week.exercises) {
+                    const idexercise = await insertExercise(idweek,exercise);
+
+                    if (exercise.tasks) {
+                        
+
+                        for (const task of exercise.tasks) {
+                            const mapTaskType = (task) => {
+                                if (task.type === "choice") {
+                                    return task.choiceMode === "multiple"
+                                        ? "multiple_choice"
+                                        : "single_choice";
+                                }
+                                return task.type;
+                            };
+
+                            let answer;
+                            const tasktype = mapTaskType(task);
+
+                            if (tasktype === "single_choice" || tasktype === "multiple_choice") {
+                                // For choice tasks, store the options and correct answers as JSON
+                                answer = JSON.stringify({
+                                    choiceMode: task.choiceMode,
+                                    options: task.options,
+                                    correctAnswers: task.correctAnswers
+                                });
+                            } else {
+                                // For essay, coding, and drawing tasks, just store the answer text
+                                answer = task.answer || "";
+                            }
+
+                            const mappedTask = {
+                                tasktype: tasktype,
+                                question: task.instructions || "",
+                                answer: answer
+                            };
+
+                            await insertTask(idexercise, mappedTask);
+                        }
+
+                    }
+                }
+                }
+            }
+
         return res.status(201).json({ idcourse });
 
     } catch (error) {
@@ -59,15 +110,26 @@ const createCourse = async (req, res, next) => {
 }
 
 const getCourseById = async (req, res, next) => {
-    try {
-        const { courseId } = req.params;
-        const result = await selectCourseById(courseId);
-        if (!result) {
-            return next(new Error("Course not found"));
+    try{
+        const {courseId } = req.params;
+
+        const course = await selectCourseById(courseId)
+
+        if(!course){
+            return res.status(404).json({error: "Course not found"})
         }
-        return res.status(200).json(result);
-    } catch (error) {
-        return next(error)
+        const weeks = await selectCourseWeeks(courseId)
+        console.log("WEEKS:", weeks);
+
+        for (const week of weeks) {
+            const exercises = await selectWeekExercises(week.idweek)
+            console.log("EXERCISES FOR WEEK", week.idweek, exercises);
+            week.exercises = exercises
+        }
+        return res.status(200).json({...course,weeks});
+    } catch(error) {
+        return next(error);
     }
 }
-export { getUsersCourses, createCourse, getCourseById }
+
+export { getUsersCourses, createCourse, getCourseById}

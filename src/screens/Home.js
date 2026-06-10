@@ -17,6 +17,7 @@ export default function Home() {
 
     const logout = () => {
       signOut()
+      localStorage.clear();
       navigate("/")
     }
 

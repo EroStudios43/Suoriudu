@@ -17,7 +17,10 @@ DROP TABLE IF EXISTS courses;
 CREATE TABLE courses (
   idcourse int PRIMARY KEY AUTO_INCREMENT UNIQUE NOT NULL,
   coursename varchar(45) NOT NULL,
-  course_description varchar(255)
+  course_description varchar(255),
+  course_start_time datetime,
+  course_end_time datetime
+
 );
 
 -- Create coursemembers-table
@@ -45,7 +48,7 @@ CREATE TABLE materials (
 DROP TABLE IF EXISTS exercises;
 CREATE TABLE exercises (
   idexercise int PRIMARY KEY AUTO_INCREMENT UNIQUE NOT NULL,
-  idcourse int NOT NULL,
+  idweek int NOT NULL,
   exercise_name varchar(45) NOT NULL,
   exercise_description varchar(500),
   exercise_type varchar(45) NOT NULL,
@@ -55,7 +58,7 @@ CREATE TABLE exercises (
   max_time varchar(50),
   active_monitors varchar(255),
   exam_password_student varchar(45),
-  FOREIGN KEY (idcourse) REFERENCES courses(idcourse) ON DELETE CASCADE ON UPDATE CASCADE
+  FOREIGN KEY (idweek) REFERENCES weeks(idweek) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Create exerciseresult-table
@@ -107,4 +110,14 @@ CREATE TABLE taskcomments (
   timestamp_of_message datetime NOT NULL,
   FOREIGN KEY (idtaskresult) REFERENCES taskresults(idtaskresult) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (idcommentor) REFERENCES users(iduser)
+);
+
+-- Create weeks-table
+DROP TABLE IF EXISTS weeks;
+CREATE TABLE weeks (
+  idweek INT PRIMARY KEY AUTO_INCREMENT,
+  idcourse INT,
+  week_name VARCHAR(255),
+  week_description TEXT,
+  FOREIGN KEY (idcourse) REFERENCES courses(idcourse)
 );

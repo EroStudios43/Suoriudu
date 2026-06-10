@@ -16,11 +16,11 @@ function CreateCourse() {
   const [courseDescription, setCourseDescription] = useState(() => {return localStorage.getItem("draftcourseDescription") || "";});
 
   const [startDate, setStartDate] = useState(() =>{
-    const saved = localStorage.getItem("draftStartDate");
+    const saved = localStorage.getItem("draftcourseStartDate");
     return saved ? new Date(saved) : new Date();
   });
   const [endDate, setEndDate] = useState(() =>{
-    const saved = localStorage.getItem("draftEndDate");
+    const saved = localStorage.getItem("draftcourseEndDate");
     if (saved) {
       return new Date(saved);
     }
@@ -45,11 +45,13 @@ function CreateCourse() {
       id: 1,
       title: "Viikko 1",
       expanded: true,
-      content: ""
+      content: "",
+      exercises: []
     }];
   });
 
 
+  //save info to localsrorage
   useEffect(() => {
     localStorage.setItem("draftcourseName", courseName);
   }, [courseName]);
@@ -63,12 +65,24 @@ function CreateCourse() {
   }, [weeks]);
 
   useEffect(() => {
-    localStorage.setItem("draftStartDate", startDate.toISOString());
+    localStorage.setItem("draftcourseStartDate", startDate.toISOString());
   }, [startDate]);
 
   useEffect(() => {
-    localStorage.setItem("draftEndDate", endDate.toISOString());
+    localStorage.setItem("draftcourseEndDate", endDate.toISOString());
   }, [endDate]);
+
+  // get saved exercises as they are made
+  useEffect(() => {
+    const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+    setWeeks(prev =>
+      prev.map((week, index) => ({
+        ...week,
+        exercises: savedExercises[index] || []
+      }))
+    )
+
+  }, [])
 
   const handleAddWeek = () => {
     setWeeks((prevWeeks) => {
@@ -77,7 +91,8 @@ function CreateCourse() {
         id: Date.now(),
         title: `Viikko ${nextIndex}`,
         expanded: true,
-        content: ""
+        content: "",
+        exercises: []
       };
       return prevWeeks.map((week) => ({ ...week, expanded: false })).concat(nextWeek);
     });
@@ -181,7 +196,7 @@ function CreateCourse() {
       course_description: courseDescription  || "",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      weeks: weeks.map(w => ({ title: w.title, content: w.content }))
+      weeks: weeks.map(w => ({ title: w.title, content: w.content, exercises: w.exercises || [] }))
     };
 
     try {
@@ -195,6 +210,7 @@ function CreateCourse() {
       localStorage.removeItem("draftcourseWeeks");
       localStorage.removeItem("draftcourseStartDate");
       localStorage.removeItem("draftcourseEndDate");
+      localStorage.removeItem("draftExercises");
       navigate("/home", {state: { refresh: true }});
     } catch (error) {
       console.error("Error creating course:", error);
@@ -319,13 +335,26 @@ function CreateCourse() {
                   />
 
                   <div className="week-actions">
-                    <button className="week-button" onClick={() => navigate("/createTask")}>
+                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index}})}>
                       Lisää tehtävä viikkoon +
                     </button>
                     <button className="week-button" onClick={() => navigate("/createExam")}>
                       Lisää koe viikkoon +
                     </button>
                   </div>
+
+                  {week.exercises?.map((exercise, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid gray",
+                        marginTop: "10px"
+                      }}
+                    >
+                      {exercise.exercise_name}
+                    </div>
+                  ))}
                 </div>
               )}
 

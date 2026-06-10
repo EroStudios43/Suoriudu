@@ -32,4 +32,24 @@ const selectCourseById = async (idcourse) => {
     return rows[0];
 }
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById }
+const insertWeek = async (idcourse,week_name,week_description) => {
+  const [result] = await pool.promise().query(
+    `INSERT INTO weeks (idcourse, week_name, week_description)VALUES (?, ?, ?)`,
+    [idcourse,week_name,week_description]
+  );
+
+  return result.insertId;
+};
+
+const selectCourseWeeks = async (idcourse) => {
+
+    const [rows] = await pool.promise().query(`SELECT * FROM weeks WHERE idcourse = ? ORDER BY idweek`,
+        [idcourse]
+    );
+
+    return rows;
+}
+
+
+
+export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks }

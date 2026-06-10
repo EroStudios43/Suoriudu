@@ -19,3 +19,4 @@ function ProtectedRoute() {
   return isTokenValid(user.access_token) ? <Outlet /> : <Navigate to="/login" />;
 }
 
+export default ProtectedRoute;

@@ -1,12 +1,19 @@
 import React, {useState} from "react";
 import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
+import { useLocation } from "react-router-dom";
 
 function CreateTask() {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [taskName, setTaskName] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
+  const [allowLateSubmissions, setAllowLateSubmissions] = useState(false);
+  const weekIndex = location.state?.weekIndex;
+
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
 
   const [tasks, setTasks] = useState([
     {
@@ -14,7 +21,8 @@ function CreateTask() {
       type: null,
       choiceMode: "single",
       options: ["", ""],
-      correctAnswers: []
+      correctAnswers: [],
+      answer: ""
     }
   ]);   
 
@@ -77,7 +85,8 @@ function CreateTask() {
         type: null,
         choiceMode: "single",
         options: ["", ""],
-        correctAnswers: []
+        correctAnswers: [],
+        answer: ""
       }
     ]);
   }
@@ -93,14 +102,36 @@ function CreateTask() {
     setTasks(prev => prev.filter((_, i) => i !== taskIndex));
   };
 
+  // create task to spesific week
   const createTask = () => {
-    console.log("Tallennetaan:", {
-      taskName,
-      taskDescription,
-      tasks
-    });
+    const invalidTask = tasks.some(t => !t.type);
 
-    navigate(-1);
+    if (invalidTask) {
+      alert("Sinulla täytyy olla vähintään yksi tehtävä ennen tallennusta");
+      return;
+    }
+    const exercise = {
+      exercise_name: taskName, 
+      exercise_description: taskDescription, 
+      allow_late_submissions: allowLateSubmissions ? 1 : 0, 
+      exercise_type: "task",
+      start_time: startTime, 
+      end_time: endTime,
+      tasks
+    };
+
+
+    const saved = JSON.parse(localStorage.getItem("draftExercises")) || {};
+
+    if (!saved[weekIndex]) {
+      saved[weekIndex] = [];
+    }
+
+    saved[weekIndex].push(exercise);
+
+    localStorage.setItem("draftExercises", JSON.stringify(saved));
+
+navigate(-1);
   };
 
   return (
@@ -136,12 +167,36 @@ function CreateTask() {
           <div className="task-time-row">
             <div className="task-time-column">
               <label className="task-time-label">Aseta aloitusaika*</label>
-              <input type="datetime-local" className="task-time-input" />
+              <input 
+                type="datetime-local" 
+                className="task-time-input"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
             </div>
             <div className="task-time-column">
               <label className="task-time-label">Aseta sulkeutumisaika*</label>
-              <input type="datetime-local" className="task-time-input" />
+              <input type="datetime-local" className="task-time-input"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                    />
             </div>
+
+            <div className="late-submissions">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={allowLateSubmissions}
+                  onChange={(e) =>
+                    setAllowLateSubmissions(
+                      e.target.checked
+                    )
+                  }
+                />
+                Salli myöhästyneet palautukset
+              </label>
+            </div>
+
           </div>          
         </div>
         <div className="divider"></div>
@@ -261,6 +316,14 @@ function CreateTask() {
               <textarea
                 className="large-answer-input"
                 placeholder="Kirjoita essee-tehtävän vastauskentän ohjeet..."
+                value={task.answer}
+                onChange={(e) => {
+                  const updatedTask = {
+                    ...task,
+                    answer: e.target.value
+                  };
+                  updateTask(taskIndex, updatedTask);
+                }}
               />
             )}
 
@@ -268,6 +331,14 @@ function CreateTask() {
               <textarea
                 className="large-answer-input"
                 placeholder="Kirjoita ohjelmointitehtävän kuvaus..."
+                value={task.answer}
+                onChange={(e) => {
+                  const updatedTask = {
+                    ...task,
+                    answer: e.target.value
+                  };
+                  updateTask(taskIndex, updatedTask);
+                }}
               />
             )}
 
@@ -275,6 +346,14 @@ function CreateTask() {
               <textarea
                 className="large-answer-input"
                 placeholder="Kirjoita piirto-tehtävän kuvaus..."
+                value={task.answer}
+                onChange={(e) => {
+                  const updatedTask = {
+                    ...task,
+                    answer: e.target.value
+                  };
+                  updateTask(taskIndex, updatedTask);
+                }}
               />
             )}
 
