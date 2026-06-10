@@ -1,4 +1,5 @@
 import { createContext, useState } from "react"
+import { UseLocation } from "react-router-dom"
 import { UserContext } from "./UserContext.js"
 import axios from "axios"
 
@@ -11,9 +12,11 @@ export default function UserProvider({ children }) {
   const signUp = async () => {
     try {
       console.log(user)
+
       await axios.post(url + "/users/register", user)
-      setUser({id: "", firstname: "", phone: "", lastname: "", email: "", password: "", role: "", passwordCheck: "", access_token: "", oldPassword: ""})
+      await signIn()
     } catch (error) {
+      setUser(prev => ({...prev, id: "", email: "", firstname: "", lastname: "", password: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""}))
       throw error
     }
   }
@@ -22,11 +25,11 @@ export default function UserProvider({ children }) {
     try {
       const response = await axios.post(url + "/users/login", user)
       const token = readAuthorizationHeader(response)
-      const userData = { id: response.data.id, email: response.data.email, firstname: response.data.firstname, lastname: response.data.lastname, role: response.data.role, phone: response.data.phone, access_token: token }
+      const userData = { id: response.data.id, email: response.data.email, firstname: response.data.firstname, lastname: response.data.lastname, role: response.data.role, phone: response.data.phone, access_token: token, password: "", passwordCheck: "", oldPassword: "" }
       setUser(userData)
       sessionStorage.setItem("user", JSON.stringify(userData))
     } catch (error) {
-      setUser({email: "", firstname: "", lastname: "", password: "", role: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""})
+      setUser(({id: "", email: "", firstname: "", lastname: "", password: "", role: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""}))
       throw error
     }
   }
@@ -39,12 +42,9 @@ export default function UserProvider({ children }) {
   }
 
   const readAuthorizationHeader = (response) => {
-      const authHeader =
-        response.headers?.authorization || response.headers?.Authorization ||
-        (typeof response.headers?.get === "function" ? response.headers.get("authorization") : undefined)
-
-      if (authHeader && authHeader.split(" ")[0] === "Bearer") {
-          return authHeader.split(" ")[1]
+      if (response.headers["authorization"] &&
+          response.headers["authorization"].split(" ")[0] === "Bearer") {
+          return response.headers["authorization"].split(" ")[1]
       }
   }
 
