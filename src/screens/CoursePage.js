@@ -1,12 +1,55 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "./styles/coursePage.css";
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
+import { useUser } from "../context/useUser.js";
+import axios from "axios";
+
+const url = process.env.REACT_APP_API_URL;
 
 function CoursePage() {
   const navigate = useNavigate();
+  const { courseId } = useParams();
+  const { user } = useUser();
+  const [courseName, setCourseName] = useState("");
+  const [courseDescription, setCourseDescription] = useState("");
   const [showRoster, setShowRoster] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [weeks, setWeeks] = useState([]);
+
+  useEffect(() => {
+    if (!user || !user.access_token) {
+      console.log("No user or token yet");
+      return;
+    }
+
+    console.log("Fetching course data for courseId:", courseId);
+    console.log("API URL:", url);
+    console.log("Full URL:", url + "/courses/" + courseId);
+
+    const getCourseData = async () => {
+      try {
+        const response = await axios.get(
+          url + "/courses/" + courseId,
+          { headers: { Authorization: "Bearer " + user.access_token } }
+        );
+        console.log("FULL COURSE:", response.data);
+        console.log("Course data response:", response.data);
+        setCourseName(response.data.coursename || "");
+        setCourseDescription(response.data.course_description || "");
+        setWeeks(response.data.weeks || []);
+
+      } catch (error) {
+        console.error("Error fetching course data:", error.response?.data || error.message);
+      }
+    };
+
+    getCourseData();
+  }, [courseId, user]);
+
+  useEffect(() => {
+    console.log("WEEKS FROM API:", weeks);
+    }, [weeks]);
 
   const availablePeople = [
     "Aino Aalto",
@@ -18,17 +61,6 @@ function CoursePage() {
     "Olli Oksanen",
     "Sanna Saarinen",
   ];
-
-  const tasks = [
-                        { title: "Tehtävä 1", isExam: false, students: "60/80" },
-                        { title: "Tehtävä 2", isExam: false, students: "18/80" },
-                        { title: "Tehtävä 3", isExam: true, time: "09:00" },
-                        { title: "Tehtävä 4", isExam: false, students: "7/80" },
-                        { title: "Tehtävä 5", isExam: false, students: "13/80" },
-                        { title: "Tehtävä 6", isExam: true, time: "13:30" },
-                        { title: "Tehtävä 7", isExam: false, students: "22/80" },
-                        
-                ];
 
   const lateStudents = ["Pertti Porkkana", "Martti Marja-Puuro", "Liisa lohikeitto"];
 
@@ -52,10 +84,10 @@ function CoursePage() {
                 <div className="topbar-left">
                         <div className="course-title">
                                 <i className="fa-regular fa-circle-left back-icon" onClick={e => navigate("/home")}></i>
-                                <h2 className="course-name">Kurssin nimi</h2>
+                                <h2 className="course-name">{courseName}</h2>
 
                         </div>  
-                        <p className="course-description">Kurssin kuvaus</p>
+                        <p className="course-description">{courseDescription}</p>
                 </div>
 
                 <div className="topbar-right">
@@ -74,19 +106,42 @@ function CoursePage() {
         <div className="divider"></div>
                 <h2>Tehtävät</h2>
 
-                        <div className={`task-list count-${tasks.length}`}>
-                            {tasks.map((task, index) => (
-                                <div key={index} className="task-card">
-                                    <div className="task-content">
-                                        <div className="task-title">{task.title}</div>
-                                        <div className="task-desc">
-                                            {task.isExam ? `Kellonaika: ${task.time}` : `Oppilasmäärä: ${task.students}`}
-                                        </div>
-                                    </div>
-                                    <i className="fa-solid fa-ellipsis-vertical task-menu-icon"></i>
+                        <div className="container weeks-container">
+    <div className="row g-4">
+
+        {weeks.map((week, index) => {
+            const isLastOdd =
+                weeks.length % 2 === 1 && index === weeks.length - 1;
+
+            return (
+                <div
+                    key={week.idweek}
+                    className={`col-12 col-sm-6 col-md-6 col-lg-6 week-col ${isLastOdd ? "tall" : ""}`}
+                >
+                    <div className="week-box">
+
+                        <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
+
+                        <h3 className="week-title">{week.week_name}</h3>
+
+                        {week.exercises && week.exercises.length > 0 ? (
+                            week.exercises.map(exercise => (
+                                <div key={exercise.idexercise} className="week-task">
+                                    <div className="week-task-label">Tehtävä:</div>
+                                    <div className="week-task-title">{exercise.exercise_name}</div>
                                 </div>
-                            ))}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="no-tasks-message">Ei tehtäviä</div>
+                        )}
+
+                    </div>
+                </div>
+            );
+        })}
+
+    </div>
+</div>
                     
         <div className="divider"></div>
 

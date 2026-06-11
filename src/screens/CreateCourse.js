@@ -3,18 +3,27 @@ import "./styles/createCourse.css";
 import { useNavigate } from "react-router-dom"
 import Calendar from "../components/calendar.js";
 import TimePicker from "../components/timepicker.js";
+import axios from "axios";
+import { useUser } from "../context/useUser.js";
+
+const url = process.env.REACT_APP_API_URL;
 
 
 function CreateCourse() {
   const navigate = useNavigate();
-  const [courseName, setCourseName] = useState(localStorage.getItem("courseName") || "Anna kurssille nimi..");
-  const [courseDescription, setCourseDescription] = useState(localStorage.getItem("courseDescription") );
+  const { user } = useUser();
+  const [courseName, setCourseName] = useState(() => {return localStorage.getItem("draftcourseName") || "";});
+  const [courseDescription, setCourseDescription] = useState(() => {return localStorage.getItem("draftcourseDescription") || "";});
 
   const [startDate, setStartDate] = useState(() =>{
-    const now = new Date();
-    return now;
+    const saved = localStorage.getItem("draftcourseStartDate");
+    return saved ? new Date(saved) : new Date();
   });
   const [endDate, setEndDate] = useState(() =>{
+    const saved = localStorage.getItem("draftcourseEndDate");
+    if (saved) {
+      return new Date(saved);
+    }
     const future = new Date();
     future.setDate(future.getDate() + 49);
     return future;
@@ -29,17 +38,51 @@ function CreateCourse() {
 
   const [startTime, setStartTime] = useState("12:00");
 
-  useEffect(() => {
-    localStorage.setItem("courseName", courseName);
-    localStorage.setItem("courseDescription", courseDescription);
-  }, [courseName, courseDescription]);
+  const [weeks, setWeeks] = useState(() => {
+    const savedWeeks = localStorage.getItem("draftcourseWeeks");
+    return savedWeeks ? JSON.parse(savedWeeks) :
+    [{
+      id: 1,
+      title: "Viikko 1",
+      expanded: true,
+      content: "",
+      exercises: []
+    }];
+  });
 
-  const [weeks, setWeeks] = useState([{
-    id: 1,
-    title: "Viikko 1",
-    expanded: true,
-    content: ""
-  }]);
+
+  //save info to localsrorage
+  useEffect(() => {
+    localStorage.setItem("draftcourseName", courseName);
+  }, [courseName]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseDescription", courseDescription);
+  }, [courseDescription]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseWeeks", JSON.stringify(weeks));
+  }, [weeks]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseStartDate", startDate.toISOString());
+  }, [startDate]);
+
+  useEffect(() => {
+    localStorage.setItem("draftcourseEndDate", endDate.toISOString());
+  }, [endDate]);
+
+  // get saved exercises as they are made
+  useEffect(() => {
+    const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+    setWeeks(prev =>
+      prev.map((week, index) => ({
+        ...week,
+        exercises: savedExercises[index] || []
+      }))
+    )
+
+  }, [])
 
   const handleAddWeek = () => {
     setWeeks((prevWeeks) => {
@@ -48,7 +91,8 @@ function CreateCourse() {
         id: Date.now(),
         title: `Viikko ${nextIndex}`,
         expanded: true,
-        content: ""
+        content: "",
+        exercises: []
       };
       return prevWeeks.map((week) => ({ ...week, expanded: false })).concat(nextWeek);
     });
@@ -137,6 +181,42 @@ function CreateCourse() {
         minute: "2-digit"
     });
   };
+
+  // Save course to backend 
+
+  const createCourse = async () => {
+
+
+    if (!courseName.trim()) {
+      alert("Kurssin nimi on pakollinen");
+      return;
+    }
+    const courseObj = {
+      name: courseName || "",
+      course_description: courseDescription  || "",
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      weeks: weeks.map(w => ({ title: w.title, content: w.content, exercises: w.exercises || [] }))
+    };
+
+    try {
+      const res = await axios.post(url + "/courses", courseObj, { headers: {Authorization: "Bearer " + user.access_token }});
+      console.log("Course created with ID:", res.data.idcourse);
+      setCourseName("");
+      setCourseDescription("");
+
+      localStorage.removeItem("draftcourseName");
+      localStorage.removeItem("draftcourseDescription");
+      localStorage.removeItem("draftcourseWeeks");
+      localStorage.removeItem("draftcourseStartDate");
+      localStorage.removeItem("draftcourseEndDate");
+      localStorage.removeItem("draftExercises");
+      navigate("/home", {state: { refresh: true }});
+    } catch (error) {
+      console.error("Error creating course:", error);
+    }
+  }
+
   return (
     <div className="createCourse-container">
       <div className="topbar">
@@ -255,19 +335,37 @@ function CreateCourse() {
                   />
 
                   <div className="week-actions">
-                    <button className="week-button" onClick={() => navigate("/createTask")}>
+                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index}})}>
                       Lisää tehtävä viikkoon +
                     </button>
                     <button className="week-button" onClick={() => navigate("/createExam")}>
                       Lisää koe viikkoon +
                     </button>
                   </div>
+
+                  {week.exercises?.map((exercise, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        padding: "10px",
+                        border: "1px solid gray",
+                        marginTop: "10px"
+                      }}
+                    >
+                      {exercise.exercise_name}
+                    </div>
+                  ))}
                 </div>
               )}
 
               {index !== weeks.length - 1 && <div className="week-divider"></div>}
             </div>
           ))}
+        </div>
+        <div className="create-course-footer">
+          <button className="create-course-submit" onClick={createCourse}>
+            Luo kurssi
+          </button>
         </div>
     </div>
   );

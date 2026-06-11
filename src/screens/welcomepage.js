@@ -13,7 +13,7 @@ function WelcomePage() {
             <p>Tehtävä ja koe palvelu</p>
 
             <div className="buttons">
-                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/home")}>
+                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/login")}>
                     Opettajat
                 </button>
 
