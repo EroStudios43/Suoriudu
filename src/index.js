@@ -21,6 +21,7 @@ import TaskOverview from "./screens/TaskOverview.js";
 import TestOverview from "./screens/TestOverview.js";
 import TaskQuestions from "./screens/TaskQuestions.js";
 import TaskEvaluation from "./screens/TaskEvaluation.js";
+import WavePagesLayout from './screens/WavePagesLayout.js';
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -33,10 +34,17 @@ root.render(
         <Routes>
 
           {/* PUBLIC */}
-          <Route path="/" element={<WelcomePage/>} />
-          <Route path="/login" element={<Login/>} />
-          <Route path="/register" element={<Register/>} />
-
+          
+          {/* 
+          Wave pattern background pages.
+          The elements inside do not need the body class div, since it's included in the parent layout
+          */}
+          <Route element={<WavePagesLayout />}>
+            <Route path="/" element={<WelcomePage/>} />
+            <Route path="/login" element={<Login/>} />
+            <Route path="/register" element={<Register/>} />
+          </Route>
+          
           <Route path="/home" element={<Home/>} />
           <Route path="/profile" element={<Profile/>} />
           <Route path="/CreateTask" element={<CreateTask/>} />

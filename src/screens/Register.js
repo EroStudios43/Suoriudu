@@ -106,8 +106,8 @@ function Register() {
   }
 
   return (
-    <div className="body">  
-      <div className="container container-sm login-container p-5 my-5 rounded-4">
+    <div className="container container-fluid d-flex flex-column justify-content-center align-items-center">  
+      <div className="container-lg login-container p-5 my-5 rounded-4">
         <div className="row">
           <div className="col-3 text-start">
             <button className="btn btn-link text-black fs-5 text-decoration-none" onClick={e => navigate("/")}>
