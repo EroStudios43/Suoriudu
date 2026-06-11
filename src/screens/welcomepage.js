@@ -11,10 +11,10 @@ function WelcomePage() {
         <h1>Kokelas</h1>
         <p>Tehtävä ja koe palvelu</p>
 
-        <div className="buttons">
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/home")}>
-                Opettajat
-            </button>
+            <div className="buttons">
+                <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/login")}>
+                    Opettajat
+                </button>
 
             <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/login")}>
                 Oppilaat

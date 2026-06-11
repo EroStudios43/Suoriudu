@@ -161,3 +161,11 @@
 .arrow-icon {
     font-size: 35px;
 }
+
+.no-courses {
+    font-style: italic;
+    color: #cfcfcf;
+    margin-top: 20px;
+    text-align: center;
+    font-size: 18px;
+}
