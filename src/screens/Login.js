@@ -84,87 +84,89 @@ function Login() {
   }
 
   return (
-    <div className="body">  
-      <div className="container container-sm login-container p-5 my-5 rounded-4">
-        <div className="row">
-          <div className="col-3 text-start">
-            <button className="btn btn-link text-black fs-5 text-decoration-none" onClick={e => navigate("/")}>
-                Takaisin
-            </button>
-          </div>
-          <div className="col-6">
-            <h2>Kirjaudu sisään</h2>
-          </div>
-          <div className="col-3"></div>
-        </div>
-        
-
-        <form noValidate>
-          <div className="form-floating mb-3 mt-3">
-            {loginErrors && loginErrors.length > 0 && (
-              <div 
-                className={`alert alert-danger mt-3 alert-dismissable fade ${showLoginErrors ? "show" : ""}`}
-                role="alert"
-              >
-                <button
-                  type="button"
-                  className="btn-close float-end"
-                  onClick={() => {
-                    setLoginErrors([])
-                    setShowLoginErrors(false)
-                  }}
-                />
-                {loginErrors.map((error, index) => (
-                  <div key={index}>{error}</div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="form-floating mb-3 mt-3">
-            <input 
-              type="text" 
-              id="email" 
-              name="email" 
-              className={`form-control ${
-                validated && formErrors.email ? "is-invalid" : ""
-              }`}
-              placeholder="Syötä sähköpostiosoitteesi" 
-              value={user.email} 
-              onChange={e => setUser({...user, email: e.target.value})} 
-              required
-            />
-            <label for="email">Sähköposti</label>
-            <div className="invalid-feedback">{formErrors.email}</div>
-          </div>
-          <div className="form-floating mb-3 mt-3">
-            <input 
-              type="password" 
-              id="password" 
-              name="password" 
-              className={`form-control ${
-                validated && formErrors.password ? "is-invalid" : ""
-              }`}
-              placeholder="Syötä salasanasi" 
-              value={user.password} 
-              onChange={e => setUser({...user, password: e.target.value})} 
-              required
-            />
-            <label for="password">Salasana</label>
-            <div class="invalid-feedback">{formErrors.password}</div>
-            <div className="invalid-feedback">
-              {loginErrors.password}
+    <>  
+      <div className="container container-fluid d-flex flex-column justify-content-center align-items-center">
+        <div className="container-lg login-container p-5 my-5 rounded-4">
+          <div className="row">
+            <div className="col-3 text-start">
+              <button className="btn btn-link text-black fs-5 text-decoration-none" onClick={e => navigate("/")}>
+                  Takaisin
+              </button>
             </div>
+            <div className="col-6">
+              <h2>Kirjaudu sisään</h2>
+            </div>
+            <div className="col-3"></div>
           </div>
-          <br />
-          <div className="d-grid gap-2">
-           <button type="button" className="btn btn-dark" id="loginButton" onClick={login}>Kirjaudu sisään</button>
-          </div>
-        </form>
+          
+
+          <form noValidate>
+            <div className="form-floating mb-3 mt-3">
+              {loginErrors && loginErrors.length > 0 && (
+                <div 
+                  className={`alert alert-danger mt-3 alert-dismissable fade ${showLoginErrors ? "show" : ""}`}
+                  role="alert"
+                >
+                  <button
+                    type="button"
+                    className="btn-close float-end"
+                    onClick={() => {
+                      setLoginErrors([])
+                      setShowLoginErrors(false)
+                    }}
+                  />
+                  {loginErrors.map((error, index) => (
+                    <div key={index}>{error}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="form-floating mb-3 mt-3">
+              <input 
+                type="text" 
+                id="email" 
+                name="email" 
+                className={`form-control ${
+                  validated && formErrors.email ? "is-invalid" : ""
+                }`}
+                placeholder="Syötä sähköpostiosoitteesi" 
+                value={user.email} 
+                onChange={e => setUser({...user, email: e.target.value})} 
+                required
+              />
+              <label for="email">Sähköposti</label>
+              <div className="invalid-feedback">{formErrors.email}</div>
+            </div>
+            <div className="form-floating mb-3 mt-3">
+              <input 
+                type="password" 
+                id="password" 
+                name="password" 
+                className={`form-control ${
+                  validated && formErrors.password ? "is-invalid" : ""
+                }`}
+                placeholder="Syötä salasanasi" 
+                value={user.password} 
+                onChange={e => setUser({...user, password: e.target.value})} 
+                required
+              />
+              <label for="password">Salasana</label>
+              <div class="invalid-feedback">{formErrors.password}</div>
+              <div className="invalid-feedback">
+                {loginErrors.password}
+              </div>
+            </div>
+            <br />
+            <div className="d-grid gap-2">
+            <button type="button" className="btn btn-dark" id="loginButton" onClick={login}>Kirjaudu sisään</button>
+            </div>
+          </form>
+        </div>
+          <button className="btn btn-link text-black text-decoration-none" onClick={e => navigate("/register")}>
+            <a className="link-light link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">Ei tiliä? Rekisteröidy täältä!</a>
+          </button>
       </div>
-      <button className="btn btn-link text-black text-decoration-none" onClick={e => navigate("/register")}>
-        <a className="link-light link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover">Ei tiliä? Rekisteröidy täältä!</a>
-      </button>
-    </div>
+    </>
   );
 }
 
