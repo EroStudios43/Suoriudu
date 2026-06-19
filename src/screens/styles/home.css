@@ -140,6 +140,24 @@
     box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.course-card-student {
+    margin-top: 20px;
+    display: inline-block;
+    gap: 20px;
+    padding: 25px;
+    border-radius: 12px;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.course-card-student:hover {
+    filter: brightness(0.9);
+    transform: scale(1.02);
+}
+
 .course-color-0 { background-color: #979DAD; }
 .course-color-1 { background-color: #525D7D; }
 .course-color-2 { background-color: #2B385B; }
@@ -168,4 +186,23 @@
     margin-top: 20px;
     text-align: center;
     font-size: 18px;
+}
+
+.student-add-courses-input {
+    background-color: #CFD5E5;
+    color: #49454F;
+    border-radius: 30px;
+    font-size: 16px;
+}
+
+.student-add-courses-input > i {
+    font-size: 22px;
+}
+
+/* The "Add courses" form input for student */
+.student-add-courses-input > form > .row > .col-8 > input {
+    border: none;
+    background-color: #CFD5E5;
+    padding-left: 0px;
+    padding-right: 0px;
 }
