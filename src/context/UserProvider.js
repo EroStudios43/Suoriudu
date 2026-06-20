@@ -36,6 +36,12 @@ export default function UserProvider({ children }) {
 
   const updateToken = (response) => {
       const token = readAuthorizationHeader(response)
+      if (!token) return
+
+      // Old function caused looping when updating token. Preventing looping here
+      if (token === user?.access_token) return
+
+      // Set token here if it actually changed
       const newUser = {...user, access_token: token}
       setUser(newUser)
       sessionStorage.setItem("user", JSON.stringify(newUser))
@@ -50,6 +56,7 @@ export default function UserProvider({ children }) {
 
   const signOut = () => {
     sessionStorage.clear()
+    localStorage.clear();
     setUser({id: "", firstname: "", lastname: "", email: "", password: "", role: "", phone: "", passwordCheck: "", access_token: "", oldPassword: ""})
   }
 

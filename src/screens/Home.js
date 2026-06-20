@@ -79,29 +79,32 @@ export default function Home() {
     
     useEffect(() => {
         if (!user || !user.access_token) {
-        console.log("NO TOKEN YET", user);
-        return;
-    }
-
-    const getCourses = async () => {
-        try {
-            console.log("CALLING API");
-
-            const response = await axios.get(
-                url + "/courses/myCourses",
-                { headers: { Authorization: "Bearer " + user.access_token } }
-            );
-
-            console.log("COURSES RESPONSE:", response.data);
-            setCourses(response.data);
-
-        } catch (error) {
-            console.error("API ERROR:", error.response?.data || error.message);
+            console.log("NO TOKEN YET", user);
+            return;
         }
-    };
 
-    getCourses();
-}, [user, refresh]);
+        const getCourses = async () => {
+            try {
+                console.log("CALLING API");
+
+                const response = await axios.get(
+                    url + "/courses/myCourses",
+                    { headers: { Authorization: "Bearer " + user.access_token } }
+                );
+
+                // Update token
+                updateToken(response)
+
+                console.log("COURSES RESPONSE:", response.data);
+                setCourses(response.data);
+
+            } catch (error) {
+                console.error("API ERROR:", error.response?.data || error.message);
+            }
+        };
+
+        getCourses();
+    }, [user?.access_token, refresh]);
 
   if (user.role === "teacher"){
     return (
