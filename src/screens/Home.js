@@ -14,6 +14,7 @@ export default function Home() {
     const {user, updateToken, signOut} = useUser()
     const [courses, setCourses] = useState([]);
     const [refresh, setRefresh] = useState(0);
+    const [studentCourseSearch, setStudentCourseSearch] = useState("")
 
     const logout = () => {
       signOut()
@@ -69,6 +70,18 @@ export default function Home() {
 
         return String(lowercaseDate).charAt(0).toUpperCase() + String(lowercaseDate).slice(1)
     };
+
+    // A function for allowing enter-presses to the student view's search courses functionality
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault()
+            searchForCoursesByName()
+        }
+    }
+    // Handle the search courses-function of student view
+    const searchForCoursesByName = () => {
+        console.log("SEARCHING FOR " + studentCourseSearch)
+    }
 
     useEffect(() => {
         if (location.state?.refresh) {
@@ -266,29 +279,33 @@ export default function Home() {
         { /* The courses section */}
         <div className="divider"></div>
 
+        { /* The search for courses-functionality */}
         <div className="row">
             <div className="col-6 col-sm-7 col-md-9"><h1>Kurssit</h1></div> 
-            <div className="col-6 col-sm-5 col-md-3 student-add-courses-input align-self-center">
-                <form>
-                    <div className="row">
-                        <div className="col-2 col-sm-1 align-self-center">
-                            <i className="fa-solid fa-bars"></i>
-                        </div>
-                        <div className="col-8 col-sm-9 align-self-center">
-                            <input 
-                                id="courseSearch"
-                                name="courseSearch"
-                                className="form-control"
-                                placeholder="Lisää kursseja"
-                            />
-                        </div>
-                        <div className="col-2 col-sm-1 align-self-center">
-                            <i className="fa-solid fa-magnifying-glass"></i>
-                        </div>
+            <div className="col-6 col-sm-5 col-md-3 student-add-courses-form align-self-center">
+                <form onSubmit={(e) => {
+                    e.preventDefault()
+                    searchForCoursesByName()
+                }}>
+                    <div className="d-flex align-items-center">
+                        <i className="fa-solid fa-bars me-2"></i>
+                        <input 
+                            id="courseSearch"
+                            name="courseSearch"
+                            value={studentCourseSearch}
+                            onChange={(e) => setStudentCourseSearch(e.target.value)}
+                            className="form-control me-2 student-add-courses-input"
+                            placeholder="Lisää kursseja"
+                        />
+                        <button className="btn" type="button" onClick={searchForCoursesByName}>
+                            <i className="fa-solid fa-magnifying-glass pointer-cursor"></i>
+                        </button>
                     </div>
                 </form>
             </div>
         </div>
+
+        {/* The section for showing all the courses the student is enrolled on */} 
 
         {/* Bring all the courses the student is part of here. */}  
         {/* If the course is not dividable by 2, make a new row */}
