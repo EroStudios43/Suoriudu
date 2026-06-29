@@ -127,7 +127,7 @@ function CoursePage() {
                         {week.exercises && week.exercises.length > 0 ? (
                             week.exercises.map(exercise => (
                                 <div key={exercise.idexercise} className="week-task">
-                                    <div className="week-task-label">Tehtävä:</div>
+                                    <div className="week-task-label">{exercise.exercise_type === "exam" ? "Koe:" : "Tehtävä:"}</div>
                                     <div className="week-task-title">{exercise.exercise_name}</div>
                                 </div>
                             ))

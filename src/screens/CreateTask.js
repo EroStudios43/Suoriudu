@@ -1,4 +1,4 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
@@ -12,8 +12,11 @@ function CreateTask() {
   const [allowLateSubmissions, setAllowLateSubmissions] = useState(false);
   const weekIndex = location.state?.weekIndex;
 
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState(location.state?.defaultStartTime || "");
+  const [endTime, setEndTime] = useState(location.state?.defaultEndTime || "");
+
+  const editMode = location.state?.editMode;
+  const editExercise = location.state?.exercise;
 
   const [tasks, setTasks] = useState([
     {
@@ -25,6 +28,21 @@ function CreateTask() {
       answer: ""
     }
   ]);   
+
+  useEffect(() => {
+    if (editExercise) {
+      setTaskName(editExercise.exercise_name || "");
+      setTaskDescription(editExercise.exercise_description || "");
+      setStartTime(editExercise.start_time || "");
+      setEndTime(editExercise.end_time || "");
+      setAllowLateSubmissions(!!editExercise.allow_late_submissions);
+
+      if (editExercise.tasks) {
+        setTasks(editExercise.tasks);
+      }
+    }
+  }, []);
+
 
   const addOption = (taskIndex) => {
     setTasks(prev =>
@@ -102,15 +120,23 @@ function CreateTask() {
     setTasks(prev => prev.filter((_, i) => i !== taskIndex));
   };
 
+  const deleteOption = (taskIndex, optionIndex) => {
+    setTasks(prev =>
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task;
+        const newOptions = task.options.filter((_, idx) => idx !== optionIndex);
+        const newCorrectAnswers = task.correctAnswers.filter(idx => idx !== optionIndex);
+        return {...task, options: newOptions, correctAnswers: newCorrectAnswers};
+      })
+    );
+  };
+
   // create task to spesific week
   const createTask = () => {
-    const invalidTask = tasks.some(t => !t.type);
+    if (!validateExercise()) return;
 
-    if (invalidTask) {
-      alert("Sinulla täytyy olla vähintään yksi tehtävä ennen tallennusta");
-      return;
-    }
     const exercise = {
+      id: editExercise?.id || Date.now(),
       exercise_name: taskName, 
       exercise_description: taskDescription, 
       allow_late_submissions: allowLateSubmissions ? 1 : 0, 
@@ -126,13 +152,69 @@ function CreateTask() {
     if (!saved[weekIndex]) {
       saved[weekIndex] = [];
     }
-
-    saved[weekIndex].push(exercise);
+    if (editMode){
+      saved[weekIndex] = saved[weekIndex].map(ex => ex.id === editExercise.id ? exercise : ex)
+    }
+    else {
+      saved[weekIndex].push(exercise);
+    }
 
     localStorage.setItem("draftExercises", JSON.stringify(saved));
 
-navigate(-1);
+    navigate(-1);
   };
+
+  const validateExercise = () => {
+    if (!taskName.trim()) {
+      alert("Nimi on pakollinen");
+      return false;
+    }
+
+    if (!startTime || !endTime) {
+      alert("Aloitus- ja lopetusaika ovat pakolliset");
+      return false;
+    }
+
+    if (tasks.length < 1) {
+      alert("Tehtävässä pitää olla vähintään yksi tehtävä");
+      return false;
+    }
+
+    for (const task of tasks) {
+      if (!task.instructions?.trim()) {
+        alert("Kaikilla tehtävillä täytyy olla tehtävänanto");
+        return false;
+      }
+      if (!task.type) {
+        alert("Valitse jokaiselle tehtävälle tehtävätyyppi");
+        return false;
+      }
+
+      if (task.type === "choice") {
+        if (!task.options || task.options.length < 2) {
+          alert("Valintatehtävässä pitää olla vähintään 2 vaihtoehtoa");
+          return false;
+        }
+
+      if (task.options.some(o => !o.trim())) {
+        alert("Valintatehtävän vaihtoehdot eivät saa olla tyhjiä");
+        return false;
+      }
+
+      if (!task.correctAnswers || task.correctAnswers.length === 0) {
+        alert("Valitse vähintään yksi oikea vastaus");
+        return false;
+      }
+    }
+
+    if (task.type === "essay" || task.type === "coding" || task.type === "drawing") {
+      // answer voi olla vapaaehtoinen -> ei validointia
+      continue;
+    }
+  }
+
+  return true;
+};
 
   return (
     <div className="task-page">
@@ -289,6 +371,9 @@ navigate(-1);
                         value={option}
                         onChange={(e) => updateOption(taskIndex, index, e.target.value)}
                       />
+                      <button className="delete-option-btn" onClick={() => deleteOption(taskIndex, index)}>
+                        ✕
+                      </button>
 
                       <label>
                         <input

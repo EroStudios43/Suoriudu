@@ -1,6 +1,6 @@
 import { hash, compare } from "bcrypt"
 import validator from "validator"
-import { getUsers, createUser, selectUserByEmail, selectUserById } from "../models/userModel.js"
+import { getUsers, createUser, selectUserByEmail, selectUserById, updateUser } from "../models/userModel.js"
 import jwt from "jsonwebtoken"
 import passwordValidator from "password-validator"
 
@@ -148,4 +148,14 @@ const userLogin = async (req, res, next) => {
     }
 }
 
-export { fetchUsers, userRegistration, userLogin }
+const updateProfile = async (req,res,next)=>{
+    try{
+        const email = req.user.email;
+        const result = await updateUser(req.user.email, req.body);
+        res.json({ success: true, result });
+    }catch(err){
+        next(err);
+    }
+};
+
+export { fetchUsers, userRegistration, userLogin, updateProfile  }

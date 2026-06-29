@@ -278,3 +278,11 @@
 .create-course-submit:hover {
     transform: translateY(-2px);
 }
+
+.exercise-item.task {
+  border-left: 4px solid #7f4caf;
+}
+
+.exercise-item.exam {
+  border-left: 4px solid #6936f4;
+}

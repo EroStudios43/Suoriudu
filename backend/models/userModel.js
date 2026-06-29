@@ -3,7 +3,7 @@ import pool from "../helpers/database.js";
 const getUsers = async () => {
 
     const [rows] = await pool.promise().query(
-        "SELECT * FROM courses"
+        "SELECT * FROM users"
     );
     return rows;
 }
@@ -23,4 +23,18 @@ const selectUserById = async (id) => {
     return rows
 }
 
-export { getUsers, createUser, selectUserByEmail, selectUserById }
+const updateUser = (email,data)=>{
+    return new Promise((resolve,reject)=>{pool.query("UPDATE users SET firstname=?, lastname=?, email=?, phone=?, role=? WHERE email=? ",[data.firstname,data.lastname,data.email,data.phone,data.role,email],            
+        (err,result)=>{
+                if(err){
+                    reject(err);
+                }else{
+                    resolve(result);
+                }
+            }
+        );
+
+    });
+};
+
+export { getUsers, createUser, selectUserByEmail, selectUserById, updateUser }

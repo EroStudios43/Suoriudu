@@ -182,8 +182,33 @@ function CreateCourse() {
     });
   };
 
-  // Save course to backend 
 
+
+  const getWeekDates = (weekIndex) => {
+    const weekStart = new Date(startDate);
+    weekStart.setDate(weekStart.getDate() + weekIndex * 7);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    return{
+      start: weekStart,
+      end: weekEnd
+    }
+  }
+
+  const toDateTimeLocal = (date) => {
+      if (!date) return "";
+
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "";
+
+      const pad = (n) => String(n).padStart(2, "0");
+
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+
+  // Save course to backend 
   const createCourse = async () => {
 
 
@@ -335,26 +360,64 @@ function CreateCourse() {
                   />
 
                   <div className="week-actions">
-                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index}})}>
+                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index, defaultStartTime: toDateTimeLocal(getWeekDates(index).start), defaultEndTime: toDateTimeLocal(getWeekDates(index).end)}})}>
                       Lisää tehtävä viikkoon +
                     </button>
-                    <button className="week-button" onClick={() => navigate("/createExam")}>
+                    <button className="week-button" onClick={() => navigate("/createExam", { state: { weekIndex: index} })}>
                       Lisää koe viikkoon +
                     </button>
                   </div>
 
-                  {week.exercises?.map((exercise, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: "10px",
-                        border: "1px solid gray",
-                        marginTop: "10px"
-                      }}
-                    >
-                      {exercise.exercise_name}
+                  <div className="week-exercises">
+                    <div className="tasks-section">
+                      <h4>Tehtävät</h4>
+
+                      {week.exercises
+                        ?.filter(e => e.exercise_type === "task")
+                        .map((exercise, i) => (
+                          <div key={exercise.id} className="exercise-item task">
+                            <span>{exercise.exercise_name}</span>
+                            <i
+                              className="fa-solid fa-pen-to-square edit-icon"
+                              onClick={() =>
+                                navigate("/createTask", {
+                                  state: {
+                                    weekIndex: index,
+                                    editMode: true,
+                                    exercise
+                                  }
+                                })
+                              }
+                            />
+                          </div>
+                        ))}
                     </div>
-                  ))}
+
+                    <div className="exams-section">
+                      <h4>Kokeet</h4>
+
+                      {week.exercises
+                        ?.filter(e => e.exercise_type === "exam")
+                        .map((exercise, i) => (
+                          <div key={exercise.id} className="exercise-item exam">
+                            <span>{exercise.exercise_name}</span>
+                            <i
+                              className="fa-solid fa-pen-to-square edit-icon"
+                              onClick={() =>
+                                navigate("/createExam", {
+                                  state: {
+                                    weekIndex: index,
+                                    editMode: true,
+                                    exercise
+                                  }
+                                })
+                              }
+                            />
+                          </div>
+                        ))}
+                    </div>
+
+                  </div>
                 </div>
               )}
 

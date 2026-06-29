@@ -58,7 +58,17 @@ const createCourse = async (req, res, next) => {
 
             if (week.exercises) {
                 for (const exercise of week.exercises) {
-                    const idexercise = await insertExercise(idweek,exercise);
+                    const normalizedExercise = {
+                        exercise_name: exercise.exercise_name,
+                        exercise_description: exercise.exercise_description,
+                        exercise_type: exercise.exercise_type, // "task" tai "exam"
+                        start_time: exercise.start_time,
+                        end_time: exercise.end_time,
+                        allow_late_submissions: exercise.allow_late_submissions ? 1 : 0,
+                        max_time: exercise.max_time || null
+                    };
+
+                    const idexercise = await insertExercise(idweek, normalizedExercise);
 
                     if (exercise.tasks) {
                         
