@@ -208,6 +208,49 @@ function CreateCourse() {
   };
 
 
+  const deleteWeek = (weekId) => {
+    setWeeks(prev => {
+      // Poista viikko
+      const updatedWeeks = prev.filter(w => w.id !== weekId);
+
+      // Poista myös tehtävät oikealta viikolta
+      const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+
+      const newExercises = {};
+      updatedWeeks.forEach((_, newIndex) => {
+        // Mappaa tehtävät uudelleen järjestyksen mukaan
+        newExercises[newIndex] = savedExercises[newIndex] || [];
+      });
+
+      localStorage.setItem("draftExercises", JSON.stringify(newExercises));
+
+      return updatedWeeks;
+    });
+  };
+
+
+
+  const handleDeleteExercise = (weekIndex, exerciseId) => {
+    setWeeks(prev => {
+      const updated = prev.map((week, idx) => {
+        if (idx !== weekIndex) return week;
+
+        return {
+          ...week,
+          exercises: week.exercises.filter(e => e.id !== exerciseId)
+        };
+      });
+
+      // Päivitä myös localStorage
+      const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+      savedExercises[weekIndex] = savedExercises[weekIndex]?.filter(e => e.id !== exerciseId) || [];
+
+      localStorage.setItem("draftExercises", JSON.stringify(savedExercises));
+
+      return updated;
+    });
+  };
+
   // Save course to backend 
   const createCourse = async () => {
 
@@ -341,12 +384,16 @@ function CreateCourse() {
           {weeks.map((week, index) => (
             <div className="week-card" key={week.id}>
               <div className="week-header" onClick={() => toggleWeek(index)}>
-                <i className={`fa-solid ${week.expanded ? "fa-chevron-down" : "fa-chevron-right"} week-toggle-icon`} />
-                <input
-                  className="week-title-input"
-                  value={week.title}
-                  onChange={(e) => handleWeekTitleChange(index, e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
+                <div className="week-header-left">
+                  <i className={`fa-solid ${week.expanded ? "fa-chevron-down" : "fa-chevron-right"} week-toggle-icon`} />
+                  <input
+                    className="week-title-input"
+                    value={week.title}
+                    onChange={(e) => handleWeekTitleChange(index, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                 <i className="fa-solid fa-xmark week-delete-icon" onClick={(e) => {e.stopPropagation(); deleteWeek(week.id);}}
                 />
               </div>
 
@@ -377,18 +424,11 @@ function CreateCourse() {
                         .map((exercise, i) => (
                           <div key={exercise.id} className="exercise-item task">
                             <span>{exercise.exercise_name}</span>
-                            <i
-                              className="fa-solid fa-pen-to-square edit-icon"
-                              onClick={() =>
-                                navigate("/createTask", {
-                                  state: {
-                                    weekIndex: index,
-                                    editMode: true,
-                                    exercise
-                                  }
-                                })
-                              }
-                            />
+                            <div className="exercise-actions">
+                              <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createTask", {state: {weekIndex: index, editMode: true, exercise}})}/>
+                              <i className="fa-solid fa-trash delete-icon" onClick={() => handleDeleteExercise(index, exercise.id)} />
+
+                            </div>
                           </div>
                         ))}
                     </div>
@@ -401,18 +441,11 @@ function CreateCourse() {
                         .map((exercise, i) => (
                           <div key={exercise.id} className="exercise-item exam">
                             <span>{exercise.exercise_name}</span>
-                            <i
-                              className="fa-solid fa-pen-to-square edit-icon"
-                              onClick={() =>
-                                navigate("/createExam", {
-                                  state: {
-                                    weekIndex: index,
-                                    editMode: true,
-                                    exercise
-                                  }
-                                })
-                              }
-                            />
+                            <div className="exercise-actions">
+                              <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createExam", {state: {weekIndex: index, editMode: true, exercise}})}/>
+                              <i className="fa-solid fa-trash delete-icon"onClick={() => handleDeleteExercise(index, exercise.id)}/>
+
+                            </div>
                           </div>
                         ))}
                     </div>

@@ -168,6 +168,21 @@
     border-radius: 14px;
     background-color: rgba(255, 255, 255, 0.05);
     cursor: pointer;
+    justify-content: space-between;
+}
+.week-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+
+.week-delete-icon {
+  cursor: pointer;
+  color: #dd8080;
+}
+.week-delete-icon:hover {
+  color: red;
 }
 
 .week-toggle-icon {
@@ -250,14 +265,13 @@
 }
 
 .create-course-footer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 24px;
+    position: sticky;
+    bottom: 0;
     display: flex;
     justify-content: center;
-    z-index: 2147483647;
-    pointer-events: auto;
+    padding: 20px 0;
+    background: transparent;
+    z-index: 10;
 }
 
 .create-course-submit {
@@ -272,7 +286,6 @@
     position: relative;
     z-index: 2147483647;
     pointer-events: auto;
-    touch-action: manipulation;
 }
 
 .create-course-submit:hover {
