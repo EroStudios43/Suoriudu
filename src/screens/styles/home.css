@@ -214,3 +214,44 @@
 .pointer-cursor {
     cursor: pointer;
 }
+
+.student-course-search-results {
+    background-color: #CFD5E5;
+    overflow: hidden;
+}
+
+.student-course-search-result {
+    background-color: #CFD5E5;
+
+}
+
+.student-course-search-result:hover {
+    filter: brightness(0.9);
+}
+
+/* Unactive link in pagination */
+.student-course-search-pagination > li > button {
+    background-color: #525D7D; 
+    color: white;
+}
+
+/* Disabled link in pagination */
+.student-course-search-pagination > .disabled > button {
+    background-color: #525D7D; 
+}
+
+/* Active link in pagination */
+.student-course-search-pagination > .active > button {
+    background-color: #525D7D; 
+    border: 1px solid #c1c1c1;
+    color:#2B385B;
+    filter: brightness(0.9);
+}
+
+/* Link hover and focus */
+.student-course-search-pagination > li > button:hover,
+.student-course-search-pagination > li > button:focus {
+    filter: brightness(0.9);
+    background-color: #525D7D;
+    color: #232859;
+}

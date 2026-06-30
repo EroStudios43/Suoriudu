@@ -1,4 +1,4 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks } from '../models/coursesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById  } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -132,4 +132,92 @@ const getCourseById = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById}
+// Get course by name, previously used in student screen's "seach for courses" -form
+const getCourseByName = async (req, res, next) => {
+    try {
+        const coursename = req.query?.coursename
+
+        // Checking if the searchable name is valid
+
+        // Check if the name exists and is string
+        if (!coursename || typeof coursename !== "string") {
+            return res.status(400).json({error: "Course name required"})
+        } 
+
+        // Sanitize the course name
+        const sanitizedCourseName = coursename.trim().toLowerCase()
+
+        // If the name is valid and sanitized, send the request to the model
+        const course = await selectCourseByName(sanitizedCourseName)
+        
+        return res.status(200).json(course || []);
+    } catch(error) {
+        return next(error)
+    }
+}
+
+// Get student's unattendended courses by name, currently used in student screen's "search for courses" -form
+const getUnattendedCoursesByName = async (req, res, next) => {
+    try {
+        const coursename = req.query?.coursename
+
+        // Checking if the searchable name is valid
+        if (!coursename || typeof coursename !== "string") {
+            console.log("name")
+            return res.status(400).json({error: "Course name is not valid"})
+        }
+
+        // Checking if the userid is valid
+        const iduser = Number(req.query?.iduser)
+        if (!Number.isInteger(iduser)) {
+            return res.status(400).json({error: "User id is not valid"})
+        }
+
+        // Sanitize the course name
+        const sanitizedCourseName = coursename.trim().toLowerCase()
+
+        // If ok, send request forward to the model
+        const course = await selectUnattendedCoursesByName(sanitizedCourseName, iduser)
+        
+        return res.status(200).json(course || []);
+    } catch(error) {
+        return next(error)
+    }
+}
+
+// Insert user into course. Default here is inserting as a student.
+const insertUserIntoCourse = async (req, res, next) => {
+    try {
+        const idcourse = Number(req.body?.idcourse)
+        const iduser = Number(req.body?.iduser)
+
+        // Check if idcourse is valid
+        if (!Number.isInteger(idcourse)) {
+            return res.status(400).json({error: "Course id not valid"})
+        }
+
+        // Check if iduser is valid
+        if (!Number.isInteger(idcourse)) {
+            return res.status(400).json({error: "User id not valid"})
+        }
+
+        // Check if course exists
+        const courseFromDb = await selectCourseById(idcourse)
+        if (!courseFromDb) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Check if user is already on the course
+        const userOnCourse = await selectUserCourseById(iduser, idcourse)
+        if (userOnCourse.length !== 0) {
+            return res.status(400).json({error: "User already on course"})
+        }
+
+        const result = await insertCourseMember(iduser, idcourse, "student");
+        return res.status(200).json(result || []);
+    } catch (error)  {
+        return next(error)
+    }
+}
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName}

@@ -32,6 +32,30 @@ const selectCourseById = async (idcourse) => {
     return rows[0];
 }
 
+const selectCourseByName = async (coursename) => {
+    const [rows] = await pool.promise().query(
+        "SELECT * FROM courses WHERE coursename LIKE ?",
+        [`%${coursename}%`]
+    );
+    return rows;
+}
+
+const selectUnattendedCoursesByName = async (coursename, iduser) => {
+    const [rows] = await pool.promise().query(
+        "SELECT courses.* FROM courses LEFT JOIN coursemembers ON courses.idcourse = coursemembers.idcourse AND coursemembers.iduser = ? WHERE coursemembers.idcourse IS NULL AND courses.coursename LIKE ?",
+        [iduser, `%${coursename}%`]
+    )
+    return rows;
+}
+
+const selectUserCourseById = async (iduser, idcourse) => {
+    const [rows] = await pool.promise().query(
+        "SELECT * FROM courses INNER JOIN coursemembers ON courses.idcourse = coursemembers.idcourse WHERE coursemembers.iduser = ? AND coursemembers.idcourse = ?",
+        [iduser, idcourse]
+    );
+    return rows;
+}
+
 const insertWeek = async (idcourse,week_name,week_description) => {
   const [result] = await pool.promise().query(
     `INSERT INTO weeks (idcourse, week_name, week_description)VALUES (?, ?, ?)`,
@@ -52,4 +76,4 @@ const selectCourseWeeks = async (idcourse) => {
 
 
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks }
+export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName }
