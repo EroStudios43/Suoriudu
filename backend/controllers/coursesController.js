@@ -65,7 +65,7 @@ const createCourse = async (req, res, next) => {
                         start_time: exercise.start_time,
                         end_time: exercise.end_time,
                         allow_late_submissions: exercise.allow_late_submissions ? 1 : 0,
-                        max_time: exercise.max_time || null
+                        max_time: exercise.exam_duration || null
                     };
 
                     const idexercise = await insertExercise(idweek, normalizedExercise);
