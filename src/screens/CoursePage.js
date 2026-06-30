@@ -108,12 +108,89 @@ function CoursePage() {
 
                         <div className="container weeks-container">
     <div className="row g-4">
+        {/* Conditional rendering required for correct layout. */}
+        {/* Layout for course with less than eight weeks */}
+        {weeks.length < 9 ?
+            (
+                <>
+                {/* Check if the amount of courses is odd in order to render the correct column width (8/12 if odd, 12/12 if even) */}
+                <div className={`${weeks.length % 2 === 1 ? "col-sm-8" : "col-sm"}`}> {/* Left column */}
+                    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                        {weeks.map((week, index) => {
+                            {/* Render box, if the amount of courses is even, or the week is not the last in case the amount of weeks is odd */}
+                            if(weeks.length % 2 === 0 || (weeks.length % 2 === 1 && index !== weeks.length - 1)) {
+                                return(
+                                <div className="col" key={week.idweek}>
+                                    <div className="week-box">
+                                        <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
+                                        <h3 className="week-title">{week.week_name}</h3>
+                                        {week.exercises && week.exercises.length > 0 ? (
+                                            week.exercises.map(exercise => (
+                                                <div key={exercise.idexercise} className="week-task">
+                                                    <div className="week-task-label">Tehtävä:</div>
+                                                    <div className="week-task-title">{exercise.exercise_name}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="no-tasks-message">Ei tehtäviä</div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        })}
+                    </div>
+                </div> 
+                {weeks.length % 2 === 1 && (
+                    <div className="col-sm-4"> {/* Right column */}
+                        <div className="col h-100" key={weeks[weeks.length - 1].idweek}>
+                            <div className="week-box">
+                                <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
+                                <h3 className="week-title">{weeks[weeks.length - 1]?.week_name}</h3>
+                                {weeks[weeks.length - 1]?.exercises && weeks[weeks.length - 1]?.exercises.length > 0 ? (
+                                    weeks[weeks.length - 1]?.exercises.map(exercise => (
+                                        <div key={exercise.idexercise} className="week-task">
+                                            <div className="week-task-label">Tehtävä:</div>
+                                            <div className="week-task-title">{exercise.exercise_name}</div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="no-tasks-message">Ei tehtäviä</div>
+                                )}
+                            </div>
+                        </div>
+                    </div> 
+                )}
+                {weeks.length > 9 && (
+                    <></>
+                )}
+                </>
+            ) : (
+                <>
+                    {weeks.map((week, index) => {
+                            {/* Render box, if the amount of courses is even, or the week is not the last in case the amount of weeks is odd */}
+                                return(
+                                <div className="col-md-4" key={week.idweek}>
+                                    <div className="week-box">
+                                        <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
+                                        <h3 className="week-title">{week.week_name}</h3>
+                                        {week.exercises && week.exercises.length > 0 ? (
+                                            week.exercises.map(exercise => (
+                                                <div key={exercise.idexercise} className="week-task">
+                                                    <div className="week-task-label">Tehtävä:</div>
+                                                    <div className="week-task-title">{exercise.exercise_name}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="no-tasks-message">Ei tehtäviä</div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        )}
+                </>
+            )
 
-        {weeks.map((week, index) => {
-            const isLastOdd =
-                weeks.length % 2 === 1 && index === weeks.length - 1;
-
-            return (
+            /*return ( 
                 <div
                     key={week.idweek}
                     className={`col-12 col-sm-6 col-md-6 col-lg-6 week-col ${isLastOdd ? "tall" : ""}`}
@@ -137,8 +214,8 @@ function CoursePage() {
 
                     </div>
                 </div>
-            );
-        })}
+            );*/
+        }
 
     </div>
 </div>
