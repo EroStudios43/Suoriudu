@@ -118,7 +118,7 @@ function CoursePage() {
                     <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
                         {weeks.map((week, index) => {
                             {/* Render box, if the amount of courses is even, or the week is not the last in case the amount of weeks is odd */}
-                            if(weeks.length % 2 === 0 || (weeks.length % 2 === 1 && index !== weeks.length - 1)) {
+                            if((weeks.length % 2 === 0) || (weeks.length % 2 === 1 && index !== weeks.length - 1) || (weeks.length === 1)) {
                                 return(
                                 <div className="col" key={week.idweek}>
                                     <div className="week-box">
@@ -140,7 +140,7 @@ function CoursePage() {
                         })}
                     </div>
                 </div> 
-                {weeks.length % 2 === 1 && (
+                {(weeks.length % 2 === 1 && weeks.length !== 1) && (
                     <div className="col-sm-4"> {/* Right column */}
                         <div className="col h-100" key={weeks[weeks.length - 1].idweek}>
                             <div className="week-box">
