@@ -11,7 +11,7 @@ const auth = (req, res, next) => {
             const access_token = authHeader.split(" ")[1]
 
             const decodedUser = jwt.verify(access_token, process.env.JWT_SECRET_KEY)
-            res.authorizationHeader(decodedUser.email)
+            req.user = decodedUser;
             next()
         } catch (err) {
             const error = new Error("Unauthorized")

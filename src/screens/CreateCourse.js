@@ -182,8 +182,76 @@ function CreateCourse() {
     });
   };
 
-  // Save course to backend 
 
+
+  const getWeekDates = (weekIndex) => {
+    const weekStart = new Date(startDate);
+    weekStart.setDate(weekStart.getDate() + weekIndex * 7);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6)
+    return{
+      start: weekStart,
+      end: weekEnd
+    }
+  }
+
+  const toDateTimeLocal = (date) => {
+      if (!date) return "";
+
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "";
+
+      const pad = (n) => String(n).padStart(2, "0");
+
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+
+  const deleteWeek = (weekId) => {
+    setWeeks(prev => {
+      // Poista viikko
+      const updatedWeeks = prev.filter(w => w.id !== weekId);
+
+      // Poista myös tehtävät oikealta viikolta
+      const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+
+      const newExercises = {};
+      updatedWeeks.forEach((_, newIndex) => {
+        // Mappaa tehtävät uudelleen järjestyksen mukaan
+        newExercises[newIndex] = savedExercises[newIndex] || [];
+      });
+
+      localStorage.setItem("draftExercises", JSON.stringify(newExercises));
+
+      return updatedWeeks;
+    });
+  };
+
+
+
+  const handleDeleteExercise = (weekIndex, exerciseId) => {
+    setWeeks(prev => {
+      const updated = prev.map((week, idx) => {
+        if (idx !== weekIndex) return week;
+
+        return {
+          ...week,
+          exercises: week.exercises.filter(e => e.id !== exerciseId)
+        };
+      });
+
+      // Päivitä myös localStorage
+      const savedExercises = JSON.parse(localStorage.getItem("draftExercises")) || {};
+      savedExercises[weekIndex] = savedExercises[weekIndex]?.filter(e => e.id !== exerciseId) || [];
+
+      localStorage.setItem("draftExercises", JSON.stringify(savedExercises));
+
+      return updated;
+    });
+  };
+
+  // Save course to backend 
   const createCourse = async () => {
 
 
@@ -316,12 +384,16 @@ function CreateCourse() {
           {weeks.map((week, index) => (
             <div className="week-card" key={week.id}>
               <div className="week-header" onClick={() => toggleWeek(index)}>
-                <i className={`fa-solid ${week.expanded ? "fa-chevron-down" : "fa-chevron-right"} week-toggle-icon`} />
-                <input
-                  className="week-title-input"
-                  value={week.title}
-                  onChange={(e) => handleWeekTitleChange(index, e.target.value)}
-                  onClick={(e) => e.stopPropagation()}
+                <div className="week-header-left">
+                  <i className={`fa-solid ${week.expanded ? "fa-chevron-down" : "fa-chevron-right"} week-toggle-icon`} />
+                  <input
+                    className="week-title-input"
+                    value={week.title}
+                    onChange={(e) => handleWeekTitleChange(index, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+                 <i className="fa-solid fa-xmark week-delete-icon" onClick={(e) => {e.stopPropagation(); deleteWeek(week.id);}}
                 />
               </div>
 
@@ -335,26 +407,50 @@ function CreateCourse() {
                   />
 
                   <div className="week-actions">
-                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index}})}>
+                    <button className="week-button" onClick={() => navigate("/createTask", {state: {weekIndex: index, defaultStartTime: toDateTimeLocal(getWeekDates(index).start), defaultEndTime: toDateTimeLocal(getWeekDates(index).end)}})}>
                       Lisää tehtävä viikkoon +
                     </button>
-                    <button className="week-button" onClick={() => navigate("/createExam")}>
+                    <button className="week-button" onClick={() => navigate("/createExam", { state: { weekIndex: index} })}>
                       Lisää koe viikkoon +
                     </button>
                   </div>
 
-                  {week.exercises?.map((exercise, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        padding: "10px",
-                        border: "1px solid gray",
-                        marginTop: "10px"
-                      }}
-                    >
-                      {exercise.exercise_name}
+                  <div className="week-exercises">
+                    <div className="tasks-section">
+                      <h4>Tehtävät</h4>
+
+                      {week.exercises
+                        ?.filter(e => e.exercise_type === "task")
+                        .map((exercise, i) => (
+                          <div key={exercise.id} className="exercise-item task">
+                            <span>{exercise.exercise_name}</span>
+                            <div className="exercise-actions">
+                              <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createTask", {state: {weekIndex: index, editMode: true, exercise}})}/>
+                              <i className="fa-solid fa-trash delete-icon" onClick={() => handleDeleteExercise(index, exercise.id)} />
+
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                  ))}
+
+                    <div className="exams-section">
+                      <h4>Kokeet</h4>
+
+                      {week.exercises
+                        ?.filter(e => e.exercise_type === "exam")
+                        .map((exercise, i) => (
+                          <div key={exercise.id} className="exercise-item exam">
+                            <span>{exercise.exercise_name}</span>
+                            <div className="exercise-actions">
+                              <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createExam", {state: {weekIndex: index, editMode: true, exercise}})}/>
+                              <i className="fa-solid fa-trash delete-icon"onClick={() => handleDeleteExercise(index, exercise.id)}/>
+
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+
+                  </div>
                 </div>
               )}
 
