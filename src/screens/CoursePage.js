@@ -9,13 +9,17 @@ const url = process.env.REACT_APP_API_URL;
 function CoursePage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
-  const { user } = useUser();
+  const { user, updateToken } = useUser();
   const [courseName, setCourseName] = useState("");
   const [courseDescription, setCourseDescription] = useState("");
   const [showRoster, setShowRoster] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [weeks, setWeeks] = useState([]);
+
+  // Student sidebar (collapse not implemented yet)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [chosenWeek, setChosenWeek] = useState({})
 
   useEffect(() => {
     if (!user || !user.access_token) {
@@ -31,7 +35,10 @@ function CoursePage() {
       try {
         const response = await axios.get(
           url + "/courses/" + courseId,
-          { headers: { Authorization: "Bearer " + user.access_token } }
+          { 
+            params: { iduser: user.id},
+            headers: { Authorization: "Bearer " + user.access_token } 
+          }
         );
         console.log("FULL COURSE:", response.data);
         console.log("Course data response:", response.data);
@@ -39,13 +46,21 @@ function CoursePage() {
         setCourseDescription(response.data.course_description || "");
         setWeeks(response.data.weeks || []);
 
+        // If user is a student, set the chosen week to the first element.
+        if(user.role === "student") {
+            setChosenWeek(response.data.weeks[0])
+        }
       } catch (error) {
         console.error("Error fetching course data:", error.response?.data || error.message);
+        if(error.status === 404) {
+            console.log("Course not found. Navigating to home page.")
+            navigate("/home")
+        }
       }
     };
 
     getCourseData();
-  }, [courseId, user]);
+  }, [courseId, user?.access_token]);
 
   useEffect(() => {
     console.log("WEEKS FROM API:", weeks);
@@ -78,6 +93,7 @@ function CoursePage() {
     { task: "Tehtävä 5", author: "Anonyymi" },
   ];
 
+  if (user.role === "teacher") {
   return (
     <div className="coursepage">
         <div className="topbar">
@@ -337,7 +353,60 @@ function CoursePage() {
         )}
 
     </div>
-  );
+  );}
+  if (user.role === "student"){
+    return (
+        <div className="coursepage">
+            { /* Topbar */}
+            <div className="topbar">
+                <div className="topbar-left">
+                    { /* Title and description */}
+                    <div className="course-title">
+                        <i className="fa-regular fa-circle-left back-icon" onClick={e => navigate("/home")}></i>
+                        <div className="student-course-titles d-block">
+                            <h2 className="text-truncate">{courseName}</h2>
+                            <h3 className="course-description-student text-truncate">{courseDescription}</h3>
+                        </div>
+                    </div>
+                </div>
+                { /* Progress bar for course's exercises */}
+                <div className="topbar-right">
+
+                </div>
+            </div>
+            <div className="divider"></div>
+            {/* Page content */}
+            <div className="d-flex">
+                {/* Navigation left-side */}
+                <div className="nav flex flex-column nav-tabs student-sidebar" role="tablist">
+                    <h3>Viikot</h3>
+                    {weeks.map((week, index) => {
+                        return (
+                                <div className={`${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
+                                    {week.week_name}
+                                </div>
+                        )
+                    })}
+                </div>
+                {/* Course week material */}
+                <div className="flex-fill ps-4">
+                    {/* Add week description here if it exists */}
+                    {chosenWeek.week_description && 
+                    <>
+                        <h4>Viikon kuvaus</h4>
+                        <p>{chosenWeek.week_description}</p>
+                    </>
+                    }
+                </div>
+                {/* Right side content */}
+                <div className="flex">
+                    <h3 className="d-inline p-2">Tehtäviin</h3>
+                    <i className="d-inline fa-solid fa-arrow-right"></i>
+                </div>
+            </div>
+        </div>
+    )
+  }
 }
 
 export default CoursePage;

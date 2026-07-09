@@ -121,22 +121,34 @@ const createCourse = async (req, res, next) => {
 
 const getCourseById = async (req, res, next) => {
     try{
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
         const {courseId } = req.params;
+        const iduser = req.query?.iduser
 
-        const course = await selectCourseById(courseId)
+        // Select user course, also check the attendance of the user so unauthorized access is denied
+        const course = await selectUserCourseById(iduser, courseId)
 
-        if(!course){
+        console.log(course[0])
+
+        if(!course[0]){
             return res.status(404).json({error: "Course not found"})
         }
         const weeks = await selectCourseWeeks(courseId)
-        console.log("WEEKS:", weeks);
+        //console.log("WEEKS:", weeks);
 
         for (const week of weeks) {
             const exercises = await selectWeekExercises(week.idweek)
-            console.log("EXERCISES FOR WEEK", week.idweek, exercises);
+            //console.log("EXERCISES FOR WEEK", week.idweek, exercises);
             week.exercises = exercises
         }
-        return res.status(200).json({...course,weeks});
+        return res.status(200).json({...course[0],weeks});
     } catch(error) {
         return next(error);
     }

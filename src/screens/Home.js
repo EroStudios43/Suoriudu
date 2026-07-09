@@ -214,6 +214,8 @@ export default function Home() {
                     { headers: { Authorization: "Bearer " + user.access_token } }
                 );
 
+                console.log(response)
+
                 // Update token
                 updateToken(response)
 
@@ -468,8 +470,8 @@ export default function Home() {
                         onClick={() => navigate(`/CoursePage/${course.idcourse}`)}
                         >
                         <div className="text-truncate">
-                            <h2>{course.coursename}</h2>
-                            <p>{course.course_description}</p>
+                            <h2 className="text-truncate">{course.coursename}</h2>
+                            <p className="text-truncate">{course.course_description}</p>
                         </div>
                     </div>
                 ))

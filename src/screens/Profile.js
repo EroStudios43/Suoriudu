@@ -142,8 +142,8 @@ export default function Profile() {
           <i className="fa-regular fa-pen-to-square"></i>
           {editMode === "role" ? (
             <select name="role" value={formData.role} onChange={handleChange}>
-              <option value="Opettaja">Opettaja</option>
-              <option value="Oppilas">Oppilas</option>
+              <option value="teacher">teacher</option>
+              <option value="student">student</option>
             </select>
           ) : (
           <span>{formData.role}</span>
