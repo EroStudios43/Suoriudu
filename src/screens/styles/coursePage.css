@@ -72,7 +72,8 @@
     background-color: #525d7d;
     color: white;
     border-bottom-color: rgb(222, 226, 230) !important; /* Needs important since bootstrap overrides otherwise*/
-    filter: brightness(110%)
+    filter: brightness(110%);
+    border-right: none;
 }
 
 .student-sidebar > .student-sidebar-item:hover {
@@ -92,6 +93,21 @@
 
 .student-sidebar.nav-tabs {
     border-bottom: none;
+}
+
+.student-left-side-sidebar {
+    border-right: 1px solid rgb(222, 226, 230);
+}
+
+@media only screen and (min-width: 768px){
+    .student-left-side-sidebar {
+        display: none;
+    }
+}
+
+/* Student content page styles */
+.student-page-content {
+    padding: 15px;
 }
 
 /* ----- */

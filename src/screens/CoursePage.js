@@ -18,7 +18,7 @@ function CoursePage() {
   const [weeks, setWeeks] = useState([]);
 
   // Student sidebar (collapse not implemented yet)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [chosenWeek, setChosenWeek] = useState({})
 
   useEffect(() => {
@@ -356,10 +356,10 @@ function CoursePage() {
   );}
   if (user.role === "student"){
     return (
-        <div className="coursepage">
+        <div className="coursepage d-flex flex-column min-vh-100">
             { /* Topbar */}
-            <div className="topbar">
-                <div className="topbar-left">
+            <div className="d-flex flex-column flex-md-row">
+                <div className="flex">
                     { /* Title and description */}
                     <div className="course-title">
                         <i className="fa-regular fa-circle-left back-icon" onClick={e => navigate("/home")}></i>
@@ -370,26 +370,43 @@ function CoursePage() {
                     </div>
                 </div>
                 { /* Progress bar for course's exercises */}
-                <div className="topbar-right">
-
+                <div className="flex-grow-1">
+                    <div className="progress-section">
+                        <div className="progress-container">
+                            <div className="progress-bar-wrapper">
+                                <div className="progress-bar">
+                                    <div className="progress-fill" style={{ width: '60%' }}></div>
+                                </div>
+                                <span className="progress-percentage">60%</span>
+                            </div>
+                        </div>
+                    </div>
+                    { /* Collapsible button */}
+                        <button className="btn edit-btn d-md-none" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+                            {sidebarCollapsed ? <i className="fa-solid fa-bars"></i> : <i className="fa-solid fa-xmark"></i>}
+                        </button>
                 </div>
             </div>
             <div className="divider"></div>
             {/* Page content */}
-            <div className="d-flex">
+            <div className="d-flex flex-grow-1">
                 {/* Navigation left-side */}
-                <div className="nav flex flex-column nav-tabs student-sidebar" role="tablist">
-                    <h3>Viikot</h3>
-                    {weeks.map((week, index) => {
-                        return (
-                                <div className={`${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
-                                    {week.week_name}
-                                </div>
-                        )
-                    })}
+                <div className={`position-relative student-left-side-sidebar ${sidebarCollapsed ? "d-none" : "d-flex"} d-md-flex`}>
+                        { /* Sidebar itself */}
+                        <div className={`nav flex flex-column nav-tabs student-sidebar ${sidebarCollapsed ? "d-none" : "d-flex"} d-md-flex`} role="tablist">
+                            <h3>Viikot</h3>
+                            {weeks.map((week, index) => {
+                                return (
+                                        <div className={`${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
+                                            {week.week_name}
+                                        </div>
+                                )
+                            })}
+                        </div>
                 </div>
+                
                 {/* Course week material */}
-                <div className="flex-fill ps-4">
+                <div className="flex-fill ps-4 student-page-content">
                     {/* Add week description here if it exists */}
                     {chosenWeek.week_description && 
                     <>
