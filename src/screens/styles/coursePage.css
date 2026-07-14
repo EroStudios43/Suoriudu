@@ -103,6 +103,8 @@
     .student-left-side-sidebar {
         display: none;
     }
+
+    
 }
 
 /* Student content page styles */
@@ -288,6 +290,44 @@
     color: #00F3FB;
     min-width: 50px;
     text-align: right;
+}
+
+/* Progress bar of student */
+.progress-container-student {
+    width: 100%;
+    max-width: 750px;
+}
+
+.progress-bar-wrapper-student {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar-student {
+    position: relative;
+    background-color: rgba(75, 75, 75, 0.5);
+    flex: 1;
+    height: 25px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-fill-student {
+    height: 100%;
+    background: linear-gradient(90deg, #00F3FB 0%, #66BB6A 100%);
+    transition: width 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.progress-star-mask {
+    position: absolute;
+    inset: 0;
+    background-color: #1D283A;
+    z-index: 2;
 }
 
 /* Content Row Styles */

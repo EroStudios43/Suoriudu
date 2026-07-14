@@ -21,6 +21,10 @@ function CoursePage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [chosenWeek, setChosenWeek] = useState({})
 
+  // Student exercise data
+  const [studentExerciseResults, setStudentExerciseResults] = useState([])
+  const [courseExercises, setCourseExercises] = useState([])
+
   useEffect(() => {
     if (!user || !user.access_token) {
       console.log("No user or token yet");
@@ -46,7 +50,8 @@ function CoursePage() {
         setCourseDescription(response.data.course_description || "");
         setWeeks(response.data.weeks || []);
 
-        // If user is a student, set the chosen week to the first element.
+        // If user is a student:
+        //  -> set the chosen week to the first element
         if(user.role === "student") {
             setChosenWeek(response.data.weeks[0])
         }
@@ -59,7 +64,32 @@ function CoursePage() {
       }
     };
 
-    getCourseData();
+    const getStudentExerciseData = async () => {
+        try {
+            // Only do this if the role of the user is student. Otherwise return.
+            if (user.role === "student") {
+                const response = await axios.get(
+                    url + "/courses/userExercisesAndAnswers",
+                    {
+                        params: {iduser: user.id, idcourse: courseId},
+                        headers: { Authorization: "Bearer " + user.access_token }
+                    }
+                );
+                console.log(response.data)
+                setStudentExerciseResults(response.data.exerciseResults)
+                setCourseExercises(response.data.exercises)
+            } else {
+                return
+            }
+        } catch (error) {
+            console.error("Error fetching student exercise data: ", error.response?.data || error.message)
+        }
+    }
+
+    getCourseData()
+    if (user.role === "student") {
+        getStudentExerciseData()
+    }
   }, [courseId, user?.access_token]);
 
   useEffect(() => {
@@ -372,12 +402,12 @@ function CoursePage() {
                 { /* Progress bar for course's exercises */}
                 <div className="flex-grow-1">
                     <div className="progress-section">
-                        <div className="progress-container">
-                            <div className="progress-bar-wrapper">
-                                <div className="progress-bar">
-                                    <div className="progress-fill" style={{ width: '60%' }}></div>
+                        <div className="progress-container-student">
+                            <div className="progress-bar-wrapper-student">
+                                <div className="progress-bar-student">
+                                    <div className="progress-fill-student" style={{width: `${Math.floor((studentExerciseResults?.length / courseExercises?.length) * 100) || 0 }%`}}></div>
                                 </div>
-                                <span className="progress-percentage">60%</span>
+                                <span className="progress-percentage-student">{Math.floor((studentExerciseResults?.length / courseExercises?.length) * 100) || 0}%</span>
                             </div>
                         </div>
                     </div>

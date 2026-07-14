@@ -1,4 +1,4 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById  } from '../models/coursesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse  } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -242,4 +242,134 @@ const insertUserIntoCourse = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName}
+// Select all the exercises of the course the user is attended on and currently looking
+const getUsersExercises = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization
+        if (!authHeader){
+            return next(new Error("Unauthorized"))
+        }
+
+        const token = authHeader.split(" ")[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+
+        // Get parameters from the request
+        const iduser = req?.query.iduser
+        const idcourse = req?.query.idcourse
+
+        // Check that user id and course id are valid
+        if (!iduser || !Number.isInteger(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idcourse || !Number.isInteger(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+        console.log("Allexfetch")
+        if(!attendedCourse[0]) {
+            
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get the exercises for the course the user has selected
+        const exercises = selectAllExercisesFromCourse(idcourse)
+
+        return res.status(200).json(exercises || [])
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const getUsersExerciseAnswers = async (req, res, next) => {
+    try {
+        // Chech that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization
+
+        if (!authHeader) {
+            return next(new Error("Unauthorized"))
+        }
+
+        const token = authHeader.split(" ")[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+
+        // Get parameters from the request
+        const iduser = req?.query.iduser
+        const idcourse = req?.query.idcourse
+
+        // Check that the user id and course id are valid
+        if (!iduser || !Number.isInteger(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idcourse || !Number.isInteger(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+        console.log("Answersfetch")
+        if (!attendedCourse[0]) {
+            
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get the done exercises for the course the user has selected
+        const doneExercises = selectUsersExerciseResultsFromCourse(iduser, idcourse)
+
+        return res.status(200).json(doneExercises || [])
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const getUsersExercisesAndResults = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization
+        if (!authHeader){
+            return next(new Error("Unauthorized"))
+        }
+
+        const token = authHeader.split(" ")[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+
+        // Get parameters from the request
+        const iduser = Number(req.query.iduser)
+        const idcourse = Number(req.query.idcourse)
+
+        // Check that user id and course id are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(iduser)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get the exercises for the course the user has selected
+        const exercises = await selectAllExercisesFromCourse(idcourse)
+
+        // Get the exercise results (user's answers) for the course the user has selected
+        const exerciseResults = await selectUsersExerciseResultsFromCourse(iduser, idcourse)
+
+        return res.status(200).json({exercises, exerciseResults})
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults}

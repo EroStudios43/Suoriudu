@@ -74,6 +74,28 @@ const selectCourseWeeks = async (idcourse) => {
     return rows;
 }
 
+const selectAllExercisesFromCourse = async (idcourse) => {
+    const [rows] = await pool.promise().query(`
+        SELECT exercises.* 
+        FROM exercises 
+        INNER JOIN weeks ON exercises.idweek = weeks.idweek
+        WHERE weeks.idcourse = ?`,
+        [idcourse]
+    );
+    return rows;
+}
 
+const selectUsersExerciseResultsFromCourse = async (iduser, idcourse) => {
+    const [rows] = await pool.promise().query(`
+        SELECT exerciseresults.* 
+        FROM exerciseresults
+        INNER JOIN exercises ON exerciseresults.idexercise = exercises.idexercise
+        INNER JOIN weeks ON exercises.idweek = weeks.idweek
+        WHERE exerciseresults.iduser = ?
+            AND weeks.idcourse = ?`,
+        [iduser, idcourse]
+    );
+    return rows;
+}
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName }
+export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse }
