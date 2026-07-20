@@ -475,7 +475,6 @@ const getUsersTasksAndAnswersForWeek = async (req, res, next) => {
                     idexercise: row.idexercise,
                     tasktype: row.tasktype,
                     question: row.question,
-                    answer: row.correct_answer
                 })
             }
 

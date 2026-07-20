@@ -51,7 +51,6 @@ const selectUsersTasksAndResultsForWeek = async (iduser, idweek) => {
       task.idexercise,
       task.tasktype,
       task.question,
-      task.answer AS correct_answer,
 
       taskresults.idtaskresult,
       taskresults.iduser,
