@@ -25,6 +25,9 @@ function CoursePage() {
   const [studentExerciseResults, setStudentExerciseResults] = useState([])
   const [courseExercises, setCourseExercises] = useState([])
 
+  // Tooltip
+  const [showTooltip, setShowTooltip] = useState(false)
+
   useEffect(() => {
     if (!user || !user.access_token) {
       console.log("No user or token yet");
@@ -55,6 +58,9 @@ function CoursePage() {
         if(user.role === "student") {
             setChosenWeek(response.data.weeks[0])
         }
+        // Update token
+        updateToken(response)
+
       } catch (error) {
         console.error("Error fetching course data:", error.response?.data || error.message);
         if(error.status === 404) {
@@ -95,6 +101,51 @@ function CoursePage() {
   useEffect(() => {
     console.log("WEEKS FROM API:", weeks);
     }, [weeks]);
+
+  // The sidebar week box of student sidebar
+  // Needs a fair amout of conditional rendering, so made it a component here
+  const StudentWeekBox = ({week}) => {
+    const getIcon = () => {
+        // Check if the week has exercises at all
+        if (!week.exercises?.length) {
+            return
+        }
+
+        const now = new Date()
+
+        // Make a lookup set for student exercise results
+        const studentResultExerciseIds = new Set(
+            studentExerciseResults?.map(r => r.idexercise)
+        )
+
+        // Check if all of the week's exercises are done
+        const areExercisesDone = week.exercises?.every(exercise => 
+            studentResultExerciseIds.has(exercise.idexercise)
+        )
+
+        // Check if some of the exercise return dates have passed
+        const hasLateExercises = week.exercises.some(exercise => 
+            new Date(exercise.end_time) < now
+        )
+
+        // Return the correct icon
+        if (areExercisesDone) {
+            return <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>
+        }
+
+        if (hasLateExercises) {
+            return <i className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1" style={{ color: "#00F3FB" }}></i>
+        }
+
+        return <i className="fa-regular fa-circle ps-3 pe-3 pt-1"></i>
+    }
+    return (
+        <div className={`d-flex justify-content-between ${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
+            {week.week_name}
+            {getIcon()}
+        </div> 
+    )
+  }
 
   const availablePeople = [
     "Aino Aalto",
@@ -427,9 +478,7 @@ function CoursePage() {
                             <h3>Viikot</h3>
                             {weeks.map((week, index) => {
                                 return (
-                                        <div className={`${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
-                                            {week.week_name}
-                                        </div>
+                                    <StudentWeekBox week={week} />
                                 )
                             })}
                         </div>
@@ -446,9 +495,34 @@ function CoursePage() {
                     }
                 </div>
                 {/* Right side content */}
-                <div className="flex">
-                    <h3 className="d-inline p-2">Tehtäviin</h3>
+            
+                <div className={`flex ${chosenWeek?.exercises?.length > 0 ? "" : "disabled-div"}`}>
+                    <div 
+                        onMouseEnter={() => chosenWeek?.exercises?.length === 0 && setShowTooltip(true)}
+                        onMouseLeave={() => setShowTooltip(false)}
+                        style={{position: "relative"}}
+                    >
+                    <h3 className="d-inline p-2 exercises" onClick={() => {
+                        if (chosenWeek.exercises.length === 0) return
+
+                        const chosenWeeksExerciseIds = new Set(
+                            chosenWeek.exercises?.map(exercise => exercise.idexercise)
+                        )
+                        
+                        const filteredStudentExerciseResults = studentExerciseResults.filter(result =>
+                            chosenWeeksExerciseIds.has(result.idexercise)
+                        )
+                        
+                        navigate(`/WeeksExercises/${chosenWeek.idweek}`, {state: { idcourse: courseId, week: chosenWeek, exerciseresults: filteredStudentExerciseResults}})}}>
+                        Tehtäviin
+                    </h3>
                     <i className="d-inline fa-solid fa-arrow-right"></i>
+                    {chosenWeek?.exercises?.length === 0 && showTooltip && (
+                        <div className="student-tooltip">
+                            Viikolla ei ole tehtäviä.
+                        </div>
+                    )}
+                    </div>
                 </div>
             </div>
         </div>

@@ -112,6 +112,30 @@
     padding: 15px;
 }
 
+.exercises {
+    cursor: pointer;
+}
+
+.disabled-div {
+    opacity: 0.65;
+}
+
+.student-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background-color: black;
+    color: white;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+}
+
 /* ----- */
 
 .back-icon {

@@ -1,0 +1,40 @@
+/* Styles for the Exercise pages */
+
+/* ----- WeeksExercises -----*/
+.exercises-container {
+  background-color: #1D283A;
+  color: white;
+  padding: 30px;
+  font-family: Arial, sans-serif;
+}
+
+/* Box for individual exercises */
+.exercise-box {
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.exercise-box:hover {
+  filter: brightness(0.9);
+}
+
+.to-exercise-btn {
+  padding: 10px 20px;
+  font-size: 18px;
+  color: #ffffff;
+  background-color: #2B385B;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8);
+  max-width: 50%;
+}
+
+.to-exercise-btn:hover {
+    background-color: #3c4a7a;
+}
+
+.course-color-0 { background-color: #979DAD; }
+.course-color-1 { background-color: #525D7D; }
+.course-color-2 { background-color: #2B385B; }
+.course-color-3 { background-color: #20294A; }

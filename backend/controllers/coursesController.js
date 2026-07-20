@@ -1,5 +1,5 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse  } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse } from '../models/coursesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
@@ -348,7 +348,7 @@ const getUsersExercisesAndResults = async (req, res, next) => {
             return next(new Error("User id is not valid"))
         }
 
-        if (!idcourse || Number.isNaN(iduser)) {
+        if (!idcourse || Number.isNaN(idcourse)) {
             return next(new Error("Course id is not valid"))
         }
 
@@ -372,4 +372,132 @@ const getUsersExercisesAndResults = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults}
+const getUserTasksAndAnswersForExercise = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization
+        if (!authHeader){
+            return next(new Error("Unauthorized"))
+        }
+
+        const token = authHeader.split(" ")[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+
+        // Get parameters from the request
+        const iduser = Number(req.query.iduser)
+        const idcourse = Number(req.query.idcourse)
+        const idexercise = Number(req.query.idexercise)
+
+        // Check that user id, course id, and exerciseid are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        if (!idexercise || Number.isNaN(idexercise)) {
+            return next(new Error("Exercise id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get all task for the exercise
+        const exerciseTasks = await selectAllExerciseTasks(idexercise)
+
+        // Get all user's done tasks and answers
+        const taskResults = await selectUsersExerciseTaskResults(iduser, idexercise)
+
+        return res.status(200).json({exerciseTasks, taskResults})
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const getUsersTasksAndAnswersForWeek = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization
+        if (!authHeader){
+            return next(new Error("Unauthorized"))
+        }
+
+        const token = authHeader.split(" ")[1]
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY)
+
+        // Get parameters from the request
+        const iduser = Number(req.query.iduser)
+        const idcourse = Number(req.query.idcourse)
+        const idweek = Number(req.query.idweek)
+
+        // Check that user id, course id, and week id are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        if (!idweek || Number.isNaN(idweek)) {
+            return next(new Error("Exercise id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get user's week's tasks and answers
+        const rows = await selectUsersTasksAndResultsForWeek(iduser, idweek)
+
+        // Make the result into a map and an array that can be returned into the frontend
+        // This is done to make the handling of the data easier in the frontend
+
+        const taskMap = new Map()
+        const answerArray = []
+
+        // Iterate over each row so we can update the task map, and add an answer to an array if there is one
+        rows.forEach(row => {
+            // Check if task map has the corresponding taskid already. If not, add the task along with its data.
+            if (!taskMap.has(row.idtask)) {
+                taskMap.set(row.idtask, {
+                    idtask: row.idtask,
+                    idexercise: row.idexercise,
+                    tasktype: row.tasktype,
+                    question: row.question,
+                    answer: row.correct_answer
+                })
+            }
+
+            // Get the possible answers from the row, and add them to the array
+            if (row.idtaskresult !== null) {
+                answerArray.push({
+                    idtaskresult: row.idtaskresult,
+                    idtask: row.idtask,
+                    iduser: row.iduser,
+                    answer: row.student_answer,
+                    points: row.points,
+                    teacher_comment: row.teacher_comment
+                })
+            }
+        })
+
+        // Return the data as two arrays
+        return res.status(200).json({tasks: Array.from(taskMap.values()), answerArray})
+
+    } catch (error) {
+        return next(error)
+    }
+}
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek }

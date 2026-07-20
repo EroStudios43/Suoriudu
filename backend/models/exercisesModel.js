@@ -25,7 +25,48 @@ const selectWeekExercises = async (idweek) => {
     return rows;
 }
 
+const selectAllExerciseTasks = async (idexercise) => {
+  const [rows]  = await pool.promise().query(
+    `SELECT * FROM task WHERE idexercise = ?`, 
+    [idexercise]);
+  return rows;
+}
+
+const selectUsersExerciseTaskResults = async (iduser, idexercise) => {
+  const [rows] = await pool.promise().query(`
+    SELECT * 
+    FROM taskresults
+    INNER JOIN task ON taskresults.idtask = task.idtask
+    WHERE taskresults.iduser = ?
+      AND task.idexercise = ?`,
+    [iduser, idexercise]
+  );
+  return rows;
+}
+
+const selectUsersTasksAndResultsForWeek = async (iduser, idweek) => {
+  const [rows] = await pool.promise().query(`
+    SELECT 
+      task.idtask,
+      task.idexercise,
+      task.tasktype,
+      task.question,
+      task.answer AS correct_answer,
+
+      taskresults.idtaskresult,
+      taskresults.iduser,
+      taskresults.answer AS student_answer,
+      taskresults.points,
+      taskresults.teacher_comment
+    FROM task
+    LEFT JOIN taskresults ON taskresults.idtask = task.idtask
+      AND taskresults.iduser = ?
+    INNER JOIN exercises ON task.idexercise = exercises.idexercise
+    WHERE exercises.idweek = ?`,
+    [iduser, idweek]
+  );
+  return rows
+}
 
 
-
-export { insertExercise, insertTask, selectWeekExercises };
+export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek };
