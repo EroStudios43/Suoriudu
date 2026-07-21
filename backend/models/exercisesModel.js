@@ -67,5 +67,33 @@ const selectUsersTasksAndResultsForWeek = async (iduser, idweek) => {
   return rows
 }
 
+const selectUsersExerciseTasksAndResults = async (iduser, idexercise) => {
+  console.log("EEEEE" + iduser, idexercise)
+  const [rows] = await pool.promise().query(`
+    SELECT 
+      task.idtask,
+      task.tasktype,
+      task.question,
+      
+      taskresults.idtaskresult,
+      taskresults.iduser,
+      taskresults.answer AS student_answer,
+      taskresults.points,
+      taskresults.teacher_comment,
 
-export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek };
+      exercises.*
+
+      FROM task
+
+      LEFT JOIN taskresults ON taskresults.idtask = task.idtask
+        AND taskresults.iduser = ?
+      INNER JOIN exercises ON task.idexercise = exercises.idexercise
+      
+      WHERE task.idexercise = ?`,
+    [iduser, idexercise]
+  )
+  return rows
+}
+
+
+export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults };

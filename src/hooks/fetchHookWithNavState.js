@@ -1,19 +1,22 @@
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useLocation } from "react-router-dom"
 
-const useFetchData = (fetchFunction, stateKey) => {
+const useFetchData = (fetchFunction, stateKey = null) => {
   // Get location and make ref
   const location = useLocation()
   const controllerRef = useRef(null)
 
+  // Get initial data from state. 
+  const initialData = stateKey ? location.state?.[stateKey] : null
+
   // Fields for data, loading and error
   // Set state data if there is data from previous page
-  const [data, setData ] = useState(location.state?.[stateKey] || null)
+  const [data, setData ] = useState(initialData || null)
   // If the state is set, loading false. If not, true.
-  const [loading, setLoading] = useState(!location.state?.[stateKey])
+  const [loading, setLoading] = useState(!initialData)
   const [error, setError] = useState(null)
 
-  const getData = async () => {
+  const getData = useCallback(async () => {
     // Cancel previous request if there is one.
     if (controllerRef.current) {
       controllerRef.current.abort()
@@ -34,12 +37,18 @@ const useFetchData = (fetchFunction, stateKey) => {
         setError(error)
       }
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) {
+        setLoading(false)
+      }
     }
-  }
+  }, [fetchFunction])
 
-  // Call the fetchdata when mounted
+  // Call the fetchdata when the fetch function changes
+  // NOTE: UseCallback should be used when configuring the frontend fetch function in order to prevent infinite looping
+  //       Doing this will make sure the fetch function will not reconfigure itself when the page reloads
+  //       If this is not used, the useEffect might cause an infinite loop here.
   useEffect(() => {
+    
     getData()
     return () => {
       // Abort if there
@@ -47,7 +56,7 @@ const useFetchData = (fetchFunction, stateKey) => {
         controllerRef.current.abort()
       }
     }
-  }, [])
+  }, [fetchFunction])
 
   return { data, loading, error, refetch: getData, setData}
 }

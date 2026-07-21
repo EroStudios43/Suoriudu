@@ -39,7 +39,7 @@ function WeeksExercises() {
     // Fallback in case the course id is not set in state
     // Needed in the back-button.
     if (!location.state?.idcourse) {
-      // Add fallback code here
+      // Add fallback code here, not done yet
       console.log("Fetch data manually with id")
     }
 
@@ -176,7 +176,7 @@ function WeeksExercises() {
                               <p><small>Myöhästyneitä palautuksia ei sallita</small></p>
                             }
                             <div className="text-end">
-                              <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskQuestions/${exercise.idexercise}`, {state: {idweek: idweek}})}>Suorita tehtävä</button>
+                              <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskQuestions/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Suorita tehtävä</button>
                             </div>
                             
                           </div>

@@ -57,9 +57,9 @@ root.render(
             <Route path="/CoursePage/:courseId" element={<CoursePage/>} />
             <Route path="/TaskOverview" element={<TaskOverview/>} />
             <Route path="/TestOverview" element={<TestOverview/>} />
-            <Route path="/TaskQuestions/:exerciseId" element={<TaskQuestions/>} />
+            <Route path="/TaskQuestions/:idexercise" element={<TaskQuestions/>} />
             <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
-            <Route path="/WeeksExercises/:weekId" element={<WeeksExercises />} />
+            <Route path="/WeeksExercises/:idweek" element={<WeeksExercises />} />
           </Route>
 
         </Routes>
