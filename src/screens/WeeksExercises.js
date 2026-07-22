@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import "./styles/exercises.css";
 import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
+import useFetchData from "../hooks/fetchHookWithNavState.js";
 import axios from "axios";
 
 const url = process.env.REACT_APP_API_URL;
@@ -29,6 +30,42 @@ function WeeksExercises() {
   // -> Get week data in case the object didn't get passed through the state
   // -> Get course id for navigation if user didn't go to the page trough the navigation itself
   // -> Get task information, since it's not been fetched before
+
+  const fetchWeekExercises = useCallback(async (signal) => {
+    // Check that user has access token
+    if (!user || !user.access_token) {
+      console.log("No user or token yet")
+      return null
+    }
+
+    // Check that the other variables are defined
+    if (!idcourse || !week) {
+      console.log("Variables not set yet")
+      return null
+    }
+
+    try {
+      const response = await axios.get(
+        url + "/courses/weekExercises",
+        {
+          params: {iduser: user.id, idcourse: idcourse, idweek: idweek},
+          headers: {Authorization: "Bearer " + user.access_token},
+          signal
+        }
+      )
+      console.log("EEEE")
+      console.log(response.data)
+      setWeek({...week, exercises: response.data})
+    } catch (error) {
+      console.log("Error fetching exercise data:", error.response?.data || error.message)
+      if (error.status === 404) {
+        console.log("Course not found. Navigating to home page.")
+      }
+    }
+  }, [user?.access_token, idweek])
+
+  const { data, loading, error } = useFetchData(fetchWeekExercises)
+
   useEffect(() => {
     // Check that user has access token
     if (!user || !user.access_token) {
@@ -43,6 +80,8 @@ function WeeksExercises() {
       console.log("Fetch data manually with id")
     }
 
+    console.log(week)
+
     // Get the tasks for all of the weeks exercises.
     const getWeekTasks = async () => {
       
@@ -50,7 +89,7 @@ function WeeksExercises() {
       const response = await axios.get(
         url + "/courses/userTasksAndAnswersWeek",
         {
-          params: {iduser: user.id, idcourse: idcourse, idweek: week.idweek},
+          params: {iduser: user.id, idcourse: idcourse, idweek: idweek},
           headers: { Authorization: "Bearer " + user.access_token }
         }
       );

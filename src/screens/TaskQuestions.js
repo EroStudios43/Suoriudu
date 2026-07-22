@@ -7,6 +7,42 @@ import useFetchData from "../hooks/fetchHookWithNavState.js";
 
 const url = process.env.REACT_APP_API_URL;
 
+// The function to render all task boxes.
+const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
+  if (task.tasktype === "essay") {
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <textarea 
+            id={task.idtask} 
+            className="form-control essay" 
+            value={answers[task.idtask] || ""} 
+            onChange={(e) =>
+              setAnswers(prev => ({...prev, [task.idtask]: e.target.value
+            }))
+          }>
+          </textarea>
+        </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "multiple_choice") {
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          
+          
+        </div>
+        <hr />
+      </>
+    )
+  }
+})
+
 function TaskQuestions() {
   // Variables for navigation and getting some values from previous page
   const navigate = useNavigate();
@@ -16,11 +52,15 @@ function TaskQuestions() {
   const { idexercise } = useParams()
   const { user, updateToken } = useUser()
   const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
+  const [ idweek, setIdWeek ] = useState(location.state?.idweek)
 
   // Data for tasks and exercise
   const [ tasks, setTasks ] = useState([])
   const [ taskResults, setTaskResults ] = useState([])
   const [ exercisedata, setExercisedata ] = useState({})
+
+  // Variables for student's answers
+  const [ answers, setAnswers ] = useState({})
 
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -35,6 +75,7 @@ function TaskQuestions() {
       return null
     }
 
+    // Get the exercise and task data
     try {
       const response = await axios.get(
         url + "/courses/userExerciseDataAndTasks",
@@ -46,6 +87,14 @@ function TaskQuestions() {
       )
 
       console.log(response.data)
+      setTasks(response.data.tasks)
+      setTaskResults(response.data.answerArray)
+      setExercisedata(response.data.exercise)
+
+      // Set the task results to the answer array if previous answers are present
+      if(response.data.answerArray.length)
+      
+      updateToken(response)
       return response.data
       
     } catch (error) {
@@ -72,22 +121,88 @@ function TaskQuestions() {
       console.log("Fetch data manually with id")
     }
 
-    console.log(data)
-
   }, [user?.access_token, idexercise])
 
-  return (
-    <div className="body">
-        <div className="container">
-            <h1>Kysymykset</h1>
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate(`/WeeksExercises/${location.state.idweek}`)}>
-                    Takaisin
-            </button>
-            
-        </div>
+  const handleSubmit = () => {
+    console.log(answers)
+  }
 
-    </div>
-  );
+  // The star progress bar with a clickable scrollspy.
+  const RenderProgressBar = () => {
+    const NavLink = ({task, index}) => {
+      // Handle click and move the screen to right section
+      const handleClick = (e) => {
+        e.preventDefault()
+        const element = document.getElementById(`scrollspy-section${index}`)
+        if (element) {
+          element?.scrollIntoView({ behavior: "smooth", block: "start"})
+        }
+      }
+
+      // Get task results for the progress bar and check if the corresponding task is done
+      const isDone = taskResults?.some(
+        (taskResult) => taskResult.idtask === task.idtask
+      )
+
+
+      // Return the nav item (star) for the task
+      return (<li className="nav-item">
+        <i className={`fa-regular fa-star progress-star me-1 ${isDone ? "complete" : ""}`} onClick={handleClick}></i>
+      </li>)
+    }
+    return(
+      <div id="starProgression" className="d-inline">
+        <ul className="nav flex-wrap">
+        {tasks.map((task, index) => (
+          <NavLink task={task} index={index}/>
+        ))}
+    </ul>
+      </div>
+    )
+  }
+
+  if (user.role === "student" || user.role === "teacher") {
+    return (
+      <div className="container-fluid min-vh-100 exercises-container">
+          <div className="row">
+            <div className="col-md-1" />
+            { /* White box for page content */}
+            <div className="col-md-10 rounded-4 p-4 allTasksBox">
+              <div className="row">
+                <div className="col d-inline">
+                  <i className="fa-regular fa-circle-left back-icon-light d-inline" onClick={e => navigate(`/WeeksExercises/${location.state.idweek}`, {state: {idcourse: idcourse}})}></i>
+                </div>
+              </div>
+              <div className="row">
+                <div className="col-md-2">
+                   <h1 className="display-4">{exercisedata?.exercise_name}</h1>
+                </div>
+                <div className="col-md-8" />
+                <div className="col-md-2 scrollspy-example" data-bs-spy="scroll" data-bs-target="#starProgression" data-bs-offset="0" tabIndex={0}>
+                 
+                  <RenderProgressBar />
+                </div>
+              </div>
+              <div className="row">
+                <form noValidate>
+                  {tasks.map((task, index) => {
+                    return (
+                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
+                    )
+                  })}
+
+                  <button type="button" className="btn btn-primary" onClick={handleSubmit}>PRINT</button>
+                </form>
+              </div>
+            </div>
+            <div className="col-md-1" />
+          </div>
+          
+          
+      </div>
+    );
+  }
+  
 }
 
 export default TaskQuestions;

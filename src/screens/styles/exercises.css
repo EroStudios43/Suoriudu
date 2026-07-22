@@ -38,3 +38,42 @@
 .course-color-1 { background-color: #525D7D; }
 .course-color-2 { background-color: #2B385B; }
 .course-color-3 { background-color: #20294A; }
+
+
+/* ----- TaskQuestions -----*/
+.allTasksBox {
+  background-color: white;
+  color: black;
+}
+
+.back-icon-light {
+  color: black;
+  box-shadow: none;
+  font-size: 40px;
+  cursor: pointer;
+}
+
+.back-icon-light:hover {
+  color: #5c5c5c;
+}
+
+.single-task {
+  scroll-margin-top: 50px;
+}
+
+.single-task p {
+  font-size: 18px;
+}
+
+.essay {
+  width: 100%;
+}
+
+.progress-star {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.progress-star.complete {
+  color: #00F3FB;
+}

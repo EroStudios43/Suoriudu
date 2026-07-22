@@ -114,17 +114,18 @@ function CoursePage() {
         const now = new Date()
 
         // Make a lookup set for student exercise results
-        const studentResultExerciseIds = new Set(
-            studentExerciseResults?.map(r => r.idexercise)
+        const completedExerciseIds = new Set(
+            studentExerciseResults?.filter(r => r.complete_time != null).map(r => r.idexercise)
         )
 
         // Check if all of the week's exercises are done
         const areExercisesDone = week.exercises?.every(exercise => 
-            studentResultExerciseIds.has(exercise.idexercise)
+            completedExerciseIds.has(exercise.idexercise)
         )
 
         // Check if some of the exercise return dates have passed
         const hasLateExercises = week.exercises.some(exercise => 
+            !completedExerciseIds.has(exercise.idexercise) &&
             new Date(exercise.end_time) < now
         )
 

@@ -135,8 +135,6 @@ const getCourseById = async (req, res, next) => {
         // Select user course, also check the attendance of the user so unauthorized access is denied
         const course = await selectUserCourseById(iduser, courseId)
 
-        console.log(course[0])
-
         if(!course[0]){
             return res.status(404).json({error: "Course not found"})
         }
@@ -154,7 +152,7 @@ const getCourseById = async (req, res, next) => {
     }
 }
 
-// Get course by name, previously used in student screen's "seach for courses" -form
+// Get course by name, previously used in student screen's "search for courses" -form
 const getCourseByName = async (req, res, next) => {
     try {
         const coursename = req.query?.coursename
@@ -185,7 +183,6 @@ const getUnattendedCoursesByName = async (req, res, next) => {
 
         // Checking if the searchable name is valid
         if (!coursename || typeof coursename !== "string") {
-            console.log("name")
             return res.status(400).json({error: "Course name is not valid"})
         }
 
@@ -269,7 +266,6 @@ const getUsersExercises = async (req, res, next) => {
 
         // Check that the user is attended on the course itself
         const attendedCourse = await selectUserCourseById(iduser, idcourse)
-        console.log("Allexfetch")
         if(!attendedCourse[0]) {
             
             return res.status(404).json({error: "Course not found"})
@@ -312,7 +308,6 @@ const getUsersExerciseAnswers = async (req, res, next) => {
 
         // Check that the user is attended on the course itself
         const attendedCourse = await selectUserCourseById(iduser, idcourse)
-        console.log("Answersfetch")
         if (!attendedCourse[0]) {
             
             return res.status(404).json({error: "Course not found"})
@@ -522,7 +517,6 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
         }
 
         if (!idcourse || Number.isNaN(idcourse)) {
-            console.log("EEEEE ", idcourse)
             return next(new Error("Course id is not valid"))
         }
 
@@ -530,7 +524,6 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
             return next(new Error("Exercise id is not valid"))
         }
 
-        console.log(iduser, idcourse, idexercise, req.query)
 
         // Check that the user is attended on the course itself
         const attendedCourse = await selectUserCourseById(iduser, idcourse)
@@ -542,7 +535,6 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
         // Get user's exercise data along with all exercise's tasks and already submitted task results
         const rows = await selectUsersExerciseTasksAndResults(iduser, idexercise)
 
-        console.log(rows)
         // Make the results into three arrays of 
         // -> exercise data
         // -> tasks
@@ -583,6 +575,7 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
                     idtaskresult: row.idtaskresult,
                     idtask: row.idtask,
                     iduser: row.iduser,
+                    idexerciseresult: row.idexerciseresult,
                     answer: row.student_answer,
                     points: row.points,
                     teacher_comment: row.teacher_comment
@@ -597,4 +590,49 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks }
+const getWeeksExercises = async (req, res, next) => {
+    try {
+         // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // Get parameters from the request
+        const iduser = Number(req.query.iduser)
+        const idweek = Number(req.query.idweek)
+        const idcourse = Number(req.query.idcourse)
+
+        // Check that user id and course id are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idweek || Number.isNaN(idweek)) {
+            return next(new Error("Week id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Get the exercises for the week the user selected
+        const exercises = await selectWeekExercises(idweek)
+
+        return res.status(200).json(exercises || [])
+    } catch (error) {
+        return next(error)
+    }
+}
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises }
