@@ -457,9 +457,26 @@ function CoursePage() {
                         <div className="progress-container-student">
                             <div className="progress-bar-wrapper-student">
                                 <div className="progress-bar-student">
-                                    <div className="progress-fill-student" style={{width: `${Math.floor((studentExerciseResults?.length / courseExercises?.length) * 100) || 0 }%`}}></div>
+                                    <div 
+                                        className="progress-fill-student" 
+                                        style={{
+                                            width: `${
+                                                Math.floor(
+                                                    (
+                                                        (studentExerciseResults?.filter(r => r.complete_time != null).length) || 0 / 
+                                                        (courseExercises?.length || 1)
+                                                    ) * 100) 
+                                                || 0 }%`
+                                            }}
+                                            ></div>
                                 </div>
-                                <span className="progress-percentage-student">{Math.floor((studentExerciseResults?.length / courseExercises?.length) * 100) || 0}%</span>
+                                <span className="progress-percentage-student">
+                                    {Math.floor(
+                                        (
+                                            (studentExerciseResults?.filter(r => r.complete_time != null).length) || 0 / 
+                                            (courseExercises?.length || 1)
+                                        ) * 100) || 0}%
+                                </span>
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises } from "../controllers/coursesController.js"
+import { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults } from "../controllers/coursesController.js"
 import { auth } from '../helpers/auth.js'
 
 const router = Router()
@@ -11,6 +11,7 @@ router.get("/userTasksAndAnswersWeek", auth, getUsersTasksAndAnswersForWeek)
 router.get("/userExerciseDataAndTasks", auth, getUsersExerciseWithTasks)
 router.get("/weekExercises", auth, getWeeksExercises)
 router.get("/:courseId", auth, getCourseById)
+router.post("/addExerciseAndTaskResults", auth, insertUserExerciseAndTaskResults)
 router.post("/addUserOnCourse", auth, insertUserIntoCourse)
 router.post("/", auth, createCourse)
 

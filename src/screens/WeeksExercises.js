@@ -163,8 +163,10 @@ function WeeksExercises() {
                                   return (amountOfDoneTasks + "/" + exerciseTasks?.length)
                                 })()}
                                 {
-                                  studentExerciseResults?.map(ex => ex.idexercise)
-                                  .includes(exercise.idexercise) ? (
+                                  studentExerciseResults?.some(ex => 
+                                    ex.idexercise === exercise.idexercise &&
+                                    ex.complete_time != null
+                                  ) ? (
                                     <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>
                                   ) :
                                   (

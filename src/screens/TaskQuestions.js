@@ -34,7 +34,74 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
         <div id={`scrollspy-section${index}`} className="col single-task">
           <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
           <p>{task.question}</p>
+          {task.answer.options.map((option, index2) => {
+            return(
+              <div key={index2} className="form-check student-multiple-choice d-flex justify-content-between align-items-start p-2">
+                <label className="form-check-label" htmlFor={`${task.idtask}${index2}`} style={{flex: 1}}>
+                  {option}
+                </label>
+                <input 
+                  className="mt-1 form-check-input" 
+                  checked={answers[task.idtask]?.includes(index2) || false}
+                    onChange={(e) => {
+                    setAnswers(prev => {
+                      const prevTaskAnswers = prev[task.idtask] || []
+
+                      let updated
+
+                      if (e.target.checked) {
+                        updated = [...prevTaskAnswers, index2]
+                      } else {
+                        updated = prevTaskAnswers.filter(i => i !== index2)
+                        // Remove instance from the answers if none are selected
+                        if (updated.length === 0) {
+                          const { [task.idtask]: _, ...rest } = prev;
+                          return rest;
+                        }
+                      }
+
+                      return {
+                        ...prev,
+                        [task.idtask]: updated
+                      }
+                    })
+                  }}
+                  type="checkbox" 
+                  id={`${task.idtask}${index2}`}
+                />
+              </div>
+            )
+          })}
           
+        </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "single_choice") {
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          {task.answer.options.map((option, index2) => {
+            return(
+              <div key={index2} className="form-check student-single-choice d-flex justify-content-between align-items-start p-2">
+                <label className="form-check-label" htmlFor={`${task.idtask}${index2}`} style={{flex: 1}}>
+                  {option}
+                </label>
+                <input 
+                  className="mt-1 form-check-input" 
+                  name={`task-${task.idtask}`}
+                  checked={answers[task.idtask] === index2 ? true : false}
+                  onChange={(e) => {
+                    setAnswers(prev => ({...prev, [task.idtask]: index2}))
+                  }}
+                  type="radio" 
+                  id={`${task.idtask}${index2}`}
+                />
+              </div>
+            )
+          })}
           
         </div>
         <hr />
@@ -59,8 +126,11 @@ function TaskQuestions() {
   const [ taskResults, setTaskResults ] = useState([])
   const [ exercisedata, setExercisedata ] = useState({})
 
-  // Variables for student's answers
+  // Variable for student's answers (both from the database and the current ones)
   const [ answers, setAnswers ] = useState({})
+
+  // Variable for showing the confirmation screen for returning the exercise
+  const [showConfirm, setShowConfirm ] = useState(false)
 
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -87,12 +157,23 @@ function TaskQuestions() {
       )
 
       console.log(response.data)
+      
+      // Make an object out of the already submitted answers
+      const tempAnswerObject = response.data.answerArray.reduce((acc, task) => {
+        acc[task.idtask] = task.answer
+        return acc
+      }, {})
+      console.log(tempAnswerObject)
+      setAnswers(tempAnswerObject)
+      
       setTasks(response.data.tasks)
       setTaskResults(response.data.answerArray)
       setExercisedata(response.data.exercise)
 
       // Set the task results to the answer array if previous answers are present
-      if(response.data.answerArray.length)
+      if(response.data.answerArray.length) {
+        
+      }
       
       updateToken(response)
       return response.data
@@ -123,7 +204,17 @@ function TaskQuestions() {
 
   }, [user?.access_token, idexercise])
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    try {
+      const exerciseObject = {
+        idexercise: idexercise,
+        taskResults: answers
+      }
+      
+      const res = await axios.post(url + "/courses/addExerciseAndTaskResults", exerciseObject, {headers: {Authorization: "Bearer " + user.access_token}})
+    } catch (error) {
+      console.log("Error submitting answers:", error.response?.data || error.message)
+    }
     console.log(answers)
   }
 
@@ -190,15 +281,50 @@ function TaskQuestions() {
                       <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
                     )
                   })}
-
-                  <button type="button" className="btn btn-primary" onClick={handleSubmit}>PRINT</button>
+                  <div className="text-center">
+                    <button type="button" className="btn btn-submit rounded-5" onClick={() => setShowConfirm(!showConfirm)}>Palauta tehtäväpaketti</button>
+                  </div>
                 </form>
               </div>
+              { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              {showConfirm && (
+                <div className="modal-overlay modal-overlay-light">
+                    <div className="modal-dialog model-dialog-light">
+                        <div className="modal-header modal-header-light">
+                            <h3>
+                              Oletko varma, että haluat palauttaa tehtäväpaketin?
+                            </h3>
+                          <button type="button" className="modal-close modal-close-light" onClick={() => setShowConfirm(false)}>
+                              <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                        <div className="modal-body">
+                            
+                            {Object.keys(answers).length !== tasks.length && (
+                              <p className="text-danger">
+                                Kaikkiin tehtäviin ei ole vastattu. 
+                              <br />
+                                Voit palauttaa tehtävän, mutta vastaamattomista tehtävistä ei saa pisteitä.
+                              </p>
+                            )}
+                            <br />
+                            
+                            <br />
+                            <div class="row">
+                              <div className="col text-start">
+                                <button type="button" className="btn btn-cancel rounded-5" onClick={() => setShowConfirm(false)}>Peruuta</button>
+                              </div>
+                              <div className="col text-end">
+                                <button type="button" className="btn btn-submit rounded-5" onClick={() => handleSubmit()}>Palauta tehtäväpaketti</button>
+                              </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             </div>
             <div className="col-md-1" />
           </div>
-          
-          
       </div>
     );
   }

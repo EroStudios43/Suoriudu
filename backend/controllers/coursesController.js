@@ -1,5 +1,5 @@
 import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults } from '../models/exercisesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult  } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
@@ -53,7 +53,7 @@ const createCourse = async (req, res, next) => {
         await insertCourseMember(iduser, idcourse, "teacher");
 
 
-        for (const week of weeks) {
+        for (const week of wee4ks) {
             const idweek = await insertWeek(idcourse,week.title,week.content);
 
             if (week.exercises) {
@@ -532,6 +532,14 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
             return res.status(404).json({error: "Course not found"})
         }
 
+        // Check if a new exerciseResult for needs to be created (exercise opened for the first time)
+        const unfinishedExerciseRows = await selectUnfinishedExerciseResult(idexercise, iduser)
+
+        if (!(unfinishedExerciseRows.length > 0)) {
+            const now = new Date()
+            await insertExerciseResult(iduser, idexercise, now, null, null)
+        }
+
         // Get user's exercise data along with all exercise's tasks and already submitted task results
         const rows = await selectUsersExerciseTasksAndResults(iduser, idexercise)
 
@@ -561,11 +569,27 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
         rows.forEach(row => {
             // Check if task map has the corresponding taskid already. If not, add the task along with its data.
             if (!taskMap.has(row.idtask)) {
+                // Make sure that the actual correct answers aren't returned to the frontend
+                let taskAnswer = null
+                if (row.answer) {
+                    try {
+                        const parsedAnswer = JSON.parse(row.answer)
+
+                        // Remove correct answers
+                        delete parsedAnswer.correctAnswers
+                        
+                        taskAnswer = parsedAnswer
+                    } catch (error) {
+                        taskAnswer = null
+                    }
+                }
+
                 taskMap.set(row.idtask, {
                     idtask: row.idtask,
                     idexercise: row.idexercise,
                     tasktype: row.tasktype,
                     question: row.question,
+                    answer: taskAnswer
                 })
             }
 
@@ -592,7 +616,7 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
 
 const getWeeksExercises = async (req, res, next) => {
     try {
-         // Check that the user is authorized (has token and it's correct)
+        // Check that the user is authorized (has token and it's correct)
         const authHeader = req.headers.authorization;
         if (!authHeader) {
             return next(new Error("Unauthorized"));
@@ -629,10 +653,76 @@ const getWeeksExercises = async (req, res, next) => {
         // Get the exercises for the week the user selected
         const exercises = await selectWeekExercises(idweek)
 
+        console.log(req.user)
+
         return res.status(200).json(exercises || [])
     } catch (error) {
         return next(error)
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises }
+// Insert exerciseresult (no task results etc.). Can be used to insert the starting time, or edit already existing records.
+const insertUserExerciseResult = async (req, res, next) => {
+    try {
+        
+    } catch (e) {
+        return next(e)
+    }
+}
+
+// Insert taskresult
+const insertUserTaskResult = async (req, res, next) => {
+    try {
+        
+    } catch (e) {
+        return next(e)
+    }
+}
+
+// Insert the exerciseresult and all the exercises taskresults at once.
+const insertUserExerciseAndTaskResults = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // Get parameters from the request
+        const iduser = req.user.iduser
+        const idexercise = req.body.idexercise
+        const taskResults = req.body.taskResults
+
+        console.log(req.body)
+
+        // Check if the user already has an unfinished exerciseresult with the specified idexercise
+        const unfinishedExerciseRows = await selectUnfinishedExerciseResult(idexercise, iduser)
+
+        if (unfinishedExerciseRows.length === 0) {
+            // If no record yet, throw error
+            throw new Error("No active exercise attempt found")
+        } else if (unfinishedExerciseRows.length > 0) {
+            // If it exists, update the existing record
+            const idexerciseresult = unfinishedExerciseRows[0].idexerciseresult
+            console.log("Unfinished Exercise Result Id:", idexerciseresult)
+
+            // Change the taskresults into a form where they can be used in the sql query
+            // No mapping with single values here, since running everything in one sql query is more efficient
+            const entries = Object.entries(taskResults)
+            const taskInsertResult = await insertOrUpdateTaskResult(entries, idexerciseresult, iduser)
+
+            // Get the current date so we can update the exerciseresult complete_time row
+            const now = new Date()
+            await updateExerciseResult(idexerciseresult, {complete_time: now})
+        }
+
+        return "works"
+    } catch (e) {
+        return next(e)
+    }
+}
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults }

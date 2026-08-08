@@ -77,3 +77,57 @@
 .progress-star.complete {
   color: #00F3FB;
 }
+
+/* Multiple choice box */
+.student-multiple-choice, .student-single-choice {
+  background-color: #F0EEF7;
+  margin: 0;
+}
+
+.student-multiple-choice:hover, .student-single-choice:hover {
+  background-color: #D4CEE8;
+}
+
+.student-multiple-choice > input, .student-single-choice > input {
+  float: none;
+}
+
+.student-multiple-choice > input[type="checkbox"]:checked , .student-single-choice > input[type="radio"]:checked {
+  background-color: #6752AD;
+  border-color: #6752AD;
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.btn-submit {
+  background-color: #6752AD;
+  color: white;
+}
+
+.btn-submit:hover {
+  background-color: #6752AD;
+  filter: brightness(80%);
+}
+
+.btn-cancel {
+  background-color: #B9AFD9;
+}
+
+.btn-cancel:hover {
+  background-color: #B9AFD9;
+  filter: brightness(80%);
+}
+
+.model-dialog-light {
+  background-color:#D4CEE8;
+}
+
+.modal-header-light > h3 {
+  color: black;
+}
+
+.modal-close-light {
+  color: black;
+}

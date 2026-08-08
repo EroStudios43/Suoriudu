@@ -139,7 +139,7 @@ const userLogin = async (req, res, next) => {
 
         // No errors path, creating the token and returning the user data and the token
         return res
-            .authorizationHeader(req.body.email)
+            .authorizationHeader(user)
             .status(200)
             .json({ id: user.iduser, email: user.email, firstname: user.firstname, lastname: user.lastname, phone: user.phone, role: user.role })
 
