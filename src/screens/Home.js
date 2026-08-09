@@ -46,6 +46,7 @@ export default function Home() {
         
 
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [exams, setExams] = useState([]);
 
 
     const formatDate = (date) => {
@@ -125,19 +126,6 @@ export default function Home() {
             setStudentCourseSearchResults(response.data)
             setTotalPages(Math.ceil(response.data.length / resultsPerPage))
 
-            // Test data for the search box.
-            /*setStudentCourseSearchResults([
-                { idcourse: 1, coursename: "Introduction to Programming" },
-                { idcourse: 2, coursename: "Web Development Basics" },
-                { idcourse: 3, coursename: "Advanced React" },
-                { idcourse: 4, coursename: "Database Systems" },
-                { idcourse: 5, coursename: "Data Structures and Algorithms" },
-                { idcourse: 6, coursename: "Mobile App Development" },
-                { idcourse: 7, coursename: "Cybersecurity Fundamentals" },
-                { idcourse: 8, coursename: "Cloud Computing" },
-                { idcourse: 9, coursename: "Machine Learning Basics" },
-                { idcourse: 10, coursename: "UI/UX Design" }])
-            */
         } catch (e) {
             console.log(e)
         }
@@ -220,6 +208,37 @@ export default function Home() {
                 console.log("COURSES RESPONSE:", response.data);
                 setCourses(response.data);
 
+                // Fetch exams for each course
+                try {
+                    const examList = [];
+                    for (const c of response.data) {
+                        try {
+                            const resp = await axios.get(url + "/courses/" + c.idcourse, { headers: { Authorization: "Bearer " + user.access_token } });
+                            const weeks = resp.data.weeks || [];
+                            for (const w of weeks) {
+                                const exercises = w.exercises || [];
+                                for (const ex of exercises) {
+                                    if (ex.exercise_type === "exam") {
+                                        examList.push({
+                                            idcourse: c.idcourse,
+                                            coursename: c.coursename,
+                                            idexercise: ex.idexercise,
+                                            examname: ex.exercise_name,
+                                            start_time: ex.start_time,
+                                            end_time: ex.end_time
+                                        });
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Failed to fetch course details for exams', c.idcourse, e.message || e);
+                        }
+                    }
+                    setExams(examList);
+                } catch (e) {
+                    console.error('Failed to collect exams', e);
+                }
+
             } catch (error) {
                 console.error("API ERROR:", error.response?.data || error.message);
             }
@@ -261,10 +280,42 @@ export default function Home() {
                 
                 <div className="left-side">
                             
-                    <div className="info-card">
-                        <h2>{formatDate(selectedDate)}</h2>
-                        <p>Tänne tulee myöhemmin backendistä tietoa.</p>
-                    </div>
+                                        <div className="info-card">
+                                                <h2>{formatDate(selectedDate)}</h2>
+                                                <div className="exam-list">
+                                                    {exams.filter(ex => {
+                                                            if (!ex.start_time) return false;
+                                                            const dt = new Date(ex.start_time);
+                                                            const sel = new Date(selectedDate);
+                                                            return dt.toDateString() === sel.toDateString();
+                                                    }).length === 0 ? (
+                                                        <p>Päivälle ei ole tehty kokeita.</p>
+                                                    ) : (
+                                                        exams.filter(ex => {
+                                                                if (!ex.start_time) return false;
+                                                                const dt = new Date(ex.start_time);
+                                                                const sel = new Date(selectedDate);
+                                                                return dt.toDateString() === sel.toDateString();
+                                                            }).map((ex) => (
+                                                                <div className="exam-row" key={ex.idexercise}>
+                                                                    <i className="fa-solid fa-graduation-cap hat"></i>
+                                                                    {
+                                                                        (() => {
+                                                                            const start = ex.start_time ? new Date(ex.start_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                                                                            const end = ex.end_time ? new Date(ex.end_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                                                                            return <div className="exam-time">{start}{end ? `-${end}` : ''}</div>;
+                                                                        })()
+                                                                    }
+                                                                    <div className="exam-course">{ex.coursename}</div>
+                                                                    <div className="exam-name">{ex.examname}</div>
+                                                                    <button className="exam-next">
+                                                                        <i className="fa-solid fa-caret-right"></i>
+                                                                    </button>
+                                                                </div>
+                                                            ))
+                                                    )}
+                                                </div>
+                                        </div>
 
                     <button className="marathon-btn" onClick={e => navigate("/TaskEvaluation")}>
                             <p>Arviointimaratoni</p>
@@ -276,7 +327,7 @@ export default function Home() {
                 </div>
 
                 <div className="right-side">
-                    <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate}/>
+                    <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate} exams={exams} />
                 </div>
             </div>
 
@@ -372,7 +423,7 @@ export default function Home() {
             {/* The calendar component */}
             <div className="col-md">
                 <h2>Kalenteri</h2>
-                <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate}/>
+                <Calendar selectedDate={selectedDate} onDateSelect={setSelectedDate} exams={exams} />
                 <br />
                 
                 <h2>Tulossa</h2>

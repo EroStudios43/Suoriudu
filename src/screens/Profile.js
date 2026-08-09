@@ -10,6 +10,31 @@ export default function Profile() {
   const navigate = useNavigate();
   const {user, setUser} = useUser()
 
+  const normalizeRole = (role) => {
+    const normalizedRole = String(role || "").trim().toLowerCase();
+
+    if (normalizedRole === "teacher" || normalizedRole === "opettaja") {
+      return "teacher";
+    }
+
+    if (normalizedRole === "student" || normalizedRole === "oppilas") {
+      return "student";
+    }
+
+    return normalizedRole;
+  };
+
+  const getRoleLabel = (role) => {
+    switch (normalizeRole(role)) {
+      case "teacher":
+        return "Opettaja";
+      case "student":
+        return "Oppilas";
+      default:
+        return role || "-";
+    }
+  };
+
   const [darkMode, setDarkMode] = useState(false);
 
   const [editMode, setEditMode] = useState(null);
@@ -19,7 +44,7 @@ export default function Profile() {
   const [formData, setFormData] = useState({
       firstname: user.firstname,
       lastname: user.lastname,
-      role: user.role,
+      role: normalizeRole(user.role),
       email: user.email,
       phone: user.phone || ""
   });
@@ -36,9 +61,14 @@ export default function Profile() {
   const saveProfile = async () => {
     try{
         setSaving(true);
-        console.log("SENDING:", formData);
+        const payload = {
+            ...formData,
+            role: normalizeRole(formData.role)
+        };
 
-        const res = await axios.put(url + "/users/profile",formData,
+        console.log("SENDING:", payload);
+
+        const res = await axios.put(url + "/users/profile", payload,
             {headers:{Authorization: `Bearer `+ user.access_token }}
         );
         console.log("SUCCESS:", res.data);
@@ -46,7 +76,7 @@ export default function Profile() {
 
         const updatedUser = {
             ...user,
-            ...formData
+            ...payload
         };
 
         setUser(updatedUser);
@@ -142,11 +172,11 @@ export default function Profile() {
           <i className="fa-regular fa-pen-to-square"></i>
           {editMode === "role" ? (
             <select name="role" value={formData.role} onChange={handleChange}>
-              <option value="Opettaja">Opettaja</option>
-              <option value="Oppilas">Oppilas</option>
+              <option value="teacher">Opettaja</option>
+              <option value="student">Oppilas</option>
             </select>
           ) : (
-          <span>{formData.role}</span>
+          <span>{getRoleLabel(formData.role)}</span>
           )}
         </div>
 

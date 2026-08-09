@@ -22,6 +22,7 @@ import TestOverview from "./screens/TestOverview.js";
 import TaskQuestions from "./screens/TaskQuestions.js";
 import TaskEvaluation from "./screens/TaskEvaluation.js";
 import WavePagesLayout from './screens/WavePagesLayout.js';
+import WeekOverview from './screens/WeekOverview.js';
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -58,6 +59,7 @@ root.render(
             <Route path="/TestOverview" element={<TestOverview/>} />
             <Route path="/TaskQuestions" element={<TaskQuestions/>} />
             <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
+            <Route path="/WeekOverview" element={<WeekOverview/>} />
           </Route>
 
         </Routes>

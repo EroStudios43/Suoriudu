@@ -1,4 +1,4 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById  } from '../models/coursesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -33,7 +33,7 @@ const getUsersCourses = async(req, res, next) => {
 const createCourse = async (req, res, next) => {
     try {
         // Do not allow empty course name
-        const { name, course_description, startDate, endDate, weeks } = req.body;
+        const { name, course_description, startDate, endDate, weeks, students } = req.body;
         if (!name.trim() || !name) {
             return res.status(400).json({ error: "Course name is required" });
         }
@@ -52,6 +52,26 @@ const createCourse = async (req, res, next) => {
 
         await insertCourseMember(iduser, idcourse, "teacher");
 
+        // If students were provided when creating the course, add them as students
+        console.log('createCourse: students payload =', students);
+        if (Array.isArray(students) && students.length) {
+            for (const studentId of students) {
+                const sid = Number(studentId);
+                if (!Number.isInteger(sid)) {
+                    console.warn('createCourse: invalid student id', studentId);
+                    continue;
+                }
+                // don't add the creator again
+                if (sid === iduser) continue;
+                try {
+                    const r = await insertCourseMember(sid, idcourse, "student");
+                    console.log('createCourse: inserted student', sid, 'result:', r?.insertId || r);
+                } catch (err) {
+                    // ignore individual insert errors (e.g. FK violation or duplicate)
+                    console.warn('Failed to add student', sid, err.message || err);
+                }
+            }
+        }
 
         for (const week of weeks) {
             const idweek = await insertWeek(idcourse,week.title,week.content);
@@ -129,15 +149,105 @@ const getCourseById = async (req, res, next) => {
             return res.status(404).json({error: "Course not found"})
         }
         const weeks = await selectCourseWeeks(courseId)
-        console.log("WEEKS:", weeks);
+        const members = await selectCourseMembers(courseId)
 
         for (const week of weeks) {
             const exercises = await selectWeekExercises(week.idweek)
-            console.log("EXERCISES FOR WEEK", week.idweek, exercises);
             week.exercises = exercises
         }
-        return res.status(200).json({...course,weeks});
+        return res.status(200).json({...course,weeks,members});
     } catch(error) {
+        return next(error);
+    }
+}
+
+const updateCourse = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        const { coursename, course_description, course_start_time, course_end_time } = req.body;
+
+        const course = await selectCourseById(courseId);
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        const updatedCourse = await updateCourseById(courseId, {
+            coursename: coursename ?? course.coursename,
+            course_description: course_description ?? course.course_description,
+            course_start_time: course_start_time ?? course.course_start_time,
+            course_end_time: course_end_time ?? course.course_end_time,
+        });
+
+        return res.status(200).json(updatedCourse);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+const deleteCourse = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        const course = await selectCourseById(courseId);
+
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        await deleteCourseById(courseId);
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        return next(error);
+    }
+}
+
+const getCourseMembers = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        const members = await selectCourseMembers(courseId);
+        return res.status(200).json(members || []);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+const addCourseMember = async (req, res, next) => {
+    try {
+        const { courseId } = req.params;
+        const { iduser } = req.body;
+
+        if (!Number.isInteger(Number(iduser))) {
+            return res.status(400).json({ error: "User id not valid" });
+        }
+
+        const course = await selectCourseById(courseId);
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        const existingMember = await selectUserCourseById(Number(iduser), Number(courseId));
+        if (existingMember.length !== 0) {
+            return res.status(400).json({ error: "User already on course" });
+        }
+
+        const result = await insertCourseMember(Number(iduser), Number(courseId), "student");
+        return res.status(201).json(result || []);
+    } catch (error) {
+        return next(error);
+    }
+}
+
+const removeCourseMember = async (req, res, next) => {
+    try {
+        const { courseId, userId } = req.params;
+        const course = await selectCourseById(courseId);
+
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        await removeCourseMemberFromDb(Number(userId), Number(courseId));
+        return res.status(200).json({ success: true });
+    } catch (error) {
         return next(error);
     }
 }
@@ -230,4 +340,4 @@ const insertUserIntoCourse = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName}
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse}

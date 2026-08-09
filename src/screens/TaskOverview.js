@@ -9,8 +9,8 @@ function TaskOverview() {
   return (
     <div className="body">
         <div className="container">
-            <h1>Tarkastele kurssia</h1>
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/")}>
+            <h1>Tarkastele tehtävää</h1>
+            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate(-1)}>
                     Takaisin
             </button>
             

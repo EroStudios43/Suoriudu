@@ -119,5 +119,5 @@ CREATE TABLE weeks (
   idcourse INT,
   week_name VARCHAR(255),
   week_description TEXT,
-  FOREIGN KEY (idcourse) REFERENCES courses(idcourse)
+  FOREIGN KEY (idcourse) REFERENCES courses(idcourse) ON DELETE CASCADE ON UPDATE CASCADE
 );

@@ -24,6 +24,113 @@ const insertCourseMember = async (iduser, idcourse, userrole) => {
     return result;
 }
 
+const selectCourseMembers = async (idcourse) => {
+    const [rows] = await pool.promise().query(
+        `SELECT cm.iduser, cm.userrole, u.firstname, u.lastname, u.email
+         FROM coursemembers cm
+         INNER JOIN users u ON cm.iduser = u.iduser
+         WHERE cm.idcourse = ?`,
+        [idcourse]
+    );
+    return rows;
+}
+
+const updateCourseById = async (idcourse, courseData) => {
+    const [result] = await pool.promise().query(
+        "UPDATE courses SET coursename = ?, course_description = ?, course_start_time = ?, course_end_time = ? WHERE idcourse = ?",
+        [courseData.coursename, courseData.course_description, courseData.course_start_time, courseData.course_end_time, idcourse]
+    );
+    return result;
+}
+
+const deleteCourseById = async (idcourse) => {
+    const connection = await pool.promise().getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        await connection.query(
+            `DELETE FROM taskcomments
+             WHERE idtaskresult IN (
+                 SELECT idtaskresult FROM taskresults WHERE idtask IN (
+                     SELECT idtask FROM task WHERE idexercise IN (
+                         SELECT idexercise FROM exercises WHERE idweek IN (
+                             SELECT idweek FROM weeks WHERE idcourse = ?
+                         )
+                     )
+                 )
+             )`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM taskresults
+             WHERE idtask IN (
+                 SELECT idtask FROM task WHERE idexercise IN (
+                     SELECT idexercise FROM exercises WHERE idweek IN (
+                         SELECT idweek FROM weeks WHERE idcourse = ?
+                     )
+                 )
+             )`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM task
+             WHERE idexercise IN (
+                 SELECT idexercise FROM exercises WHERE idweek IN (
+                     SELECT idweek FROM weeks WHERE idcourse = ?
+                 )
+             )`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM exercises
+             WHERE idweek IN (
+                 SELECT idweek FROM weeks WHERE idcourse = ?
+             )`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM weeks WHERE idcourse = ?`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM materials WHERE idcourse = ?`,
+            [idcourse]
+        );
+
+        await connection.query(
+            `DELETE FROM coursemembers WHERE idcourse = ?`,
+            [idcourse]
+        );
+
+        const [result] = await connection.query(
+            "DELETE FROM courses WHERE idcourse = ?",
+            [idcourse]
+        );
+
+        await connection.commit();
+        return result;
+    } catch (error) {
+        await connection.rollback();
+        throw error;
+    } finally {
+        connection.release();
+    }
+}
+
+const removeCourseMember = async (iduser, idcourse) => {
+    const [result] = await pool.promise().query(
+        "DELETE FROM coursemembers WHERE iduser = ? AND idcourse = ?",
+        [iduser, idcourse]
+    );
+    return result;
+}
+
 const selectCourseById = async (idcourse) => {
     const [rows] = await pool.promise().query(
         "SELECT * FROM courses WHERE idcourse = ?",
@@ -76,4 +183,4 @@ const selectCourseWeeks = async (idcourse) => {
 
 
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName }
+export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectCourseMembers, updateCourseById, deleteCourseById, removeCourseMember }

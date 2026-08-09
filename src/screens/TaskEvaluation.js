@@ -8,7 +8,7 @@ function TaskEvaluation() {
   return (
     <div className="body">
         <div className="container">
-            <h1>Tarkista tehtäviä</h1>
+            <h1>Tarkista tehtäviää</h1>
             <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/home")}>
                     Takaisin
             </button>

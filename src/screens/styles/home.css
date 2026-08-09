@@ -70,6 +70,17 @@
     padding: 25px;
     border-radius: 16px;
     box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
+
+        .exam-list { display:flex; flex-direction:column; gap:12px; }
+        .exam-row { display:flex; align-items:center; gap:12px; padding:8px; background: rgba(43,56,91,0.7); border-radius:8px; }
+        .exam-time { font-weight:600; min-width:64px; }
+        .exam-course { font-weight:600; color:#cfd8ff; }
+        .exam-name { color:#ffffff; flex:1; }
+        .exam-next { background:transparent; border:none; color:#ffffff; cursor:pointer; }
+}
+.hat {
+    color: #00F3FB;
+    font-size: 20px;
 }
 
 .marathon-btn {

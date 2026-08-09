@@ -1,0 +1,83 @@
+.small-week-box {
+    padding: 8px !important;
+    margin-bottom: 8px !important;
+    border-radius: 10px;
+    background: rgba(43,56,91,0.55);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.small-week-box .week-title {
+    font-size: 16px;
+    margin: 0 0 6px 0;
+}
+.small-week-box .week-task-desc {
+    font-size: 13px;
+    color: #d0d7ef;
+}
+.material-card {
+    background: rgba(43,56,91,0.6);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+}
+.material-card .card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+.material-content {
+    color: #e6eefc;
+    white-space: pre-wrap;
+}
+
+/* Week-specific styles moved from coursePage.css */
+.week-box {
+    background: linear-gradient(180deg, #2B385B 0%, #202B44 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    width: auto;
+    height: auto;
+    position: relative;
+}
+
+.week-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 18px;
+    cursor: pointer;
+    color: #bbbbbb;
+}
+
+.week-menu:hover {
+    color: #ffffff;
+}
+
+.week-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.week-task {
+    margin-bottom: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.week-task:last-child {
+    border-bottom: none;
+}
+
+.week-task-label {
+    font-size: 11px;
+    color: #8b8b8b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.week-task-title  {
+    font-size: 16px;
+    font-weight: 600;
+}
