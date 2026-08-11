@@ -2,6 +2,7 @@ import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById,
 import { insertExercise, insertTask, selectWeekExercises } from '../models/exercisesModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
+import pool from '../helpers/database.js'
 import jwt from 'jsonwebtoken'
 
 const getUsersCourses = async(req, res, next) => {
@@ -160,6 +161,83 @@ const getCourseById = async (req, res, next) => {
         return next(error);
     }
 }
+
+const getExerciseSubmissions = async (req, res, next) => {
+    try {
+        const { courseId, exerciseId } = req.params;
+
+        const course = await selectCourseById(courseId);
+        if (!course) {
+            return res.status(404).json({ error: "Course not found" });
+        }
+
+        const [memberRows] = await pool.promise().query(
+            "SELECT iduser FROM coursemembers WHERE idcourse = ?",
+            [courseId]
+        );
+
+        const totalStudents = memberRows.length;
+
+        const [submissionRows] = await pool.promise().query(
+            `SELECT er.idexerciseresult, er.starting_time, er.complete_time, er.ai_notes,
+                    u.iduser, u.firstname, u.lastname
+             FROM exerciseresults er
+             INNER JOIN users u ON er.iduser = u.iduser
+             WHERE er.idexercise = ?
+             ORDER BY er.complete_time DESC, er.starting_time DESC`,
+            [exerciseId]
+        );
+
+        const [reviewedRows] = await pool.promise().query(
+            `SELECT tr.idtaskresult, tr.points, tr.teacher_comment, u.iduser, u.firstname, u.lastname
+             FROM taskresults tr
+             INNER JOIN task t ON tr.idtask = t.idtask
+             INNER JOIN users u ON tr.iduser = u.iduser
+             WHERE t.idexercise = ?
+             ORDER BY tr.idtaskresult DESC`,
+            [exerciseId]
+        );
+
+        const reviewedUserIds = new Set(reviewedRows.map((row) => row.iduser));
+        const submissionsByUser = new Map();
+
+        submissionRows.forEach((row) => {
+            const submittedAt = row.complete_time || row.starting_time || null;
+            submissionsByUser.set(row.iduser, {
+                iduser: row.iduser,
+                name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
+                submittedAt,
+                autoCheck: row.ai_notes || "Ei vielä arvioitu",
+                reviewed: reviewedUserIds.has(row.iduser),
+            });
+        });
+
+        reviewedRows.forEach((row) => {
+            if (!submissionsByUser.has(row.iduser)) {
+                submissionsByUser.set(row.iduser, {
+                    iduser: row.iduser,
+                    name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
+                    submittedAt: null,
+                    autoCheck: "Ei vielä arvioitu",
+                    reviewed: true,
+                });
+            }
+        });
+
+        const submissions = Array.from(submissionsByUser.values());
+        const reviewed = submissions.filter((submission) => submission.reviewed);
+        const unreviewed = submissions.filter((submission) => !submission.reviewed);
+
+        return res.status(200).json({
+            exerciseId,
+            totalStudents,
+            reviewed,
+            unreviewed,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
 
 const updateCourse = async (req, res, next) => {
     try {
