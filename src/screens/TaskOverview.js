@@ -71,7 +71,23 @@ function TaskOverview() {
       <div className="topbar task-overview-topbar">
         <div className="topbar-left">
           <div className="course-title">
-            <i className="fa-regular fa-circle-left back-icon" onClick={() => navigate(-1)}></i>
+            <i
+              className="fa-regular fa-circle-left back-icon"
+              onClick={() => {
+                if (location.state?.week) {
+                  navigate('/WeekOverview', {
+                    replace: true,
+                    state: {
+                      courseId,
+                      week: location.state.week,
+                    }
+                  });
+                  return;
+                }
+
+                navigate('/CoursePage/' + courseId, { replace: true });
+              }}
+            ></i>
             <div>
               <h2 className="course-name task-overview-title">{taskName}</h2>
               <p className="course-description task-overview-subtitle">{loading ? "Ladataan..." : completionText}</p>
@@ -89,7 +105,38 @@ function TaskOverview() {
             </div>
           </div>
 
-          <button className="settings-button" type="button" title="Asetukset" aria-label="Asetukset" onClick={() => {}}>
+          <button
+            className="settings-button"
+            type="button"
+            title="Muokkaa tehtävää"
+            aria-label="Muokkaa tehtävää"
+            onClick={async () => {
+              if (!exercise?.idexercise || !courseId || !user?.access_token) {
+                navigate('/CreateTask', { state: { courseId, weekIndex: exercise?.idweek ?? 0, editMode: true, exercise, source: 'taskOverview' } });
+                return;
+              }
+
+              try {
+                const response = await axios.get(
+                  `${url}/courses/${courseId}/exercises/${exercise.idexercise}/details`,
+                  { headers: { Authorization: `Bearer ${user.access_token}` } }
+                );
+
+                navigate('/CreateTask', {
+                  state: {
+                    courseId,
+                    weekIndex: response.data?.exercise?.idweek ?? exercise?.idweek ?? 0,
+                    editMode: true,
+                    exercise: response.data?.exercise || exercise,
+                    source: 'taskOverview',
+                  }
+                });
+              } catch (error) {
+                console.error('Failed to fetch full exercise details', error);
+                navigate('/CreateTask', { state: { courseId, weekIndex: exercise?.idweek ?? 0, editMode: true, exercise, source: 'taskOverview' } });
+              }
+            }}
+          >
             <i className="fa-solid fa-gear"></i>
           </button>
         </div>
@@ -127,7 +174,20 @@ function TaskOverview() {
                   <span className="submission-status-value">{submission.autoCheck}</span>
                 </div>
 
-                <button className="submission-arrow" aria-label="Avaa palautus" type="button">
+                <button
+                  className="submission-arrow"
+                  aria-label="Avaa palautus"
+                  type="button"
+                  onClick={() => navigate('/TaskEvaluation', {
+                    state: {
+                      courseId,
+                      exercise,
+                      submission,
+                      studentName: submission.name,
+                      userId: submission.iduser,
+                    }
+                  })}
+                >
                   <i className="fa-solid fa-chevron-right"></i>
                 </button>
               </div>
@@ -164,10 +224,27 @@ function TaskOverview() {
 
                 <div className="submission-status">
                   <span className="submission-status-label">Arviointi:</span>
-                  <span className="submission-status-value">Arvioitu</span>
+                  <span className="submission-status-value">
+                    {submission.points !== undefined && submission.points !== null && submission.points !== ""
+                      ? `${Number(submission.points)} p`
+                      : "Arvioitu"}
+                  </span>
                 </div>
 
-                <button className="submission-arrow" aria-label="Avaa arvioitu palautus" type="button">
+                <button
+                  className="submission-arrow"
+                  aria-label="Avaa arvioitu palautus"
+                  type="button"
+                  onClick={() => navigate('/TaskEvaluation', {
+                    state: {
+                      courseId,
+                      exercise,
+                      submission,
+                      studentName: submission.name,
+                      userId: submission.iduser,
+                    }
+                  })}
+                >
                   <i className="fa-solid fa-chevron-right"></i>
                 </button>
               </div>

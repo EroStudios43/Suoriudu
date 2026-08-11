@@ -72,13 +72,23 @@ function WeekOverview() {
   const tasks = exercises.filter(e => (e.exercise_type || "task") === "task");
   const exams = exercises.filter(e => (e.exercise_type || "") === "exam");
 
-  const formatTime = (t) => {
+  const formatDate = (t) => {
     if (!t) return "";
     try {
-      return new Date(t).toLocaleString("fi-FI", { hour: "2-digit", minute: "2-digit", hour12: false });
+      return new Date(t).toLocaleDateString("fi-FI", { day: "2-digit", month: "2-digit", year: "numeric" });
     } catch (e) {
       return t;
     }
+  };
+
+  const formatDuration = (value) => {
+    if (!value) return "";
+    if (typeof value === "string" && value.includes(":")) return value;
+    const minutes = Number(value);
+    if (!Number.isFinite(minutes) || minutes <= 0) return value || "";
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`;
   };
 
   return (
@@ -132,7 +142,8 @@ function WeekOverview() {
                   <i className="fa-solid fa-ellipsis-vertical week-menu" onClick={() => navigate('/TaskOverview', { state: { courseId, exercise: task, week } })}></i>
                   <h4 className="week-title">{task.exercise_name}</h4>
                   <div className="week-task-desc">{task.exercise_description}</div>
-                  <div className="week-task-time">{formatTime(task.start_time)}{task.end_time ? ` - ${formatTime(task.end_time)}` : ''}</div>
+                  <div className="week-task-time">Aukeaa: {formatDate(task.start_time)}</div>
+                  <div className="week-task-time">Sulkeutuu: {formatDate(task.end_time)}</div>
                 </div>
               ))
             )}
@@ -148,7 +159,17 @@ function WeekOverview() {
                   <i className="fa-solid fa-ellipsis-vertical week-menu" onClick={() => navigate('/TestOverview', { state: { courseId, exercise: exam, week } })}></i>
                   <h4 className="week-title">{exam.exercise_name}</h4>
                   <div className="week-task-desc">{exam.exercise_description}</div>
-                  <div className="week-task-time">{formatTime(exam.start_time)}{exam.end_time ? ` - ${formatTime(exam.end_time)}` : ''}</div>
+                  <div className="week-task-time">Koepäivä: {formatDate(exam.start_time)}</div>
+                  <div className="week-task-time">Kesto: {formatDuration(exam.exam_duration || exam.max_time || exam.end_time ? (() => {
+                    if (exam.start_time && exam.end_time) {
+                      const diff = new Date(exam.end_time) - new Date(exam.start_time);
+                      const totalMinutes = Math.max(0, Math.round(diff / 60000));
+                      const hours = Math.floor(totalMinutes / 60);
+                      const minutes = totalMinutes % 60;
+                      return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+                    }
+                    return "";
+                  })() : "")}</div>
                 </div>
               ))
             )}

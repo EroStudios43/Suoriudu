@@ -70,6 +70,31 @@ function CoursePage() {
     refreshCourseData();
   }, [courseId, user?.access_token]);
 
+  useEffect(() => {
+    if (!user || !user.access_token) {
+      return;
+    }
+
+    const fetchAvailableUsers = async () => {
+      try {
+        const response = await axios.get(url + "/users", {
+          headers: { Authorization: "Bearer " + user.access_token },
+        });
+
+        const enrolledIds = new Set((courseMembers || []).map((member) => member.iduser));
+        const users = (response.data || []).filter(
+          (person) => person.iduser !== user.id && !enrolledIds.has(person.iduser)
+        );
+
+        setAvailableUsers(users);
+      } catch (error) {
+        console.error("Error fetching users:", error.response?.data || error.message);
+      }
+    };
+
+    fetchAvailableUsers();
+  }, [user?.access_token, user?.id, courseMembers]);
+
   // Student sidebar (collapse not implemented yet)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true)
   const [chosenWeek, setChosenWeek] = useState({})
@@ -87,7 +112,7 @@ function CoursePage() {
       return;
     }
 
-    const fetchUsers = async () => {
+    const fetchCourseData = async () => {
       try {
         const response = await axios.get(
           url + "/courses/" + courseId,
@@ -102,19 +127,16 @@ function CoursePage() {
         setCourseDescription(response.data.course_description || "");
         setWeeks(response.data.weeks || []);
 
-        // If user is a student:
-        //  -> set the chosen week to the first element
-        if(user.role === "student") {
-            setChosenWeek(response.data.weeks[0])
+        if (user.role === "student") {
+            setChosenWeek(response.data.weeks[0]);
         }
-        // Update token
-        updateToken(response)
 
+        updateToken(response);
       } catch (error) {
         console.error("Error fetching course data:", error.response?.data || error.message);
-        if(error.status === 404) {
-            console.log("Course not found. Navigating to home page.")
-            navigate("/home")
+        if (error.status === 404) {
+            console.log("Course not found. Navigating to home page.");
+            navigate("/home");
         }
       }
     };
@@ -141,9 +163,9 @@ function CoursePage() {
         }
     }
 
-    getCourseData()
+    fetchCourseData();
     if (user.role === "student") {
-        getStudentExerciseData()
+        getStudentExerciseData();
     }
   }, [courseId, user?.access_token]);
 
@@ -159,62 +181,6 @@ function CoursePage() {
     if (!courseId || !user?.access_token) {
       return;
     }
-  // The sidebar week box of student sidebar
-  // Needs a fair amout of conditional rendering, so made it a component here
-  const StudentWeekBox = ({week}) => {
-    const getIcon = () => {
-        // Check if the week has exercises at all
-        if (!week.exercises?.length) {
-            return
-        }
-
-        const now = new Date()
-
-        // Make a lookup set for student exercise results
-        const completedExerciseIds = new Set(
-            studentExerciseResults?.filter(r => r.complete_time != null).map(r => r.idexercise)
-        )
-
-        // Check if all of the week's exercises are done
-        const areExercisesDone = week.exercises?.every(exercise => 
-            completedExerciseIds.has(exercise.idexercise)
-        )
-
-        // Check if some of the exercise return dates have passed
-        const hasLateExercises = week.exercises.some(exercise => 
-            !completedExerciseIds.has(exercise.idexercise) &&
-            new Date(exercise.end_time) < now
-        )
-
-        // Return the correct icon
-        if (areExercisesDone) {
-            return <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>
-        }
-
-        if (hasLateExercises) {
-            return <i className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1" style={{ color: "#00F3FB" }}></i>
-        }
-
-        return <i className="fa-regular fa-circle ps-3 pe-3 pt-1"></i>
-    }
-    return (
-        <div className={`d-flex justify-content-between ${chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"}`} key={week.idweek} data-bs-toggle="tab" onClick={() => setChosenWeek(week)}>
-            {week.week_name}
-            {getIcon()}
-        </div> 
-    )
-  }
-
-  const availablePeople = [
-    "Aino Aalto",
-    "Eero Ekholm",
-    "Ilona Iivonen",
-    "Kaisa Korhonen",
-    "Laura Leinonen",
-    "Mikko Mäkelä",
-    "Olli Oksanen",
-    "Sanna Saarinen",
-  ];
 
     setSaving(true);
     try {
@@ -237,6 +203,58 @@ function CoursePage() {
       setSaving(false);
     }
   };
+
+  // The sidebar week box of student sidebar
+  // Needs a fair amount of conditional rendering, so made it a component here
+  const StudentWeekBox = ({ week }) => {
+    const getIcon = () => {
+      if (!week.exercises?.length) {
+        return;
+      }
+
+      const now = new Date();
+      const completedExerciseIds = new Set(
+        studentExerciseResults?.filter((r) => r.complete_time != null).map((r) => r.idexercise)
+      );
+      const areExercisesDone = week.exercises?.every((exercise) => completedExerciseIds.has(exercise.idexercise));
+      const hasLateExercises = week.exercises.some(
+        (exercise) => !completedExerciseIds.has(exercise.idexercise) && new Date(exercise.end_time) < now
+      );
+
+      if (areExercisesDone) {
+        return <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>;
+      }
+      if (hasLateExercises) {
+        return <i className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1" style={{ color: "#00F3FB" }}></i>;
+      }
+      return <i className="fa-regular fa-circle ps-3 pe-3 pt-1"></i>;
+    };
+
+    return (
+      <div
+        className={`d-flex justify-content-between ${
+          chosenWeek.idweek === week.idweek ? "nav-link student-sidebar-item active" : "nav-link student-sidebar-item"
+        }`}
+        key={week.idweek}
+        data-bs-toggle="tab"
+        onClick={() => setChosenWeek(week)}
+      >
+        {week.week_name}
+        {getIcon()}
+      </div>
+    );
+  };
+
+  const availablePeople = [
+    "Aino Aalto",
+    "Eero Ekholm",
+    "Ilona Iivonen",
+    "Kaisa Korhonen",
+    "Laura Leinonen",
+    "Mikko Mäkelä",
+    "Olli Oksanen",
+    "Sanna Saarinen",
+  ];
 
   const handleDeleteCourse = async () => {
     if (!courseId || !user?.access_token) {
@@ -348,96 +366,6 @@ function CoursePage() {
       <div className="divider"></div>
         <h2>Tehtävät</h2>
 
-
-      <div className="container weeks-container">
-        <div className="row g-4">
-        {/* Conditional rendering required for correct layout. */}
-        {/* Layout for course with less than eight weeks */}
-        {weeks.length < 9 ?
-            (
-                <>
-                {/* Check if the amount of courses is odd in order to render the correct column width (8/12 if odd, 12/12 if even) */}
-                <div className={`${weeks.length % 2 === 1 ? "col-sm-8" : "col-sm"}`}> {/* Left column */}
-                    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
-                        {weeks.map((week, index) => {
-                            {/* Render box, if the amount of courses is even, or the week is not the last in case the amount of weeks is odd */}
-                            if((weeks.length % 2 === 0) || (weeks.length % 2 === 1 && index !== weeks.length - 1) || (weeks.length === 1)) {
-                                return(
-                                <div className="col" key={week.idweek}>
-                                    <div className="week-box">
-                                        <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
-                                        <h3 className="week-title">{week.week_name}</h3>
-                                        {week.exercises && week.exercises.length > 0 ? (
-                                            week.exercises.map(exercise => (
-                                                <div key={exercise.idexercise} className="week-task">
-                                                    <div className="week-task-label">Tehtävä:</div>
-                                                    <div className="week-task-title">{exercise.exercise_name}</div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="no-tasks-message">Ei tehtäviä</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        })}
-                    </div>
-                </div> 
-                {(weeks.length % 2 === 1 && weeks.length !== 1) && (
-                    <div className="col-sm-4"> {/* Right column */}
-                        <div className="col h-100" key={weeks[weeks.length - 1].idweek}>
-                            <div className="week-box">
-                                <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
-                                <h3 className="week-title">{weeks[weeks.length - 1]?.week_name}</h3>
-                                {weeks[weeks.length - 1]?.exercises && weeks[weeks.length - 1]?.exercises.length > 0 ? (
-                                    weeks[weeks.length - 1]?.exercises.map(exercise => (
-                                        <div key={exercise.idexercise} className="week-task">
-                                            <div className="week-task-label">Tehtävä:</div>
-                                            <div className="week-task-title">{exercise.exercise_name}</div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <div className="no-tasks-message">Ei tehtäviä</div>
-                                )}
-                            </div>
-                        </div>
-                    </div> 
-                )}
-                {weeks.length > 9 && (
-                    <></>
-                )}
-                </>
-            ) : (
-                <>
-                    {weeks.map((week, index) => {
-                            {/* Render box, if the amount of courses is even, or the week is not the last in case the amount of weeks is odd */}
-                                return(
-                                <div className="col-md-4" key={week.idweek}>
-                                    <div className="week-box">
-                                        <i className="fa-solid fa-ellipsis-vertical week-menu"></i>
-                                        <h3 className="week-title">{week.week_name}</h3>
-                                        {week.exercises && week.exercises.length > 0 ? (
-                                            week.exercises.map(exercise => (
-                                                <div key={exercise.idexercise} className="week-task">
-                                                    <div className="week-task-label">Tehtävä:</div>
-                                                    <div className="week-task-title">{exercise.exercise_name}</div>
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <div className="no-tasks-message">Ei tehtäviä</div>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        )}
-                </>
-            )
-        }
-
-      </div>
-    </div>
-
-
       <div className="container weeks-container">
         <div className="row g-4">
           {weeks.length < 9 ? (
@@ -454,7 +382,7 @@ function CoursePage() {
                             {week.exercises && week.exercises.length > 0 ? (
                               week.exercises.map((exercise) => (
                                 <div key={exercise.idexercise} className="week-task">
-                                  <div className="week-task-label">Tehtävä:</div>
+                                  <div className="week-task-label">{exercise.exercise_type === "exam" ? "Koe:" : "Tehtävä:"}</div>
                                   <div className="week-task-title">{exercise.exercise_name}</div>
                                 </div>
                               ))
@@ -471,14 +399,14 @@ function CoursePage() {
               </div>
               {weeks.length % 2 === 1 && (
                 <div className="col-sm-4">
-                    <div className="col h-100" key={weeks[weeks.length - 1]?.idweek}>
+                  <div className="col h-100" key={weeks[weeks.length - 1]?.idweek}>
                     <div className="week-box">
                       <i className="fa-solid fa-ellipsis-vertical week-menu" onClick={() => navigate("/WeekOverview", { state: { courseId, week: weeks[weeks.length - 1] } })} />
                       <h3 className="week-title">{weeks[weeks.length - 1]?.week_name}</h3>
                       {weeks[weeks.length - 1]?.exercises && weeks[weeks.length - 1]?.exercises.length > 0 ? (
                         weeks[weeks.length - 1]?.exercises.map((exercise) => (
                           <div key={exercise.idexercise} className="week-task">
-                            <div className="week-task-label">Tehtävä:</div>
+                            <div className="week-task-label">{exercise.exercise_type === "exam" ? "Koe:" : "Tehtävä:"}</div>
                             <div className="week-task-title">{exercise.exercise_name}</div>
                           </div>
                         ))
@@ -500,7 +428,7 @@ function CoursePage() {
                     {week.exercises && week.exercises.length > 0 ? (
                       week.exercises.map((exercise) => (
                         <div key={exercise.idexercise} className="week-task">
-                          <div className="week-task-label">Tehtävä:</div>
+                          <div className="week-task-label">{exercise.exercise_type === "exam" ? "Koe:" : "Tehtävä:"}</div>
                           <div className="week-task-title">{exercise.exercise_name}</div>
                         </div>
                       ))

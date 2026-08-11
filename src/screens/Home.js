@@ -392,33 +392,67 @@ export default function Home() {
             
             {/* Today's exercises box */}
             <div className="col-md m-2">   
-                <h2>{formatDate(new Date())}</h2>    
+                <h2>{formatDate(selectedDate)}</h2>    
                 <div className="info-card">
-                    <p>Tänne tulee myöhemmin backendistä tietoa.</p>
+                    {exams.filter((ex) => {
+                        if (!ex.start_time) return false;
+                        const dt = new Date(ex.start_time);
+                        const sel = new Date(selectedDate);
+                        return dt.toDateString() === sel.toDateString();
+                    }).length === 0 ? (
+                        <p>Päivälle ei ole tehty kokeita.</p>
+                    ) : (
+                        exams.filter((ex) => {
+                            if (!ex.start_time) return false;
+                            const dt = new Date(ex.start_time);
+                            const sel = new Date(selectedDate);
+                            return dt.toDateString() === sel.toDateString();
+                        }).map((ex) => {
+                            const start = ex.start_time ? new Date(ex.start_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                            const end = ex.end_time ? new Date(ex.end_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                            return (
+                                <div className="exam-row" key={ex.idexercise}>
+                                    <i className="fa-solid fa-graduation-cap hat"></i>
+                                    <div className="exam-time">{start}{end ? `-${end}` : ''}</div>
+                                    <div className="exam-course">{ex.coursename}</div>
+                                    <div className="exam-name">{ex.examname}</div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 
             {/* Tomorrow's exercises box */}
             <div className="col-md m-2">
-                <h2>
-                    { /* Getting tomorrow's date in order for the formatDate function to return
-                     the right information. If the date is changed from the calendar, 
-                     change it to that date. */}
-
-                    {formatDate(
-                        (() => {
-                        const d = new Date();
-                        if (d.getDate() === selectedDate.getDate()) {
-                            d.setDate(d.getDate() + 1);
-                            return d;
-                        } else {
-                            return selectedDate
-                        }
-                        })()
-                    )}
-                </h2>  
+                <h2>{formatDate(new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000))}</h2>
                 <div className="info-card">
-                    <p>Tänne tulee myöhemmin backendistä tietoa.</p>
+                    {exams.filter((ex) => {
+                        if (!ex.start_time) return false;
+                        const dt = new Date(ex.start_time);
+                        const tom = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+                        return dt.toDateString() === tom.toDateString();
+                    }).length === 0 ? (
+                        <p>Päivälle ei ole tehty kokeita.</p>
+                    ) : (
+                        exams.filter((ex) => {
+                            if (!ex.start_time) return false;
+                            const dt = new Date(ex.start_time);
+                            const tom = new Date(selectedDate.getTime() + 24 * 60 * 60 * 1000);
+                            return dt.toDateString() === tom.toDateString();
+                        }).map((ex) => {
+                            const start = ex.start_time ? new Date(ex.start_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                            const end = ex.end_time ? new Date(ex.end_time).toLocaleTimeString('fi-FI', { hour: '2-digit', minute: '2-digit', hour12: false }) : '';
+                            return (
+                                <div className="exam-row" key={ex.idexercise}>
+                                    <i className="fa-solid fa-graduation-cap hat"></i>
+                                    <div className="exam-time">{start}{end ? `-${end}` : ''}</div>
+                                    <div className="exam-course">{ex.coursename}</div>
+                                    <div className="exam-name">{ex.examname}</div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
 

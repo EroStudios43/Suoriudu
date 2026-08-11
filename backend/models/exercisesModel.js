@@ -117,6 +117,85 @@ const insertTaskResult = async (idtask, iduser, idexerciseresult, answer, points
   return result
 }
 
+const updateExercise = async (idexercise, data) => {
+  const fields = []
+  const values = []
+
+  if (data.exercise_name !== undefined) {
+    fields.push("exercise_name = ?")
+    values.push(data.exercise_name)
+  }
+
+  if (data.exercise_description !== undefined) {
+    fields.push("exercise_description = ?")
+    values.push(data.exercise_description)
+  }
+
+  if (data.start_time !== undefined) {
+    fields.push("start_time = ?")
+    values.push(data.start_time)
+  }
+
+  if (data.end_time !== undefined) {
+    fields.push("end_time = ?")
+    values.push(data.end_time)
+  }
+
+  if (data.allow_late_submissions !== undefined) {
+    fields.push("allow_late_submissions = ?")
+    values.push(data.allow_late_submissions)
+  }
+
+  if (fields.length === 0) return null
+
+  values.push(idexercise)
+
+  const [result] = await pool.promise().query(
+    `UPDATE exercises
+     SET ${fields.join(", ")}
+     WHERE idexercise = ?`,
+    values
+  )
+
+  return result
+}
+
+const replaceExerciseTasks = async (idexercise, tasks = []) => {
+  await pool.promise().query(
+    `DELETE FROM task WHERE idexercise = ?`,
+    [idexercise]
+  )
+
+  if (!tasks.length) return []
+
+  const values = tasks.flatMap((task) => {
+    const mappedTask = {
+      tasktype: task.tasktype || task.type,
+      question: task.question || task.instructions || "",
+      answer: task.answer || ""
+    }
+
+    if (mappedTask.tasktype === "choice") {
+      mappedTask.tasktype = task.choiceMode === "multiple" ? "multiple_choice" : "single_choice"
+      mappedTask.answer = JSON.stringify({
+        choiceMode: task.choiceMode || "single",
+        options: task.options || ["", ""],
+        correctAnswers: task.correctAnswers || []
+      })
+    }
+
+    return [idexercise, mappedTask.tasktype, mappedTask.question, mappedTask.answer]
+  })
+
+  const placeholders = tasks.map(() => '(?, ?, ?, ?)').join(', ')
+  const [rows] = await pool.promise().query(
+    `INSERT INTO task (idexercise, tasktype, question, answer) VALUES ${placeholders}`,
+    values
+  )
+
+  return rows
+}
+
 const insertExerciseResult = async (iduser, idexercise, starting_time, complete_time, ai_notes) => {
   const [result] = await pool.promise().query(
     `INSERT INTO exerciseresults
@@ -252,18 +331,22 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
   // If there are no entries, return empty
   if (!entries.length) return
 
-  // Change the entries into a form where they can be put straight to the query
-  const values = entries.map(([idtask, answer]) => [
-    idexerciseresult,
-    Number(idtask),
-    iduser,
-    JSON.stringify(answer)
-  ])
+  const values = entries.map(([idtask, answer]) => {
+    const normalizedAnswer = typeof answer === 'string'
+      ? answer
+      : JSON.stringify(answer)
+
+    return [
+      idexerciseresult,
+      Number(idtask),
+      iduser,
+      normalizedAnswer
+    ]
+  })
 
   const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ')
   const flatValues = values.flat()
 
-  // Flatten the values
   const [rows] = await pool.promise().query(
     `INSERT INTO taskresults (idexerciseresult, idtask, iduser, answer)
     VALUES ${placeholders}
@@ -274,4 +357,4 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
   return rows
 }
 
-export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult };
+export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult };

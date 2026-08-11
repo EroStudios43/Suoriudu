@@ -9,7 +9,7 @@ const url = process.env.REACT_APP_API_URL;
 
 // The function to render all task boxes.
 const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
-  if (task.tasktype === "essay") {
+  if (task.tasktype === "essay" || task.tasktype === "coding" || task.tasktype === "drawing") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">

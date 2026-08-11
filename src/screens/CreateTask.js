@@ -1,11 +1,16 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
+import axios from "axios";
 import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
+import { useUser } from "../context/useUser.js";
+
+const url = process.env.REACT_APP_API_URL;
 
 function CreateTask() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useUser();
 
   const [taskName, setTaskName] = useState("");
   const [taskDescription, setTaskDescription] = useState("");
@@ -17,6 +22,9 @@ function CreateTask() {
 
   const editMode = location.state?.editMode;
   const editExercise = location.state?.exercise;
+  const source = location.state?.source;
+  const courseId = location.state?.courseId;
+  const initialFormRef = useRef(null);
 
   const [tasks, setTasks] = useState([
     {
@@ -29,19 +37,99 @@ function CreateTask() {
     }
   ]);   
 
+  const toDateTimeLocal = (value) => {
+    if (!value) return "";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const pad = (num) => String(num).padStart(2, "0");
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const normalizeTaskFromBackend = (task) => {
+    if (!task) return {
+      instructions: "",
+      type: null,
+      choiceMode: "single",
+      options: ["", ""],
+      correctAnswers: [],
+      answer: ""
+    };
+
+    if (task.type === "choice" || task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
+      let parsed = {};
+      try {
+        parsed = typeof task.answer === "string" ? JSON.parse(task.answer) : (task.answer || {});
+      } catch (error) {
+        parsed = {};
+      }
+
+      return {
+        instructions: task.instructions || task.question || "",
+        type: "choice",
+        choiceMode: task.choiceMode || (task.tasktype === "multiple_choice" ? "multiple" : "single"),
+        options: Array.isArray(parsed.options) && parsed.options.length ? parsed.options : ["", ""],
+        correctAnswers: Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [],
+        answer: ""
+      };
+    }
+
+    return {
+      instructions: task.instructions || task.question || "",
+      type: task.type || task.tasktype || "essay",
+      choiceMode: "single",
+      options: ["", ""],
+      correctAnswers: [],
+      answer: typeof task.answer === "string" ? task.answer : ""
+    };
+  };
+
+  const buildFormState = () => ({
+    taskName,
+    taskDescription,
+    allowLateSubmissions,
+    startTime,
+    endTime,
+    tasks,
+  });
+
   useEffect(() => {
     if (editExercise) {
       setTaskName(editExercise.exercise_name || "");
       setTaskDescription(editExercise.exercise_description || "");
-      setStartTime(editExercise.start_time || "");
-      setEndTime(editExercise.end_time || "");
+      setStartTime(toDateTimeLocal(editExercise.start_time) || "");
+      setEndTime(toDateTimeLocal(editExercise.end_time) || "");
       setAllowLateSubmissions(!!editExercise.allow_late_submissions);
 
       if (editExercise.tasks) {
-        setTasks(editExercise.tasks);
+        setTasks(editExercise.tasks.map((task) => normalizeTaskFromBackend(task)));
       }
     }
-  }, []);
+
+    initialFormRef.current = {
+      taskName: editExercise?.exercise_name || "",
+      taskDescription: editExercise?.exercise_description || "",
+      allowLateSubmissions: !!editExercise?.allow_late_submissions,
+      startTime: toDateTimeLocal(editExercise?.start_time) || "",
+      endTime: toDateTimeLocal(editExercise?.end_time) || "",
+      tasks: (editExercise?.tasks || []).map((task) => normalizeTaskFromBackend(task)),
+    };
+  }, [editExercise]);
+
+  const isDirty = JSON.stringify(buildFormState()) !== JSON.stringify(initialFormRef.current || buildFormState());
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      if (isDirty) {
+        event.preventDefault();
+        event.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
 
   const addOption = (taskIndex) => {
@@ -131,21 +219,92 @@ function CreateTask() {
     );
   };
 
+  const normalizeTasksForBackend = () => tasks.map((task) => {
+    if (task.type === "choice") {
+      return {
+        tasktype: task.choiceMode === "multiple" ? "multiple_choice" : "single_choice",
+        question: task.instructions || "",
+        answer: JSON.stringify({
+          choiceMode: task.choiceMode || "single",
+          options: task.options || ["", ""],
+          correctAnswers: task.correctAnswers || []
+        })
+      };
+    }
+
+    return {
+      tasktype: task.type || "essay",
+      question: task.instructions || "",
+      answer: task.answer || ""
+    };
+  });
+
   // create task to spesific week
-  const createTask = () => {
+  const createTask = async () => {
     if (!validateExercise()) return;
 
     const exercise = {
       id: editExercise?.id || Date.now(),
-      exercise_name: taskName, 
-      exercise_description: taskDescription, 
-      allow_late_submissions: allowLateSubmissions ? 1 : 0, 
+      exercise_name: taskName,
+      exercise_description: taskDescription,
+      allow_late_submissions: allowLateSubmissions ? 1 : 0,
       exercise_type: "task",
-      start_time: startTime, 
+      start_time: startTime,
       end_time: endTime,
-      tasks
+      tasks,
     };
 
+    if (source === "taskOverview" && editMode && editExercise?.idexercise && courseId && user?.access_token) {
+      try {
+        await axios.put(
+          `${url}/courses/${courseId}/exercises/${editExercise.idexercise}`,
+          {
+            exercise_name: taskName,
+            exercise_description: taskDescription,
+            allow_late_submissions: allowLateSubmissions ? 1 : 0,
+            start_time: startTime,
+            end_time: endTime,
+            tasks: normalizeTasksForBackend(),
+          },
+          { headers: { Authorization: `Bearer ${user.access_token}` } }
+        );
+
+        const updatedExercise = {
+          ...editExercise,
+          exercise_name: taskName,
+          exercise_description: taskDescription,
+          start_time: startTime,
+          end_time: endTime,
+          allow_late_submissions: allowLateSubmissions ? 1 : 0,
+          tasks: tasks.map((task) => normalizeTaskFromBackend(task))
+        };
+
+        const currentWeek = location.state?.week || {};
+        const updatedWeek = {
+          ...currentWeek,
+          exercises: Array.isArray(currentWeek.exercises)
+            ? currentWeek.exercises.map((exercise) =>
+                exercise.idexercise === updatedExercise.idexercise ? updatedExercise : exercise
+              )
+            : [updatedExercise]
+        };
+
+        navigate('/TaskOverview', {
+          replace: true,
+          state: {
+            courseId,
+            exercise: updatedExercise,
+            week: updatedWeek,
+            refresh: true,
+          }
+        });
+        return;
+      } catch (error) {
+        console.error("Failed to update exercise", error);
+        alert("Tehtävän päivittäminen epäonnistui.");
+        return;
+      }
+    }
 
     const saved = JSON.parse(localStorage.getItem("draftExercises")) || {};
 
@@ -220,7 +379,28 @@ function CreateTask() {
     <div className="task-page">
       <div className="task-paper">
         <div className="task-header">
-          <i className="fa-regular fa-circle-left back-arrow" onClick={e => navigate(-1)}></i>
+          <i
+            className="fa-regular fa-circle-left back-arrow"
+            onClick={() => {
+              if (isDirty && !window.confirm("Sinulla on tallentamattomia muutoksia. Haluatko jatkaa ilman tallennusta?")) {
+                return;
+              }
+
+              if (source === "taskOverview") {
+                navigate('/TaskOverview', {
+                  replace: true,
+                  state: {
+                    courseId,
+                    exercise: editExercise,
+                    week: location.state?.week,
+                  }
+                });
+                return;
+              }
+
+              navigate(-1);
+            }}
+          ></i>
           <h1>Takaisin kurssin luontiin</h1>
 
         </div>

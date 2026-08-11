@@ -1,7 +1,8 @@
 import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers,selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult   } from '../models/exercisesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult   } from '../models/exercisesModel.js'
 
 import { emptyOrRows } from '../helpers/utils.js'
+import { isTeacherReviewed } from '../helpers/submissionStatus.js'
 import { selectUserByEmail } from '../models/userModel.js'
 import pool from '../helpers/database.js'
 import jwt from 'jsonwebtoken'
@@ -152,14 +153,17 @@ const getCourseById = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
         const {courseId } = req.params;
-        const iduser = req.query?.iduser
+        const rawIdUser = req.query?.iduser;
+        const iduser = rawIdUser !== undefined && rawIdUser !== null && rawIdUser !== "" ? Number(rawIdUser) : null;
 
-        // Select user course, also check the attendance of the user so unauthorized access is denied
-        const course = await selectUserCourseById(iduser, courseId)
+        const course = iduser !== null && Number.isInteger(iduser)
+            ? await selectUserCourseById(iduser, courseId)
+            : await selectCourseById(courseId)
 
-        if(!course[0]){
+        if (!course || (Array.isArray(course) && course.length === 0) || (!Array.isArray(course) && !course.idcourse)) {
             return res.status(404).json({error: "Course not found"})
         }
+
         const weeks = await selectCourseWeeks(courseId)
         const members = await selectCourseMembers(courseId)
 
@@ -167,11 +171,346 @@ const getCourseById = async (req, res, next) => {
             const exercises = await selectWeekExercises(week.idweek)
             week.exercises = exercises
         }
-        return res.status(200).json({...course,weeks,members});
+
+        const courseData = Array.isArray(course) ? course[0] : course;
+        return res.status(200).json({...courseData, weeks, members});
     } catch(error) {
         return next(error);
     }
 }
+
+const getExerciseDetailsForEdit = async (req, res, next) => {
+    try {
+        const { courseId, exerciseId } = req.params;
+
+        const [exerciseRows] = await pool.promise().query(
+            `SELECT e.*
+             FROM exercises e
+             INNER JOIN weeks w ON w.idweek = e.idweek
+             WHERE e.idexercise = ? AND w.idcourse = ?`,
+            [exerciseId, courseId]
+        );
+
+        if (!exerciseRows.length) {
+            return res.status(404).json({ error: "Exercise not found" });
+        }
+
+        const exercise = exerciseRows[0];
+        const taskRows = await selectAllExerciseTasks(exerciseId);
+
+        const tasks = taskRows.map((task) => {
+            const mapped = {
+                idtask: task.idtask,
+                instructions: task.question || "",
+                answer: task.answer || "",
+                choiceMode: "single",
+                options: ["", ""],
+                correctAnswers: [],
+            };
+
+            if (task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
+                mapped.type = "choice";
+                mapped.choiceMode = task.tasktype === "multiple_choice" ? "multiple" : "single";
+
+                try {
+                    const parsedData = task.answer ? JSON.parse(task.answer) : {};
+                    mapped.options = Array.isArray(parsedData.options) && parsedData.options.length ? parsedData.options : ["", ""];
+                    mapped.correctAnswers = Array.isArray(parsedData.correctAnswers) ? parsedData.correctAnswers : [];
+                } catch (error) {
+                    mapped.options = ["", ""];
+                    mapped.correctAnswers = [];
+                }
+
+                return mapped;
+            }
+
+            if (task.tasktype === "essay") mapped.type = "essay";
+            else if (task.tasktype === "coding") mapped.type = "coding";
+            else if (task.tasktype === "drawing") mapped.type = "drawing";
+            else mapped.type = task.tasktype || "essay";
+
+            return mapped;
+        });
+
+        return res.status(200).json({
+            exercise: {
+                idexercise: exercise.idexercise,
+                idweek: exercise.idweek,
+                exercise_name: exercise.exercise_name,
+                exercise_description: exercise.exercise_description,
+                exercise_type: exercise.exercise_type,
+                start_time: exercise.start_time,
+                end_time: exercise.end_time,
+                allow_late_submissions: Boolean(exercise.allow_late_submissions),
+                tasks,
+            }
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const parseChoicePayload = (value) => {
+    if (!value || value === "") return { options: [], correctAnswers: [], selectedAnswer: [], selectedAnswers: [] };
+
+    if (typeof value === "string") {
+        try {
+            const parsed = JSON.parse(value);
+            if (Array.isArray(parsed)) {
+                return { options: [], correctAnswers: [], selectedAnswer: parsed, selectedAnswers: parsed };
+            }
+            if (parsed && typeof parsed === "object") return parsed;
+            return { options: [], correctAnswers: [], selectedAnswer: parsed, selectedAnswers: Array.isArray(parsed) ? parsed : [] };
+        } catch (error) {
+            return { options: [], correctAnswers: [], selectedAnswer: value, selectedAnswers: [] };
+        }
+    }
+
+    if (Array.isArray(value)) {
+        return { options: [], correctAnswers: [], selectedAnswer: value, selectedAnswers: value };
+    }
+
+    if (typeof value === "object") return value;
+
+    return { options: [], correctAnswers: [], selectedAnswer: value, selectedAnswers: [] };
+};
+
+const normalizeChoiceSelection = (rawValue) => {
+    if (rawValue === null || rawValue === undefined || rawValue === "") return [];
+
+    if (Array.isArray(rawValue)) {
+        return rawValue.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+    }
+
+    if (typeof rawValue === "number") {
+        return [rawValue];
+    }
+
+    if (typeof rawValue === "string") {
+        const trimmed = rawValue.trim();
+        if (!trimmed) return [];
+
+        try {
+            const parsed = JSON.parse(trimmed);
+            if (Array.isArray(parsed)) {
+                return parsed.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+            }
+            if (typeof parsed === "number") {
+                return [parsed];
+            }
+        } catch (error) {
+            // ignore and continue with numeric conversion below
+        }
+
+        const number = Number(trimmed);
+        return Number.isNaN(number) ? [] : [number];
+    }
+
+    const parsed = parseChoicePayload(rawValue);
+
+    if (Array.isArray(parsed.selectedAnswers)) {
+        return parsed.selectedAnswers.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+    }
+
+    if (Array.isArray(parsed.selectedAnswer)) {
+        return parsed.selectedAnswer.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+    }
+
+    const selected = parsed.selectedAnswer ?? parsed.correctAnswers ?? [];
+    if (Array.isArray(selected)) {
+        return selected.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+    }
+
+    const number = Number(selected);
+    return Number.isNaN(number) ? [] : [number];
+};
+
+const getChoiceAutoScore = (task) => {
+    const correctAnswers = Array.isArray(task.correctAnswers) ? task.correctAnswers.map((item) => Number(item)) : [];
+    const selectedAnswers = Array.isArray(task.studentSelectedAnswers) ? task.studentSelectedAnswers.map((item) => Number(item)) : [];
+
+    if (!correctAnswers.length) return 0;
+    return selectedAnswers.filter((item) => correctAnswers.includes(item)).length;
+};
+
+const getStudentExerciseReview = async (req, res, next) => {
+    try {
+        const { courseId, exerciseId, userId } = req.params;
+
+        const [exerciseRows] = await pool.promise().query(
+            `SELECT e.*
+             FROM exercises e
+             INNER JOIN weeks w ON w.idweek = e.idweek
+             WHERE e.idexercise = ? AND w.idcourse = ?`,
+            [exerciseId, courseId]
+        );
+
+        if (!exerciseRows.length) {
+            return res.status(404).json({ error: "Exercise not found" });
+        }
+
+        const [studentRows] = await pool.promise().query(
+            `SELECT iduser, firstname, lastname FROM users WHERE iduser = ?`,
+            [userId]
+        );
+
+        const [taskRows] = await pool.promise().query(
+            `SELECT t.idtask, t.tasktype, t.question, t.answer AS task_answer,
+                    tr.idtaskresult, tr.answer AS student_answer, tr.points, tr.teacher_comment
+             FROM task t
+             LEFT JOIN taskresults tr ON tr.idtask = t.idtask AND tr.iduser = ?
+             WHERE t.idexercise = ?
+             ORDER BY t.idtask ASC`,
+            [userId, exerciseId]
+        );
+
+        const tasks = taskRows.map((task, index) => {
+            let normalizedType = task.tasktype || "essay";
+            let displayAnswer = typeof task.student_answer === "string" && task.student_answer.length > 0
+                ? task.student_answer
+                : "";
+
+            if (typeof displayAnswer === "string" && displayAnswer.startsWith('"') && displayAnswer.endsWith('"')) {
+                try {
+                    const unwrapped = JSON.parse(displayAnswer);
+                    if (typeof unwrapped === "string") displayAnswer = unwrapped;
+                } catch (error) {
+                    // leave as-is
+                }
+            }
+
+            let taskAnswerPayload = { options: [], correctAnswers: [], selectedAnswer: [], selectedAnswers: [] };
+            let choiceOptions = [];
+            let correctAnswers = [];
+            let studentSelectedAnswers = [];
+            let exampleAnswer = task.task_answer || "";
+
+            if (task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
+                normalizedType = "choice";
+                choiceOptions = Array.isArray(parseChoicePayload(task.task_answer).options) ? parseChoicePayload(task.task_answer).options : [];
+                correctAnswers = Array.isArray(parseChoicePayload(task.task_answer).correctAnswers)
+                    ? parseChoicePayload(task.task_answer).correctAnswers.map((item) => Number(item))
+                    : [];
+                studentSelectedAnswers = normalizeChoiceSelection(task.student_answer);
+
+                taskAnswerPayload = parseChoicePayload(task.task_answer);
+                const parsedStudent = parseChoicePayload(task.student_answer);
+
+                if (typeof parsedStudent === "object" && parsedStudent !== null) {
+                    if (Array.isArray(parsedStudent.selectedAnswers)) {
+                        displayAnswer = parsedStudent.selectedAnswers.map((item) => Number(item));
+                    } else if (Array.isArray(parsedStudent.selectedAnswer)) {
+                        displayAnswer = parsedStudent.selectedAnswer.map((item) => Number(item));
+                    } else if (parsedStudent.selectedAnswer !== undefined && parsedStudent.selectedAnswer !== null && parsedStudent.selectedAnswer !== "") {
+                        displayAnswer = parsedStudent.selectedAnswer;
+                    } else {
+                        displayAnswer = parsedStudent.correctAnswers ?? parsedStudent;
+                    }
+                }
+
+                exampleAnswer = choiceOptions.filter((_, optionIndex) => correctAnswers.includes(optionIndex)).join(", ");
+            } else {
+                if (task.tasktype === "coding") {
+                    normalizedType = "coding";
+                } else if (task.tasktype === "drawing") {
+                    normalizedType = "drawing";
+                } else {
+                    normalizedType = "essay";
+                }
+                exampleAnswer = task.task_answer || "";
+            }
+
+            return {
+                idtask: task.idtask,
+                idtaskresult: task.idtaskresult,
+                title: `Tehtävä ${index + 1}`,
+                instruction: task.question || "",
+                type: normalizedType,
+                choiceMode: task.tasktype === "multiple_choice" ? "multiple" : "single",
+                options: choiceOptions,
+                correctAnswers,
+                studentAnswer: displayAnswer,
+                studentSelectedAnswers,
+                exampleAnswer,
+                points: task.points ?? "",
+                teacherComment: task.teacher_comment ?? "",
+                hasQuestions: false,
+                autoScore: normalizedType === "choice" ? getChoiceAutoScore({ correctAnswers, studentSelectedAnswers }) : 0,
+            };
+        });
+
+        return res.status(200).json({
+            exercise: {
+                idexercise: exerciseRows[0].idexercise,
+                exercise_name: exerciseRows[0].exercise_name,
+                exercise_description: exerciseRows[0].exercise_description,
+                start_time: exerciseRows[0].start_time,
+                end_time: exerciseRows[0].end_time,
+                allow_late_submissions: exerciseRows[0].allow_late_submissions,
+            },
+            student: studentRows[0] || null,
+            tasks,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const saveStudentExerciseReview = async (req, res, next) => {
+    try {
+        const { courseId, exerciseId, userId } = req.params;
+        const { reviews = [] } = req.body || {};
+
+        if (!Array.isArray(reviews)) {
+            return res.status(400).json({ error: "Reviews must be an array" });
+        }
+
+        for (const review of reviews) {
+            if (!review || !review.idtask) continue;
+
+            const [rows] = await pool.promise().query(
+                `SELECT tr.idtaskresult, tr.idexerciseresult
+                 FROM taskresults tr
+                 INNER JOIN task t ON t.idtask = tr.idtask
+                 WHERE tr.iduser = ? AND t.idexercise = ? AND tr.idtask = ?
+                 LIMIT 1`,
+                [userId, exerciseId, review.idtask]
+            );
+
+            let idtaskresult = rows[0]?.idtaskresult;
+
+            if (!idtaskresult) {
+                const [exerciseRows] = await pool.promise().query(
+                    `SELECT idexerciseresult
+                     FROM exerciseresults
+                     WHERE iduser = ? AND idexercise = ?
+                     ORDER BY idexerciseresult DESC
+                     LIMIT 1`,
+                    [userId, exerciseId]
+                );
+
+                if (!exerciseRows.length) continue;
+
+                const [insertResult] = await pool.promise().query(
+                    `INSERT INTO taskresults (idtask, iduser, idexerciseresult, answer, points, teacher_comment)
+                     VALUES (?, ?, ?, ?, ?, ?)`,
+                    [review.idtask, userId, exerciseRows[0].idexerciseresult, "", review.points ?? null, review.teacher_comment ?? ""]
+                );
+
+                idtaskresult = insertResult.insertId;
+            }
+
+            await updateTaskResult(idtaskresult, {
+                points: review.points ?? null,
+                teacher_comment: review.teacher_comment ?? "",
+            });
+        }
+
+        return res.status(200).json({ success: true, courseId, exerciseId, userId });
+    } catch (error) {
+        return next(error);
+    }
+};
 
 const getExerciseSubmissions = async (req, res, next) => {
     try {
@@ -188,6 +527,29 @@ const getExerciseSubmissions = async (req, res, next) => {
         );
 
         const totalStudents = memberRows.length;
+
+        const [taskCountRows] = await pool.promise().query(
+            "SELECT COUNT(*) AS total_tasks FROM task WHERE idexercise = ?",
+            [exerciseId]
+        );
+        const totalTasks = Number(taskCountRows[0]?.total_tasks || 0);
+
+        const [reviewSummaryRows] = await pool.promise().query(
+            `SELECT tr.iduser, COUNT(*) AS reviewed_task_count
+             FROM taskresults tr
+             INNER JOIN task t ON tr.idtask = t.idtask
+             WHERE t.idexercise = ?
+               AND (
+                   (tr.points IS NOT NULL AND tr.points <> '')
+                   OR (tr.teacher_comment IS NOT NULL AND TRIM(tr.teacher_comment) <> '')
+               )
+             GROUP BY tr.iduser`,
+            [exerciseId]
+        );
+
+        const reviewedTaskCounts = new Map(
+            reviewSummaryRows.map((row) => [Number(row.iduser), Number(row.reviewed_task_count || 0)])
+        );
 
         const [submissionRows] = await pool.promise().query(
             `SELECT er.idexerciseresult, er.starting_time, er.complete_time, er.ai_notes,
@@ -209,28 +571,49 @@ const getExerciseSubmissions = async (req, res, next) => {
             [exerciseId]
         );
 
-        const reviewedUserIds = new Set(reviewedRows.map((row) => row.iduser));
+        const reviewedUserIds = new Map();
+        const totalPointsByUser = new Map();
+
+        reviewedRows.forEach((row) => {
+            const userId = Number(row.iduser);
+            reviewedUserIds.set(userId, row);
+
+            const parsedPoints = Number(row.points);
+            const safePoints = Number.isFinite(parsedPoints) ? parsedPoints : 0;
+            totalPointsByUser.set(userId, (totalPointsByUser.get(userId) || 0) + safePoints);
+        });
+
         const submissionsByUser = new Map();
 
         submissionRows.forEach((row) => {
             const submittedAt = row.complete_time || row.starting_time || null;
-            submissionsByUser.set(row.iduser, {
+            const userId = Number(row.iduser);
+            const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
+            const isReviewed = totalTasks > 0 ? reviewedTaskCount >= totalTasks : false;
+            const totalPoints = totalPointsByUser.get(userId) || 0;
+
+            submissionsByUser.set(userId, {
                 iduser: row.iduser,
                 name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
                 submittedAt,
                 autoCheck: row.ai_notes || "Ei vielä arvioitu",
-                reviewed: reviewedUserIds.has(row.iduser),
+                reviewed: isReviewed,
+                points: isReviewed ? totalPoints : null,
             });
         });
 
         reviewedRows.forEach((row) => {
-            if (!submissionsByUser.has(row.iduser)) {
-                submissionsByUser.set(row.iduser, {
+            const userId = Number(row.iduser);
+            if (!submissionsByUser.has(userId)) {
+                const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
+                const totalPoints = totalPointsByUser.get(userId) || 0;
+                submissionsByUser.set(userId, {
                     iduser: row.iduser,
                     name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
                     submittedAt: null,
                     autoCheck: "Ei vielä arvioitu",
-                    reviewed: true,
+                    reviewed: totalTasks > 0 ? reviewedTaskCount >= totalTasks : false,
+                    points: totalTasks > 0 && reviewedTaskCount >= totalTasks ? totalPoints : null,
                 });
             }
         });
@@ -405,7 +788,7 @@ const insertUserIntoCourse = async (req, res, next) => {
         }
 
         // Check if iduser is valid
-        if (!Number.isInteger(idcourse)) {
+        if (!Number.isInteger(iduser)) {
             return res.status(400).json({error: "User id not valid"})
         }
 
@@ -803,6 +1186,44 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
     }
 }
 
+const updateExerciseAndTasks = async (req, res, next) => {
+    try {
+        const { courseId, exerciseId } = req.params;
+        const { exercise_name, exercise_description, start_time, end_time, allow_late_submissions, tasks = [] } = req.body || {};
+
+        if (!exerciseId || Number.isNaN(Number(exerciseId))) {
+            return res.status(400).json({ error: "Exercise id is not valid" });
+        }
+
+        if (!exercise_name || !String(exercise_name).trim()) {
+            return res.status(400).json({ error: "Exercise name is required" });
+        }
+
+        if (!start_time || !end_time) {
+            return res.status(400).json({ error: "Exercise start and end time are required" });
+        }
+
+        await updateExercise(exerciseId, {
+            exercise_name: String(exercise_name).trim(),
+            exercise_description: exercise_description || "",
+            start_time,
+            end_time,
+            allow_late_submissions: allow_late_submissions ? 1 : 0,
+        });
+
+        await replaceExerciseTasks(exerciseId, tasks);
+
+        return res.status(200).json({
+            success: true,
+            courseId,
+            exerciseId,
+            updated: true,
+        });
+    } catch (error) {
+        return next(error);
+    }
+};
+
 const getWeeksExercises = async (req, res, next) => {
     try {
         // Check that the user is authorized (has token and it's correct)
@@ -914,4 +1335,4 @@ const insertUserExerciseAndTaskResults = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults , getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse}
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults , getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions}
