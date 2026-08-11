@@ -1,0 +1,133 @@
+/* Styles for the Exercise pages */
+
+/* ----- WeeksExercises -----*/
+.exercises-container {
+  background-color: #1D283A;
+  color: white;
+  padding: 30px;
+  font-family: Arial, sans-serif;
+}
+
+/* Box for individual exercises */
+.exercise-box {
+  box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.exercise-box:hover {
+  filter: brightness(0.9);
+}
+
+.to-exercise-btn {
+  padding: 10px 20px;
+  font-size: 18px;
+  color: #ffffff;
+  background-color: #2B385B;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8);
+  max-width: 50%;
+}
+
+.to-exercise-btn:hover {
+    background-color: #3c4a7a;
+}
+
+.course-color-0 { background-color: #979DAD; }
+.course-color-1 { background-color: #525D7D; }
+.course-color-2 { background-color: #2B385B; }
+.course-color-3 { background-color: #20294A; }
+
+
+/* ----- TaskQuestions -----*/
+.allTasksBox {
+  background-color: white;
+  color: black;
+}
+
+.back-icon-light {
+  color: black;
+  box-shadow: none;
+  font-size: 40px;
+  cursor: pointer;
+}
+
+.back-icon-light:hover {
+  color: #5c5c5c;
+}
+
+.single-task {
+  scroll-margin-top: 50px;
+}
+
+.single-task p {
+  font-size: 18px;
+}
+
+.essay {
+  width: 100%;
+}
+
+.progress-star {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.progress-star.complete {
+  color: #00F3FB;
+}
+
+/* Multiple choice box */
+.student-multiple-choice, .student-single-choice {
+  background-color: #F0EEF7;
+  margin: 0;
+}
+
+.student-multiple-choice:hover, .student-single-choice:hover {
+  background-color: #D4CEE8;
+}
+
+.student-multiple-choice > input, .student-single-choice > input {
+  float: none;
+}
+
+.student-multiple-choice > input[type="checkbox"]:checked , .student-single-choice > input[type="radio"]:checked {
+  background-color: #6752AD;
+  border-color: #6752AD;
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.btn-submit {
+  background-color: #6752AD;
+  color: white;
+}
+
+.btn-submit:hover {
+  background-color: #6752AD;
+  filter: brightness(80%);
+}
+
+.btn-cancel {
+  background-color: #B9AFD9;
+}
+
+.btn-cancel:hover {
+  background-color: #B9AFD9;
+  filter: brightness(80%);
+}
+
+.model-dialog-light {
+  background-color:#D4CEE8;
+}
+
+.modal-header-light > h3 {
+  color: black;
+}
+
+.modal-close-light {
+  color: black;
+}

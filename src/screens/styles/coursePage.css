@@ -37,6 +37,106 @@
     color: #8b8b8b;
     padding: 10px;
 }
+/* ----- */
+/* Student topbar text styles */
+.course-description-student {
+    font-size: 1.5em;
+    margin: .75em;
+    color: #8b8b8b;
+    margin: 0;
+}
+
+.student-course-titles {
+    max-width: 450px;
+    display: block;
+}
+
+/* Student left sidebar styles */
+
+.student-sidebar-item {
+    background-color: #1D283A;
+    border: none;
+    color: white;
+    font-size: 20px;
+    padding-left: 0;
+}
+
+.student-sidebar {
+    color: white;
+}
+
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    background-color: #525d7d;
+    color: white;
+    border-bottom-color: rgb(222, 226, 230) !important; /* Needs important since bootstrap overrides otherwise*/
+    filter: brightness(110%);
+    border-right: none;
+}
+
+.student-sidebar > .student-sidebar-item:hover {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    overflow: hidden;
+}
+
+.student-sidebar > .student-sidebar-item:focus,
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    border-bottom: 1px solid transparent;
+    overflow: hidden;
+}
+
+.student-sidebar.nav-tabs {
+    border-bottom: none;
+}
+
+.student-left-side-sidebar {
+    border-right: 1px solid rgb(222, 226, 230);
+}
+
+@media only screen and (min-width: 768px){
+    .student-left-side-sidebar {
+        display: none;
+    }
+
+    
+}
+
+/* Student content page styles */
+.student-page-content {
+    padding: 15px;
+}
+
+.exercises {
+    cursor: pointer;
+}
+
+.disabled-div {
+    opacity: 0.65;
+}
+
+.student-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background-color: black;
+    color: white;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ----- */
 
 .back-icon {
     font-size: 40px;
@@ -214,6 +314,44 @@
     color: #00F3FB;
     min-width: 50px;
     text-align: right;
+}
+
+/* Progress bar of student */
+.progress-container-student {
+    width: 100%;
+    max-width: 750px;
+}
+
+.progress-bar-wrapper-student {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar-student {
+    position: relative;
+    background-color: rgba(75, 75, 75, 0.5);
+    flex: 1;
+    height: 25px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-fill-student {
+    height: 100%;
+    background: linear-gradient(90deg, #00F3FB 0%, #66BB6A 100%);
+    transition: width 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.progress-star-mask {
+    position: absolute;
+    inset: 0;
+    background-color: #1D283A;
+    z-index: 2;
 }
 
 /* Content Row Styles */
