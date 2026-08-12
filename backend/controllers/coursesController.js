@@ -76,7 +76,7 @@ const createCourse = async (req, res, next) => {
             }
         }
 
-        for (const week of wee4ks) {
+        for (const week of weeks) {
             const idweek = await insertWeek(idcourse,week.title,week.content);
 
             if (week.exercises) {
