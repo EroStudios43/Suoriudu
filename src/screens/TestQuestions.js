@@ -4,6 +4,7 @@ import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
+import ProgressBarTimer from "../components/progressbartimer.js";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -111,7 +112,8 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
   }
 })
 
-function TaskQuestions() {
+// Page itself
+function TestQuestions() {
   // Variables for navigation and getting some values from previous page
   const navigate = useNavigate();
   const location = useLocation();
@@ -121,6 +123,7 @@ function TaskQuestions() {
   const { user, updateToken } = useUser()
   const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
   const [ idweek, setIdWeek ] = useState(location.state?.idweek)
+  const [ examCodeMatch, setExamCodeMatch ] = useState(location.state?.examCodeMatch)
 
   // Data for tasks and exercise
   const [ tasks, setTasks ] = useState([])
@@ -133,11 +136,29 @@ function TaskQuestions() {
   // Variable for showing the confirmation screen for returning the exercise
   const [showConfirm, setShowConfirm ] = useState(false)
 
+  // Variables for navigating back, set to false by default
+  const [canGoBack, setCanGoBack ] = useState(false)
+
+  // Variables used for the timer
+  const [ startingTime, setStartingTime ] = useState(null)
+  const [ showTimer, setShowTimer ] = useState(true)
+  const [ remainingExamTime, setRemainingExamTime ] = useState(null) // Used to automatically submit the exam after time ends. Updated in the timer component
+  const [ fiveMinutesLeft, setFiveMinutesLeft ] = useState(false) // Used to determine when the warning should be shown.
+  const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
+  const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
+
+  // Fetch data when landing on the page
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
     if (!user || !user.access_token) {
       console.log("No user or token yet");
       return null
+    }
+
+    // Check that the user has successfully given the right exam code on the previous page
+    if (!examCodeMatch) {
+      console.log("Exam password incorrect")
+      navigate("/home")
     }
 
     // Check that the other variables are defined
@@ -170,6 +191,7 @@ function TaskQuestions() {
       setTasks(response.data.tasks)
       setTaskResults(response.data.answerArray)
       setExercisedata(response.data.exercise)
+      setStartingTime(response.data.starting_time)
       
       updateToken(response)
       return response.data
@@ -200,6 +222,60 @@ function TaskQuestions() {
 
   }, [user?.access_token, idexercise])
 
+  // Prevent refresh and tab closing
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (!canGoBack) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload)
+    }
+  }, [canGoBack])
+
+  // Prevent browser's back-button navigation
+  useEffect(() => {
+    const handlePopState = (e) => {
+      if (!canGoBack) {
+        e.preventDefault()
+        setShowConfirm(true)
+
+        // Prevent url from changing
+        window.history.pushState(null, "", window.location.pathname)
+      }
+    }
+
+    window.history.pushState(null, "", window.location.pathname)
+    window.addEventListener("popstate", handlePopState)
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState)
+    }
+  }, [canGoBack])
+
+  // Check if the exam has 5 minutes remaining
+  //     -> The time is checked and variable is updated in the progressbartimer component
+  //     -> If the exam has five minutes remaining, show the modal that warns the user that there's not a lot of time remaining
+  useEffect(() => {
+    if (fiveMinutesLeft === true) {
+      setShowFiveMinuteWarning(true)
+    }
+  }, [fiveMinutesLeft])
+
+  // Check if the exam time has run out
+  //     -> The time is checked in the progressbartimer component
+  //     -> The component sets the zeroTimeRemaining variable to true when the time's run out
+  useEffect(() => {
+    if (zeroTimeRemaining === true) {
+      // Return the answers
+      handleSubmit()
+    }
+  }, [zeroTimeRemaining])
+
+  // Function for submitting answers
   const handleSubmit = async () => {
     try {
       const exerciseObject = {
@@ -208,12 +284,22 @@ function TaskQuestions() {
       }
       
       const res = await axios.post(url + "/courses/addExerciseAndTaskResults", exerciseObject, {headers: {Authorization: "Bearer " + user.access_token}})
-      console.log("Exercise submitted", res.data)
-      navigate(`/WeeksExercises/${exercisedata.idweek}`, {state: { idcourse: idcourse}})
+      if (res.status === 200) {
+        setCanGoBack(true)
+        if (!zeroTimeRemaining) {
+          navigate(`/WeeksExercises/${exercisedata.idweek}`, {state: { idcourse: idcourse}})
+        }
+      }
     } catch (error) {
       console.log("Error submitting answers:", error.response?.data || error.message)
     }
     console.log(answers)
+    
+  }
+
+  // Function for closing the confirmation screen
+  const handleClosingConfirm = () => {
+    setShowConfirm(false)
   }
 
   // The star progress bar with a clickable scrollspy.
@@ -240,7 +326,7 @@ function TaskQuestions() {
       </li>)
     }
     return(
-      <div id="starProgression" className="d-inline">
+      <div id="starProgression" className="d-none d-md-inline-block">
         <ul className="nav flex-wrap">
         {tasks.map((task, index) => (
           <NavLink task={task} index={index}/>
@@ -258,18 +344,30 @@ function TaskQuestions() {
             { /* White box for page content */}
             <div className="col-md-10 rounded-4 p-4 allTasksBox">
               <div className="row">
-                <div className="col d-inline">
-                  <i className="fa-regular fa-circle-left back-icon-light d-inline" onClick={e => navigate(`/WeeksExercises/${exercisedata.idweek}`, {state: {idcourse: idcourse}})}></i>
-                </div>
-              </div>
-              <div className="row">
                 <div className="col-md-2">
                    <h1 className="display-4">{exercisedata?.exercise_name}</h1>
                 </div>
-                <div className="col-md-8" />
-                <div className="col-md-2 scrollspy-example" data-bs-spy="scroll" data-bs-target="#starProgression" data-bs-offset="0" tabIndex={0}>
-                 
+                <div className="col-md-3 col-lg-5" />
+                <div className="col-md-2 scrollspy-example text-end" data-bs-spy="scroll" data-bs-target="#starProgression" data-bs-offset="0" tabIndex={0}>
                   <RenderProgressBar />
+                </div> 
+                <div className="col-md-5 col-lg-3 text-end">
+                   <i className={`fa-regular fa-eye show-timer ${showTimer ? "" : "hide"} d-inline-block align-middle`} onClick={() => setShowTimer(!showTimer)}></i>
+                  {
+                    showTimer ? 
+                      <div className="d-inline-block align-middle">
+                        <ProgressBarTimer 
+                          studentExamStartTime={startingTime} 
+                          exerciseEndTime={exercisedata.end_time} 
+                          examDuration={exercisedata?.exam_duration}
+                          fiveMinutesLeft={fiveMinutesLeft}
+                          setFiveMinutesLeft={setFiveMinutesLeft}
+                          zeroTimeRemaining={zeroTimeRemaining}
+                          setZeroTimeRemaining={setZeroTimeRemaining}
+                        />
+                      </div>
+                      : <></>
+                  }
                 </div>
               </div>
               <div className="row">
@@ -280,17 +378,18 @@ function TaskQuestions() {
                     )
                   })}
                   <div className="text-center">
-                    <button type="button" className="btn btn-submit rounded-5" onClick={() => setShowConfirm(!showConfirm)}>Palauta tehtäväpaketti</button>
+                    <button type="button" className="btn btn-submit rounded-5" onClick={() => setShowConfirm(!showConfirm)}>Palauta koe</button>
                   </div>
                 </form>
               </div>
-              { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              { /* Show the confirm submission box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              { /* The box styles are slightly edited, and the changes can be found from exercises.css */}
               {showConfirm && (
                 <div className="modal-overlay modal-overlay-light">
                     <div className="modal-dialog model-dialog-light">
                         <div className="modal-header modal-header-light">
                             <h3>
-                              Oletko varma, että haluat palauttaa tehtäväpaketin?
+                              Oletko varma, että haluat palauttaa kokeen?
                             </h3>
                           <button type="button" className="modal-close modal-close-light" onClick={() => setShowConfirm(false)}>
                               <i className="fa-solid fa-xmark"></i>
@@ -302,24 +401,72 @@ function TaskQuestions() {
                               <p className="text-danger">
                                 Kaikkiin tehtäviin ei ole vastattu. 
                               <br />
-                                Voit palauttaa tehtävän, mutta vastaamattomista tehtävistä ei saa pisteitä.
+                                Voit palauttaa kokeen, mutta vastaamattomista tehtävistä ei saa pisteitä.
                               </p>
                             )}
                             <br />
                             
                             <br />
-                            <div className="row">
+                            <div class="row">
                               <div className="col text-start">
-                                <button type="button" className="btn btn-cancel rounded-5" onClick={() => setShowConfirm(false)}>Peruuta</button>
+                                <button type="button" className="btn btn-cancel rounded-5" onClick={() => handleClosingConfirm()}>Peruuta</button>
                               </div>
                               <div className="col text-end">
-                                <button type="button" className="btn btn-submit rounded-5" onClick={() => handleSubmit()}>Palauta tehtäväpaketti</button>
+                                <button type="button" className="btn btn-submit rounded-5" onClick={() => handleSubmit()}>Palauta koe</button>
                               </div>
                             </div>
                         </div>
                     </div>
                 </div>
             )}
+
+            { /* Show the five minute warning box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+            { /* The box styles are slightly edited, and the changes can be found from exercises.css */}
+              {showFiveMinuteWarning === true && (
+                <div className="modal-overlay">
+                    <div className="modal-dialog modal-white">
+                        <div className="modal-header modal-header-light">
+                            <h3>
+                              Kokeen suoritusaikaa 5 minuuttia jäljellä
+                            </h3>
+                          <button type="button" className="modal-close modal-close-light" onClick={() => setShowFiveMinuteWarning(false)}>
+                              <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                        <div className="modal-body">
+                          <p>
+                            Ajan loputtua vastauksesi tallennetaan ja lähetetään automaattisesti.
+                            <br />
+                            Varmistathan, että vastauksesi ovat valmiita ennen ajan loppumista.
+                          </p>
+                          <br />
+                        </div>
+                    </div>
+                </div>
+              )}
+
+            { /* Show the time ended box, the styles are the same used on coursepage, and can be found from coursePage.css */}
+            { /* The box styles are slightly edited, and the changes can be found from exercises.css */}
+              {zeroTimeRemaining === true && (
+                <div className="modal-overlay">
+                    <div className="modal-dialog modal-white">
+                        <div className="modal-header modal-header-light">
+                            <h3>
+                              Kokeen suoritusaikaa on loppunut.
+                            </h3>
+                        </div>
+                        <div className="modal-body">
+                          <p>
+                            Kokeen suoritusaika on loppunut, ja vastauksesi on tallennettu ja koe lähetetty automaattisesti.
+                            <br />
+                            Voit palata kurssin sivulle alla olevasta painikkeesta.
+                          </p>
+                          <br />
+                          <button type="button" className="btn btn-submit rounded-5 float-end mb-2" onClick={canGoBack ? e => navigate(`/CoursePage/${idcourse}`) : e => {}}>Palaa kurssisivulle</button>
+                        </div>
+                    </div>
+                </div>
+              )}
             </div>
             <div className="col-md-1" />
           </div>
@@ -329,4 +476,4 @@ function TaskQuestions() {
   
 }
 
-export default TaskQuestions;
+export default TestQuestions;

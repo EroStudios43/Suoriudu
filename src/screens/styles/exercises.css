@@ -78,7 +78,7 @@
   color: #00F3FB;
 }
 
-/* Multiple choice box */
+/* Multiple and single choice box */
 .student-multiple-choice, .student-single-choice {
   background-color: #F0EEF7;
   margin: 0;
@@ -129,5 +129,75 @@
 }
 
 .modal-close-light {
+  color: black;
+}
+
+/* ----- TaskResults ----- */
+.student-multiple-choice-answer, .student-single-choice-answer {
+  background-color: #F0EEF7;
+  margin: 0;
+}
+
+.student-multiple-choice-answer > input, .student-single-choice-answer > input {
+  float: none;
+}
+
+.student-multiple-choice-answer.correct input[type="checkbox"]:checked , .student-single-choice-answer.correct input[type="radio"]:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.student-multiple-choice-answer.incorrect input[type="checkbox"]:checked , .student-single-choice-answer.incorrect input[type="radio"]:checked {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.student-multiple-choice-answer.partiallycorrect input[type="checkbox"]:checked , .student-single-choice-answer.partiallycorrect input[type="radio"]:checked {
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.show-timer {
+  font-size: 32px;
+}
+
+.show-timer.hide {
+  color: #ababab;
+}
+
+/* ----- ExamLobby.js ----- */
+.warning-picture {
+  height: 150px;
+}
+
+.warning-text {
+  font-size: 20px;
+}
+
+.btn-exam {
+  background-color: #979DAD;
+  color: white;
+}
+
+.btn-exam:hover {
+  background-color: #525D7D;
+}
+
+.btn-exam:active {
+  background-color: #3c4a7a;
+}
+
+.btn-exam:disabled {
+  background-color: #979DAD;
+  color: white;
+  opacity: 0.7;
+}
+
+.modal-white {
+  background-color: white;
   color: black;
 }

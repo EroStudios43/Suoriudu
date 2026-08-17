@@ -2,7 +2,27 @@ import pool from "../helpers/database.js";
 
 const selectUsersCourses = async (id) => {
     const [rows] = await pool.promise().query(
-        "SELECT * FROM courses c INNER JOIN coursemembers cm ON c.idcourse = cm.idcourse WHERE cm.iduser = ?",
+        `SELECT 
+            c.*,
+
+            e.idexercise,
+            e.start_time,
+            e.end_time,
+
+            er.idexerciseresult,
+            er.starting_time,
+            er.complete_time
+        FROM courses c 
+        INNER JOIN coursemembers cm 
+            ON c.idcourse = cm.idcourse 
+        LEFT JOIN weeks w
+            ON w.idcourse = c.idcourse
+        LEFT JOIN exercises e
+            ON e.idweek = w.idweek
+        LEFT JOIN exerciseresults er
+            ON e.idexercise = er.idexercise
+            AND er.iduser = cm.iduser
+        WHERE cm.iduser = ?`,
         [id]
     );
     return rows;
