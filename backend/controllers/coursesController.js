@@ -1,5 +1,6 @@
 import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById } from '../models/exercisesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership } from '../models/exercisesModel.js'
+import { selectUsersExerciseComments, insertTaskComment } from '../models/commentModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { selectUserByEmail } from '../models/userModel.js'
 import jwt from 'jsonwebtoken'
@@ -586,7 +587,8 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
 
         if (!(unfinishedExerciseRows.length > 0)) {
             const now = new Date()
-            await insertExerciseResult(iduser, idexercise, now, null, null)
+            const exerciseresult = await insertExerciseResult(iduser, idexercise, now, null, null)
+            unfinishedExerciseRows.push({idexerciseresult: exerciseresult.insertId})
         }
 
         // Get user's exercise data along with all exercise's tasks and already submitted task results
@@ -609,7 +611,8 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
             max_time: rows[0].max_time,
             active_monitors: rows[0].active_monitors,
             exam_password_student: rows[0].exam_password_student,
-            exam_duration: rows[0].exam_duration      
+            exam_duration: rows[0].exam_duration,
+            idexerciseresult: unfinishedExerciseRows[0].idexerciseresult
         } : null
 
         const taskMap = new Map()
@@ -869,7 +872,7 @@ const getExamPasswordForValidation = async (req, res, next) => {
             return next(new Error("Exercise id is not valid"))
         }
 
-        if (!allowAi || typeof allowAi !== "boolean") {
+        if (allowAi === null || typeof allowAi !== "boolean") {
             return next(new Error("AllowAi is not valid."))
         }
 
@@ -974,4 +977,139 @@ const insertUserExerciseAndTaskResults = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation }
+const getUsersExerciseComments = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // Get parameters from the request
+        const iduser = req.user.iduser
+        const idexercise = Number(req.query.idexercise)
+        const idcourse = Number(req.query.idcourse)
+
+        // Check that user id and course id are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idexercise || Number.isNaN(idexercise)) {
+            return next(new Error("Exercise id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        const commentRows = await selectUsersExerciseComments(idexercise, iduser)
+
+        return res.status(200).json({comments: commentRows || []})
+    } catch (error) {
+        return next(error)
+    }
+}
+
+const insertUserTaskComment = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // Get parameters from the request
+        const iduser = Number(req.user.iduser)
+        const idexercise = Number(req.body.idexercise)
+        const idcourse = Number(req.body.idcourse)
+        const idtask = Number(req.body.idtask)
+        const idexerciseresult = Number(req.body.idexerciseresult)
+        const question = req.body.question
+        const public_question = Boolean(req.body.public_question)
+        const anonymous_question = Boolean(req.body.anonymous_question)
+
+        // Check that all the values are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idexercise || Number.isNaN(idexercise)) {
+            return next(new Error("Exercise id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        if (!idtask || Number.isNaN(idtask)) {
+            return next(new Error("Task id is not valid"))
+        }
+
+        if (!idexerciseresult || Number.isNaN(idexerciseresult)) {
+            return next(new Error("Task id is not valid"))
+        }
+
+        if (!question || question.length < 15) {
+            return next(new Error("Question must be a minimum of 15 characters"))
+        }
+
+        if (public_question === null || typeof public_question !== "boolean") {
+            return next(new Error("Public question value is not valid"))
+        }
+
+        if (anonymous_question === null || typeof anonymous_question !== "boolean") {
+            return next(new Error("Anonymous question value is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Check that exerciseresult belongs to the user
+        const exerciseResultOwnershipRows = await checkExerciseResultOwnership(iduser, idexerciseresult)
+
+        if (!exerciseResultOwnershipRows[0]) {
+            return res.status(404).json({error: "Exerciseresult ownership could not be verified."})
+        }
+
+        const existingTaskResultIdRows = await selectExistingTaskResultId(iduser, idtask, idexerciseresult)
+
+        if (!existingTaskResultIdRows[0]) {
+            // If no existing task result, create a new empty one
+            const newTaskResult = await insertTaskResult(idtask, iduser, exerciseResultOwnershipRows[0].idexerciseresult)
+            console.log(newTaskResult.insertId)
+            const idtaskresult = newTaskResult.insertId
+            // After a task result is created, create the comment
+            const now = new Date()
+            const newComment = await insertTaskComment(idtaskresult, iduser, public_question, anonymous_question, question, now)
+        } else {
+            // If a result exists, use the gotten taskResultId to create a new comment
+            const idtaskresult = existingTaskResultIdRows[0].idtaskresult
+            const now = new Date()
+            const newComment = await insertTaskComment(idtaskresult, iduser, public_question, anonymous_question, question, now)
+        }
+        return res.status(200).json({message: "Comment successfully submitted."})
+    } catch (error) {
+        return next(error)
+    }
+}
+
+
+export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, insertExerciseResult, insertUserExerciseAndTaskResults, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }

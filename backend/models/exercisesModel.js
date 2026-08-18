@@ -390,4 +390,29 @@ const selectExamPasswordForValidation = async (idexercise, iduser) => {
   return rows
 }
 
-export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById };
+// Used for checking if an user already has a task result for a particular task in an exercise attempt
+const selectExistingTaskResultId = async (iduser, idtask, idexerciseresult) => {
+  const [rows] = await pool.promise().query(
+    `SELECT taskresults.idtaskresult
+    FROM taskresults
+    WHERE idtask = ?
+      AND iduser = ?
+      AND idexerciseresult = ?
+    LIMIT 1`,
+    [idtask, iduser, idexerciseresult]
+  )
+  return rows
+}
+
+const checkExerciseResultOwnership = async (iduser, idexerciseresult) => {
+  const [rows] = await pool.promise().query(
+    `SELECT idexerciseresult
+    FROM exerciseresults
+    WHERE idexerciseresult = ?
+      AND iduser = ?`,
+      [idexerciseresult, iduser]
+  )
+  return rows
+}
+
+export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership };

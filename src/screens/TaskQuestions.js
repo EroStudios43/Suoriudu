@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/exercises.css";
 import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
@@ -8,7 +8,7 @@ import useFetchData from "../hooks/fetchHookWithNavState.js";
 const url = process.env.REACT_APP_API_URL;
 
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
+const RenderTask = React.memo(({task, index, answers, setAnswers, setShowCommentBox, setChosenTask})  => {
   if (task.tasktype === "essay") {
     return (
       <>
@@ -26,6 +26,8 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
           }/>
           <span className="text-muted text-end d-block"><small>{answers[task.idtask]?.length || 0}/{10000} merkkiä</small></span>
         </div>
+        <br />
+        <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
         <hr />
       </>
     )
@@ -73,7 +75,8 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
               </div>
             )
           })}
-          
+          <br />
+          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
         </div>
         <hr />
       </>
@@ -103,7 +106,8 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
               </div>
             )
           })}
-          
+          <br />
+          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
         </div>
         <hr />
       </>
@@ -131,7 +135,17 @@ function TaskQuestions() {
   const [ answers, setAnswers ] = useState({})
 
   // Variable for showing the confirmation screen for returning the exercise
-  const [showConfirm, setShowConfirm ] = useState(false)
+  const [ showConfirm, setShowConfirm ] = useState(false)
+
+  // Variable for the help / comment box
+  const [ showCommentBox, setShowCommentBox ] = useState(false)
+  const [ showNewQuestionBox, setShowNewQuestionBox ] = useState(false)
+  const [ visibleTooltip, setVisibleTooltip ] = useState("")
+  const [ previousComments, setPreviousComments ] = useState([])
+  const [ newStudentComment, setNewStudentComment ] = useState({question: "", public_question: false, anonymous_question: false})
+  const [ newCommentErrors, setNewCommentErrors ] = useState([])
+  const [ chosenTask, setChosenTask ] = useState("")
+  const commentContainerRef = useRef(null)
 
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -184,6 +198,40 @@ function TaskQuestions() {
 
   const { data, loading, error } = useFetchData(fetchUserExerciseAndTaskData)
 
+  // Function for fetching comment data
+  const fetchCommentData  = useCallback(async (signal) => {
+    // Check that user has access token
+    if (!user || !user.access_token) {
+      console.log("User data or token missing")
+      return null
+    }
+
+    // Check that the other variables are defined
+    if (!idcourse || !idexercise) {
+      console.log("Variables not set yet")
+      return null
+    }
+
+    // Create the request to the backend
+    try {
+      const response = await axios.get(
+        url + "/courses/getUserExerciseComments",
+        {
+          params: {idexercise: idexercise, idcourse: idcourse},
+          headers: {Authorization: "Bearer " + user.access_token},
+          signal
+        }
+      )
+
+      console.log(response.data)
+      setPreviousComments(response.data.comments)
+    } catch (error) {
+      console.log("Error fetching comments: ", error.response?.data, error.message)
+    }
+  }, [user?.access_token, idexercise])
+
+  const {data2, loading2, error2 } = useFetchData(fetchCommentData)
+
   useEffect(() => {
     // Check that user has access token
     if (!user || !user.access_token) {
@@ -199,6 +247,16 @@ function TaskQuestions() {
     }
 
   }, [user?.access_token, idexercise])
+
+  // UseEffect to automatically scroll the comment box to the bottom
+  useEffect(() => {
+    if (commentContainerRef.current) {
+        commentContainerRef.current.scrollTo({
+          top: commentContainerRef.current.scrollHeight,
+          behavior: "smooth"
+        })
+      }
+  }, [previousComments, showCommentBox])
 
   const handleSubmit = async () => {
     try {
@@ -216,6 +274,100 @@ function TaskQuestions() {
     console.log(answers)
   }
 
+  const handleCommentSumbit = async () => {
+    try {
+      console.log("Submitting comment")
+      console.log(newStudentComment)
+      console.log(exercisedata.idexerciseresult)
+
+      setNewCommentErrors([])
+      const tempComment = {}
+      const tempErrors = []
+
+      // Check that user has access token
+      if (!user || !user.access_token) {
+        console.log("No user or token yet");
+        return;
+      } else {
+        tempComment.idcommentor = user.id
+      }
+
+      // Check that idexercise and idcourse are valid
+      // Check that the other variables are defined
+      if (!idcourse || !idexercise) {
+        console.log("Idexercise or idcourse aren't valid")
+        return 
+      } else {
+        tempComment.idcourse = idcourse
+        tempComment.idexercise = idexercise
+      }
+
+      // Check that idexerciseresult is not null
+      if (!exercisedata.idexerciseresult) {
+        console.log("Idexercisersult can't be null")
+        return
+      } else {
+        tempComment.idexerciseresult = exercisedata.idexerciseresult
+      }
+
+      // Check that chosen task id is not null
+      if (!chosenTask) {
+        console.log("No chosen task")
+        return
+      } else {
+        tempComment.idtask = chosenTask
+      }
+
+      // Check that user has filled the question itself
+      if (newStudentComment.question.length <= 0) {
+        console.log("Question cannot be empty.")
+        tempErrors.push("Kysymys ei voi olla tyhjä.")
+        setNewCommentErrors(prev => [...prev, "Kysymys ei voi olla tyhjä."])
+      }
+
+      // Check that the answer is over 15 characters
+      if (newStudentComment.question.length < 15 && newStudentComment.question.length !== 0) {
+        console.log("Question must be 15 characters or more")
+        tempErrors.push("Kysymyksen tulee olla vähintään 15 merkkiä pitkä.")
+        setNewCommentErrors(prev => [...prev, "Kysymyksen tulee olla vähintään 15 merkkiä pitkä."])
+      }
+      
+
+      console.log(newCommentErrors)
+
+      if (tempErrors.length !== 0) {
+        return
+      }
+
+      // If no errors, form the rest of the object and submit the comment
+      tempComment.question = newStudentComment.question
+      tempComment.public_question = newStudentComment.public_question
+      tempComment.anonymous_question = newStudentComment.anonymous_question
+
+      console.log(tempComment)
+
+      const res = await axios.post(url + "/courses/insertTaskComment/student", tempComment, {headers: {Authorization: "Bearer " + user.access_token}})
+      console.log("Comment submitted", res.data)
+      setNewCommentErrors([])
+      setNewStudentComment({})
+
+      // Bring the user back to comment page
+      setShowCommentBox(true)
+      setShowNewQuestionBox(false)
+      
+      // Set tempcomment question -> tempcomment comment
+      tempComment.comment = tempComment.question
+      setPreviousComments(prev => [...prev, tempComment])
+    } catch (error) {
+      console.log("Error submitting comment:", error.response?.data || error.message)
+    }
+  }
+
+  const handleNewQuestionClick = () => {
+    setShowCommentBox(false)
+    setShowNewQuestionBox(true)
+  }
+
   // The star progress bar with a clickable scrollspy.
   const RenderProgressBar = () => {
     const NavLink = ({task, index}) => {
@@ -230,7 +382,7 @@ function TaskQuestions() {
 
       // Get task results for the progress bar and check if the corresponding task is done
       const isDone = taskResults?.some(
-        (taskResult) => taskResult.idtask === task.idtask
+        (taskResult) => taskResult.idtask === task.idtask && taskResult.answer !== null
       )
 
 
@@ -276,7 +428,7 @@ function TaskQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
+                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} setShowCommentBox={setShowCommentBox} setChosenTask={setChosenTask} />
                     )
                   })}
                   <div className="text-center">
@@ -287,7 +439,7 @@ function TaskQuestions() {
               { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
               {showConfirm && (
                 <div className="modal-overlay modal-overlay-light">
-                    <div className="modal-dialog model-dialog-light">
+                    <div className="modal-dialog modal-dialog-light">
                         <div className="modal-header modal-header-light">
                             <h3>
                               Oletko varma, että haluat palauttaa tehtäväpaketin?
@@ -316,6 +468,128 @@ function TaskQuestions() {
                                 <button type="button" className="btn btn-submit rounded-5" onClick={() => handleSubmit()}>Palauta tehtäväpaketti</button>
                               </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              {showCommentBox && (
+                <div className="modal-overlay modal-overlay-light">
+                  <div className="modal-dialog modal-white">
+                    <div className="modal-header modal-header-light">
+                        <h3>
+                          Tehtävän kommentit
+                        </h3>
+                      <button type="button" className="modal-close modal-close-light" onClick={() => setShowCommentBox(false)}>
+                          <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                    <div className="modal-body">
+                      <div ref={commentContainerRef} className="row student-comment-container rounded-5 p-3">
+                        {previousComments.map((comment, index) => (
+                          <>
+                            {comment.idcommentor === user.id && (
+                              <>
+                                <div className="col-md-6"></div>
+                                <div className="col-md-6">
+                                  <div className={`student-comment-box p-3 mb-2 mt-2 float-end student-own-comment`}>
+                                    <p className="m-0 p-0">{user.firstname} {user.lastname}</p>
+                                    <hr className="mt-1" />
+                                    <p className="m-0 p-0">{comment.comment}</p>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            {comment.idcommentor !== user.id && (
+                              <>
+                                <div className="col-md-6">
+                                  <div className={`student-comment-box p-3 mb-2 mt-2 float-start other-comment`}>
+                                    <p className="m-0 p-0">Opettaja</p>
+                                    <hr className="mt-1" />
+                                    <p className="m-0 p-0">{comment.comment}</p>
+                                  </div>
+                                </div>
+                                <div className="col-md-6"></div>
+                              </>
+                            )}
+                          </>
+                        ))}
+                      </div>
+                      <br />
+                      <br />
+                      </div>
+                      <div className="row p-3">
+                        <div className="col text-start">
+                          <button className="btn new-question btn-cancel" onClick={() => handleNewQuestionClick()}>Uusi kysymys<i className="fa-solid fa-plus chat-icon"></i></button>
+                        </div>
+                      </div>
+                  </div>
+              </div>
+            )}
+
+            { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              {showNewQuestionBox && (
+                <div className="modal-overlay modal-overlay-light">
+                    <div className="modal-dialog modal-white">
+                        <div className="modal-header modal-header-light">
+                            <h3>
+                              Uusi kysymys
+                            </h3>
+                          <button type="button" className="modal-close modal-close-light" onClick={() => setShowNewQuestionBox(false)}>
+                              <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </div>
+                        <div className="modal-body">
+                          <form noValidate>
+                            <label htmlFor="student-question">Kysymys:</label>
+                            <textarea id="student-question" className={`form-control essay mt-1 ${newCommentErrors.length > 0 ? "is-invalid" : ""}`} value={newStudentComment.question || ""} maxLength={1000} onChange={(e) => {setNewStudentComment((prev) => ({...prev, question: e.target.value})); setNewCommentErrors([])}}/>
+                            {newCommentErrors.length > 0 && (
+                              <p className="text-danger">{newCommentErrors[0]}</p>
+                            )}
+                            <br />
+                            <label htmlFor="anonymous-question" style={{position: "relative"}}>
+                              Anonyymi kysymys
+                              <i className="fa-solid fa-circle-info" onMouseEnter={() => setVisibleTooltip("anonymous")} onMouseLeave={() => setVisibleTooltip("")}></i>
+                              {visibleTooltip === "anonymous" && (
+                                <div className="student-tooltip">
+                                  Lähetä kysymys nimettömänä <br />
+                                  klikkaamalla ruutua
+                                </div>
+                              )}
+                            </label>
+                            <input type="checkbox" className="form-check-input ms-2" checked={newStudentComment.anonymous_question || ""} onChange={(e) => setNewStudentComment((prev) => ({...prev, anonymous_question: e.target.checked}))}/>
+                            <br />
+                            <br />
+                            <label htmlFor="public-question" style={{position: "relative"}}>
+                              Julkinen kysymys
+                              <i className={`fa-solid fa-circle-info`} onMouseEnter={() => setVisibleTooltip("public")} onMouseLeave={() => setVisibleTooltip("")}></i>
+                              {visibleTooltip === "public" && (
+                                <div className="student-tooltip">
+                                  Julkisia kysymyksiä voidaan <br/>
+                                  käyttää myöhemmin muiden  <br />
+                                  opiskelijoiden apuna. <br />
+                                  Jätä kohta tyhjäksi mikäli <br />
+                                  haluat pitää kysymyksesi <br />
+                                  yksityisenä.
+                                </div>
+                              )}
+                            </label>
+                            <input type="checkbox" className="form-check-input ms-2" checked={newStudentComment.public_question || ""} onChange={(e) => setNewStudentComment((prev) => ({...prev, public_question: e.target.checked}))}/>
+                          </form>
+                          <br />
+                          <br />
+                          <br />
+                          
+                          <div class="row">
+                            <div className="col text-start">
+                              <button type="button" className="btn btn-cancel rounded-5" onClick={() => {setShowNewQuestionBox(false); setShowCommentBox(true)}}>Peruuta</button>
+                            </div>
+                            <div className="col text-end">
+                              <button type="button" className="btn btn-submit rounded-5" onClick={() => handleCommentSumbit()}>Lähetä kysymys</button>
+                            </div>
+                          </div>
                         </div>
                     </div>
                 </div>
