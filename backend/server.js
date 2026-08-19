@@ -13,8 +13,9 @@ app.use(express.json());
 app.use(express.urlencoded({extended: false}))
 
 app.use((req,res,next) => {
-    res.authorizationHeader = (email) => {
-      const access_token = jwt.sign({email: email}, process.env.JWT_SECRET_KEY, {expiresIn: '15m'})
+    res.authorizationHeader = (user) => {
+      const access_token = jwt.sign({iduser: user.iduser, email: user.email, role: user.role}, process.env.JWT_SECRET_KEY, {expiresIn: '15m'})
+      console.log("New token set")
       return res.header('Access-Control-Expose-Headers','Authorization')
                 .header('Authorization','Bearer ' + access_token)
     }

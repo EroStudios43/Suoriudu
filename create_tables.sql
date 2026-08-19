@@ -91,11 +91,13 @@ CREATE TABLE taskresults (
   idtaskresult int PRIMARY KEY AUTO_INCREMENT UNIQUE NOT NULL,
   idtask int NOT NULL,
   iduser int NOT NULL,
+  idexerciseresult int NOT NULL,
   answer MEDIUMTEXT,
   points varchar(45),
   teacher_comment TEXT,
   FOREIGN KEY (idtask) REFERENCES task(idtask) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (iduser) REFERENCES users(iduser)
+  FOREIGN KEY (iduser) REFERENCES users(iduser),
+  FOREIGN KEY (idexerciseresult) REFERENCES exerciseresults(idexerciseresult)
 );
 
 -- Create taskcomments-table
@@ -119,5 +121,5 @@ CREATE TABLE weeks (
   idcourse INT,
   week_name VARCHAR(255),
   week_description TEXT,
-  FOREIGN KEY (idcourse) REFERENCES courses(idcourse)
+  FOREIGN KEY (idcourse) REFERENCES courses(idcourse) ON DELETE CASCADE ON UPDATE CASCADE
 );

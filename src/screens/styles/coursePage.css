@@ -37,6 +37,106 @@
     color: #8b8b8b;
     padding: 10px;
 }
+/* ----- */
+/* Student topbar text styles */
+.course-description-student {
+    font-size: 1.5em;
+    margin: .75em;
+    color: #8b8b8b;
+    margin: 0;
+}
+
+.student-course-titles {
+    max-width: 450px;
+    display: block;
+}
+
+/* Student left sidebar styles */
+
+.student-sidebar-item {
+    background-color: #1D283A;
+    border: none;
+    color: white;
+    font-size: 20px;
+    padding-left: 0;
+}
+
+.student-sidebar {
+    color: white;
+}
+
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    background-color: #525d7d;
+    color: white;
+    border-bottom-color: rgb(222, 226, 230) !important; /* Needs important since bootstrap overrides otherwise*/
+    filter: brightness(110%);
+    border-right: none;
+}
+
+.student-sidebar > .student-sidebar-item:hover {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    overflow: hidden;
+}
+
+.student-sidebar > .student-sidebar-item:focus,
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    border-bottom: 1px solid transparent;
+    overflow: hidden;
+}
+
+.student-sidebar.nav-tabs {
+    border-bottom: none;
+}
+
+.student-left-side-sidebar {
+    border-right: 1px solid rgb(222, 226, 230);
+}
+
+@media only screen and (min-width: 768px){
+    .student-left-side-sidebar {
+        display: none;
+    }
+
+    
+}
+
+/* Student content page styles */
+.student-page-content {
+    padding: 15px;
+}
+
+.exercises {
+    cursor: pointer;
+}
+
+.disabled-div {
+    opacity: 0.65;
+}
+
+.student-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background-color: black;
+    color: white;
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ----- */
 
 .back-icon {
     font-size: 40px;
@@ -216,6 +316,44 @@
     text-align: right;
 }
 
+/* Progress bar of student */
+.progress-container-student {
+    width: 100%;
+    max-width: 750px;
+}
+
+.progress-bar-wrapper-student {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar-student {
+    position: relative;
+    background-color: rgba(75, 75, 75, 0.5);
+    flex: 1;
+    height: 25px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-fill-student {
+    height: 100%;
+    background: linear-gradient(90deg, #00F3FB 0%, #66BB6A 100%);
+    transition: width 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.progress-star-mask {
+    position: absolute;
+    inset: 0;
+    background-color: #1D283A;
+    z-index: 2;
+}
+
 /* Content Row Styles */
 .content-row {
     display: grid;
@@ -335,6 +473,13 @@
     pointer-events: auto;
 }
 
+/* Keep modal dialog from growing beyond viewport and make body scrollable */
+.modal-dialog {
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -385,6 +530,109 @@
 
 .modal-body {
     padding: 20px 28px 28px;
+}
+
+
+/* Make modal body scrollable when content is large */
+.modal-body {
+    overflow: auto;
+}
+
+.edit-modal-dialog {
+    max-width: 760px;
+}
+
+.edit-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #ffffff;
+}
+
+.edit-field span {
+    font-weight: 600;
+}
+
+.edit-field input,
+.edit-field textarea {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.08);
+    color: #ffffff;
+}
+
+.edit-field textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.edit-date-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.edit-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(43, 56, 91, 0.9);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.edit-date-block span {
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.edit-date-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.date-picker-btn,
+.time-picker-btn,
+.save-course-btn,
+.delete-course-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    color: #ffffff;
+}
+
+.date-picker-btn,
+.time-picker-btn {
+    background: rgba(255,255,255,0.1);
+}
+
+.save-course-btn {
+    background: #4CAF50;
+}
+
+.delete-course-btn {
+    background: #d9534f;
+}
+
+.edit-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.inline-picker {
+    margin-top: 10px;
 }
 
 .roster-list {
@@ -440,6 +688,9 @@
 .search-results {
     display: grid;
     gap: 12px;
+    max-height: 360px;
+    overflow: auto;
+    padding-right: 6px;
 }
 
 .search-row {
@@ -501,58 +752,4 @@
 
 .week-col {
     display: flex;
-}
-
-.week-box {
-    background: linear-gradient(180deg, #2B385B 0%, #202B44 100%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 20px;
-    padding: 22px;
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.25);
-    width: 100%;
-    height: 100%;
-    position: relative;
-}
-
-.week-menu {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    font-size: 22px;
-    cursor: pointer;
-    color: #bbbbbb;
-}
-
-.week-menu:hover {
-    color: #ffffff;
-}
-
-
-
-.week-title {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 15px;
-}
-
-.week-task {
-    margin-bottom: 10px;
-    padding: 10px 0;
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.week-task:last-child {
-    border-bottom: none;
-}
-
-.week-task-label {
-    font-size: 12px;
-    color: #8b8b8b;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-}
-
-.week-task-title  {
-    font-size: 18px;
-    font-weight: 600;
 }
