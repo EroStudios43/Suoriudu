@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from "react";
 import "./styles/createCourse.css";
+import "./styles/coursePage.css";
 import { useNavigate } from "react-router-dom"
 import Calendar from "../components/calendar.js";
 import TimePicker from "../components/timepicker.js";
@@ -49,6 +50,22 @@ function CreateCourse() {
       exercises: []
     }];
   });
+
+  // Students selection for the course
+  const [students, setStudents] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("draftcourseStudents")) || [];
+      return saved;
+    } catch (e) {
+      return [];
+    }
+  });
+  const [usersList, setUsersList] = useState([]);
+  const [userSearchOpen, setUserSearchOpen] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [usersFetched, setUsersFetched] = useState(false);
+  const [showSelectedModal, setShowSelectedModal] = useState(false);
 
 
   //save info to localsrorage
@@ -259,17 +276,20 @@ function CreateCourse() {
       alert("Kurssin nimi on pakollinen");
       return;
     }
+    setIsCreating(true);
     const courseObj = {
       name: courseName || "",
       course_description: courseDescription  || "",
       startDate: startDate.toISOString(),
       endDate: endDate.toISOString(),
-      weeks: weeks.map(w => ({ title: w.title, content: w.content, exercises: w.exercises || [] }))
+      weeks: weeks.map(w => ({ title: w.title, content: w.content, exercises: w.exercises || [] })),
+      students: students.map(s => s.iduser)
     };
 
     try {
       const res = await axios.post(url + "/courses", courseObj, { headers: {Authorization: "Bearer " + user.access_token }});
       console.log("Course created with ID:", res.data.idcourse);
+      setIsCreating(false);
       setCourseName("");
       setCourseDescription("");
 
@@ -279,11 +299,54 @@ function CreateCourse() {
       localStorage.removeItem("draftcourseStartDate");
       localStorage.removeItem("draftcourseEndDate");
       localStorage.removeItem("draftExercises");
+      localStorage.removeItem("draftcourseStudents");
+      setStudents([]);
+      setShowSelectedModal(false);
+      setUserSearchOpen(false);
       navigate("/home", {state: { refresh: true }});
     } catch (error) {
+      setIsCreating(false);
       console.error("Error creating course:", error);
     }
   }
+
+  const fetchAllUsers = async () => {
+    try {
+      const res = await axios.get(url + "/users");
+      setUsersList(res.data || []);
+      setUsersFetched(true);
+    } catch (err) {
+      console.error('Failed to fetch users', err);
+    }
+  }
+
+  const openUserSearch = async () => {
+    setUserSearchOpen(true);
+    if (!usersFetched) {
+      await fetchAllUsers();
+    }
+  }
+
+  const addStudent = (u) => {
+    if (!students.find(s => s.iduser === u.iduser)) {
+      setStudents(prev => {
+        const next = prev.concat(u);
+        return next;
+      });
+    }
+  }
+
+  const removeStudent = (iduser) => {
+    setStudents(prev => prev.filter(s => s.iduser !== iduser));
+  }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("draftcourseStudents", JSON.stringify(students));
+    } catch (e) {
+      console.error('Failed to persist students to localStorage', e);
+    }
+  }, [students]);
 
   return (
     <div className="createCourse-container">
@@ -311,15 +374,98 @@ function CreateCourse() {
             </div> 
 
             <div className="topbar-right">
-                <button className="icon-button">
+                <button className="icon-button" onClick={openUserSearch}>
                     <i className="fa-solid fa-user-plus"></i>
                 </button>
+
+                <div className="selected-students-button">
+                  <button className="icon-button" onClick={() => setShowSelectedModal(true)}>
+                    <i className="fa-solid fa-user-group"></i>
+                  </button>
+                  {students.length > 0 && <span className="selected-count">{students.length}</span>}
+                </div>
 
             </div>
 
         </div>
 
         <div className="divider"></div>
+
+        {userSearchOpen && (
+          <div className="modal-overlay">
+            <div className="modal-dialog">
+              <div className="modal-header">
+                <h3>Lisää kurssilainen</h3>
+                <button type="button" className="modal-close" onClick={() => setUserSearchOpen(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div className="modal-body">
+                <input
+                  type="text"
+                  className="search-input"
+                  placeholder="Hae henkilöä..."
+                  value={userSearchQuery}
+                  autoFocus
+                  onChange={(e) => setUserSearchQuery(e.target.value)}
+                />
+
+                {userSearchQuery.trim().length === 0 ? (
+                  <p className="empty-message">Aloita kirjoittamalla nimi</p>
+                ) : (
+                  <div className="search-results">
+                    { (usersList || []).filter(person => {
+                        const q = userSearchQuery.trim().toLowerCase();
+                        const hay = `${person.firstname} ${person.lastname} ${person.email}`.toLowerCase();
+                        return hay.includes(q) && !students.some(s => s.iduser === person.iduser);
+                      }).length === 0 ? (
+                        <p className="empty-message">Ei löytyviä henkilöitä</p>
+                      ) : (
+                        (usersList || []).filter(person => {
+                          const q = userSearchQuery.trim().toLowerCase();
+                          const hay = `${person.firstname} ${person.lastname} ${person.email}`.toLowerCase();
+                          return hay.includes(q) && !students.some(s => s.iduser === person.iduser);
+                        }).map((person) => (
+                          <div key={person.iduser} className="search-row">
+                            <span className="search-name">{person.firstname} {person.lastname}</span>
+                            <button type="button" className="search-add-button" onClick={() => addStudent(person)}>+</button>
+                          </div>
+                        ))
+                      )
+                    }
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showSelectedModal && (
+          <div className="modal-overlay">
+            <div className="modal-dialog">
+              <div className="modal-header">
+                <h3>Valitut oppilaat</h3>
+                <button type="button" className="modal-close" onClick={() => setShowSelectedModal(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="roster-list">
+                  {students.length === 0 ? (
+                    <p className="empty-message">Ei valittuja oppilaita</p>
+                  ) : (
+                    students.map((s) => (
+                      <div key={s.iduser} className="roster-row">
+                        <span className="roster-name">{s.firstname} {s.lastname}</span>
+                        <button type="button" className="roster-remove" onClick={() => removeStudent(s.iduser)}>Poista</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="date-container">
             <div className="date-box">
@@ -459,8 +605,8 @@ function CreateCourse() {
           ))}
         </div>
         <div className="create-course-footer">
-          <button className="create-course-submit" onClick={createCourse}>
-            Luo kurssi
+          <button className="create-course-submit" onClick={createCourse} disabled={isCreating}>
+            {isCreating ? "Luodaan..." : "Luo kurssi"}
           </button>
         </div>
     </div>

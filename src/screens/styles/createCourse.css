@@ -299,3 +299,34 @@
 .exercise-item.exam {
   border-left: 4px solid #6936f4;
 }
+
+.selected-students {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+.selected-students-list { display:flex; flex-direction:column; gap:8px; max-height:160px; overflow:auto; }
+.selected-roster-row { display:flex; justify-content:space-between; align-items:center; background: rgba(43, 56, 91, 0.9); padding:8px 12px; border-radius:12px; border:1px solid rgba(255,255,255,0.06); }
+.selected-roster-row .roster-name { color: #ffffff; font-weight:500; }
+.user-search-popup {
+    position: relative;
+    background: rgba(0,0,0,0.7);
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+}
+.user-search-header {
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+.user-search-header input {
+    flex:1;
+    padding:8px 10px;
+    border-radius:6px;
+    border:none;
+}
+.user-search-results { max-height: 240px; overflow:auto; margin-top:8px; }
+.user-search-item { display:flex; justify-content:space-between; padding:8px 6px; border-bottom:1px solid rgba(255,255,255,0.03); }
+.add-user-button { background: #2a64d6; color:white; border:none; padding:6px 10px; border-radius:6px; cursor:pointer; }

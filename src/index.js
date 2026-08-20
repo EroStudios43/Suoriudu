@@ -26,6 +26,7 @@ import ExamLobby from './screens/ExamLobby.js';
 import TaskEvaluation from "./screens/TaskEvaluation.js";
 import WeeksExercises from "./screens/WeeksExercises.js";
 import WavePagesLayout from './screens/WavePagesLayout.js';
+import WeekOverview from './screens/WeekOverview.js';
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -65,6 +66,7 @@ root.render(
             <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
             <Route path="/TestQuestions/:idexercise" element={<TestQuestions/>} />
             <Route path="/ExamLobby/:idexercise" element={<ExamLobby />} />
+            <Route path="/WeekOverview" element={<WeekOverview/>} />
             <Route path="/WeeksExercises/:idweek" element={<WeeksExercises />} />
           </Route>
 

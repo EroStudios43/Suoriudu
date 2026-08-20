@@ -1,0 +1,260 @@
+.small-week-box {
+    padding: 8px !important;
+    margin-bottom: 8px !important;
+    border-radius: 10px;
+    background: rgba(43,56,91,0.55);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.small-week-box .week-title {
+    font-size: 16px;
+    margin: 0 0 6px 0;
+}
+.small-week-box .week-task-desc {
+    font-size: 13px;
+    color: #d0d7ef;
+}
+.material-card {
+    background: rgba(43,56,91,0.6);
+    border-radius: 12px;
+    padding: 16px;
+    position: relative;
+}
+.material-card .card-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+}
+.material-content {
+    color: #e6eefc;
+    white-space: pre-wrap;
+}
+
+/* Week-specific styles moved from coursePage.css */
+.week-box {
+    background: linear-gradient(180deg, #2B385B 0%, #202B44 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    width: auto;
+    height: auto;
+    position: relative;
+}
+
+.week-menu {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 18px;
+    cursor: pointer;
+    color: #bbbbbb;
+}
+
+.week-menu:hover {
+    color: #ffffff;
+}
+
+.week-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.week-task {
+    margin-bottom: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.week-task:last-child {
+    border-bottom: none;
+}
+
+.week-task-label {
+    font-size: 11px;
+    color: #8b8b8b;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.week-task-title  {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.task-overview-page {
+    padding: 30px 40px;
+}
+
+.task-overview-topbar {
+    align-items: flex-start;
+}
+
+.task-overview-title {
+    font-size: 38px;
+    margin-bottom: 4px;
+    line-height: 1.1;
+}
+
+.task-overview-subtitle {
+    font-size: 18px;
+    color: #a8b4ce;
+    margin: 0;
+}
+
+.task-overview-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.task-progress-ring {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+}
+
+.task-progress-ring-inner {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #1d283a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.settings-button {
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.settings-button:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+.task-overview-section {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.task-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.task-section-header h3 {
+    margin: 0;
+    color: #f4f7ff;
+}
+
+.task-action-btn {
+    padding: 10px 16px;
+    border-radius: 999px;
+    font-size: 14px;
+}
+
+.submission-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.submission-card {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    border-radius: 14px;
+    background: rgba(43,56,91,0.7);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.submission-card.reviewed {
+    background: rgba(35, 53, 83, 0.92);
+}
+
+.submission-main {
+    display: flex;
+    align-items: center;
+}
+
+.submission-name {
+    margin: 0 0 4px 0;
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.submission-meta {
+    margin: 0;
+    color: #a8b4ce;
+    font-size: 13px;
+}
+
+.submission-status {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #dbe5ff;
+}
+
+.submission-status-label {
+    font-size: 12px;
+    color: #8ea0bf;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.submission-status-value {
+    font-size: 14px;
+}
+
+.submission-arrow {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    cursor: pointer;
+}
+
+.submission-arrow:hover {
+    background: rgba(255,255,255,0.2);
+}
+
+@media (max-width: 768px) {
+    .task-overview-page {
+        padding: 20px;
+    }
+
+    .task-overview-actions {
+        margin-top: 10px;
+    }
+
+    .task-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .submission-card {
+        grid-template-columns: 1fr;
+    }
+}

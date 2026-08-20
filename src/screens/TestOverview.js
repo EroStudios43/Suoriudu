@@ -9,7 +9,7 @@ function TestOverview() {
     <div className="body">
         <div className="container">
             <h1>Tarkastele koetta</h1>
-            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/")}>
+            <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate(-1)}>
                     Takaisin
             </button>
             

@@ -2,7 +2,7 @@ import React, {useState} from "react";
 import "./calendar.css";
 import '@fortawesome/fontawesome-free/css/all.min.css';
  
-function Calendar({ selectedDate = new Date(), onDateSelect }) {
+function Calendar({ selectedDate = new Date(), onDateSelect, exams = [] }) {
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const today = new Date();
@@ -33,11 +33,17 @@ function Calendar({ selectedDate = new Date(), onDateSelect }) {
 
         const isToday = date.toDateString() === today.toDateString()
 
-        const classNames = ["date", isSelected ? "selected" : "", isToday ? "today" : ""].filter(Boolean).join(" ");
+        const hasExam = exams.some(e => {
+            if (!e?.start_time) return false;
+            const dt = new Date(e.start_time);
+            return dt.toDateString() === date.toDateString();
+        });
+
+        const classNames = ["date", isSelected ? "selected" : "", isToday ? "today" : "", hasExam ? "exam" : ""].filter(Boolean).join(" ");
 
         dates.push(
             <div key={i} className={classNames} onClick={() => onDateSelect(date)}>
-                {i}
+                <span className="date-number">{i}</span>
             </div>
         );
     }
