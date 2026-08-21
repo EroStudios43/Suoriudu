@@ -26,6 +26,8 @@ function CreateTask() {
   const courseId = location.state?.courseId;
   const initialFormRef = useRef(null);
 
+  const week = location.state?.week || {};
+
   const [tasks, setTasks] = useState([
     {
       instructions: "",
@@ -33,7 +35,8 @@ function CreateTask() {
       choiceMode: "single",
       options: ["", ""],
       correctAnswers: [],
-      answer: ""
+      answer: "",
+      points: 1
     }
   ]);   
 
@@ -54,7 +57,8 @@ function CreateTask() {
       choiceMode: "single",
       options: ["", ""],
       correctAnswers: [],
-      answer: ""
+      answer: "",
+      points: task?.points ?? 1
     };
 
     if (task.type === "choice" || task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
@@ -71,7 +75,8 @@ function CreateTask() {
         choiceMode: task.choiceMode || (task.tasktype === "multiple_choice" ? "multiple" : "single"),
         options: Array.isArray(parsed.options) && parsed.options.length ? parsed.options : ["", ""],
         correctAnswers: Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [],
-        answer: ""
+        answer: "",
+        points: task.points ?? 1
       };
     }
 
@@ -81,7 +86,8 @@ function CreateTask() {
       choiceMode: "single",
       options: ["", ""],
       correctAnswers: [],
-      answer: typeof task.answer === "string" ? task.answer : ""
+      answer: typeof task.answer === "string" ? task.answer : "",
+      points: task.points ?? 1
     };
   };
 
@@ -192,7 +198,8 @@ function CreateTask() {
         choiceMode: "single",
         options: ["", ""],
         correctAnswers: [],
-        answer: ""
+        answer: "",
+        points: 1
       }
     ]);
   }
@@ -228,20 +235,23 @@ function CreateTask() {
           choiceMode: task.choiceMode || "single",
           options: task.options || ["", ""],
           correctAnswers: task.correctAnswers || []
-        })
+        }),
+        points: task.points ?? null
       };
     }
 
     return {
       tasktype: task.type || "essay",
       question: task.instructions || "",
-      answer: task.answer || ""
+      answer: task.answer || "",
+      points: task.points ?? null
     };
   });
 
   // create task to spesific week
   const createTask = async () => {
     if (!validateExercise()) return;
+
 
     const exercise = {
       id: editExercise?.id || Date.now(),
@@ -253,6 +263,52 @@ function CreateTask() {
       end_time: endTime,
       tasks,
     };
+    console.log(exercise.exercise_type)
+
+
+
+    
+    if (source === "weekOverview" && weekIndex && courseId && user?.access_token) {
+        try {
+          const payload = {
+            idweek: weekIndex,
+            exercise_name: taskName,
+            exercise_description: taskDescription,
+            exercise_type: "task",
+            start_time: startTime,
+            end_time: endTime,
+            allow_late_submissions: allowLateSubmissions ? 1 : 0,
+            tasks: normalizeTasksForBackend(),
+          };
+
+
+          const response = await axios.post(
+            `${url}/courses/${courseId}/exercises`,
+            payload,
+            {
+              headers: {
+                Authorization: `Bearer ${user.access_token}`,
+              },
+            }
+          );
+
+
+          // Palataan WeekOverviewiin.
+          
+          navigate(-1);
+
+          return;
+
+        } catch (error) {
+          console.error(
+            "Failed to create exercise:",
+            error.response?.data || error.message
+          );
+
+          alert("Tehtävän luominen epäonnistui.");
+          return;
+        }
+      }
 
     if (source === "taskOverview" && editMode && editExercise?.idexercise && courseId && user?.access_token) {
       try {
@@ -276,7 +332,7 @@ function CreateTask() {
           start_time: startTime,
           end_time: endTime,
           allow_late_submissions: allowLateSubmissions ? 1 : 0,
-          tasks: tasks.map((task) => normalizeTaskFromBackend(task))
+          tasks: tasks.map((task) => normalizeTasksForBackend(task))
         };
 
         const currentWeek = location.state?.week || {};
@@ -369,6 +425,10 @@ function CreateTask() {
     if (task.type === "essay" || task.type === "coding" || task.type === "drawing") {
       // answer voi olla vapaaehtoinen -> ei validointia
       continue;
+    }
+    if (task.points === "" || task.points === null || Number(task.points) < 1) {
+      alert("Tehtävän maksimipisteiden täytyy olla vähintään 1");
+      return false;
     }
   }
 
@@ -576,6 +636,17 @@ function CreateTask() {
 
               </div>
             )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <label className="task-time-label" style={{ margin: 0 }}>Maksimipistemäärä</label>
+              <input
+                type="number"
+                min="0"
+                value={ task.points ?? 1}
+                onChange={(e) => updateTask(taskIndex, { ...task, points: Number(e.target.value) })}
+                style={{ width: 120, padding: 8, borderRadius: 8, border: '1px solid #ccc' }}
+              />
+            </div>
 
             {task.type === "essay" && (
               <textarea

@@ -5,6 +5,7 @@ import Calendar from "../components/calendar.js";
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import { useUser } from "../context/useUser.js";
 import axios from "axios";
+import { pickRandomUnreviewedSubmission } from "../utils/reviewSelection.js";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -52,7 +53,93 @@ export default function Home() {
 
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [exams, setExams] = useState([]);
+    const [showNoMarathonModal, setShowNoMarathonModal] = useState(false);
+    const [marathonLoading, setMarathonLoading] = useState(false);
 
+    const [courseLateStatus, setCourseLateStatus] = useState({});
+
+    const handleMarathonStart = async () => {
+        if (!user || !user.access_token) return;
+
+        setMarathonLoading(true);
+        setShowNoMarathonModal(false);
+
+        try {
+            const myCoursesResponse = await axios.get(
+                url + "/courses/myCourses",
+                { headers: { Authorization: "Bearer " + user.access_token } }
+            );
+
+            const myCourses = myCoursesResponse.data || [];
+            const marathonCandidates = [];
+
+            for (const course of myCourses) {
+                try {
+                    const courseResponse = await axios.get(
+                        url + "/courses/" + course.idcourse,
+                        { headers: { Authorization: "Bearer " + user.access_token } }
+                    );
+
+                    const weeks = courseResponse.data?.weeks || [];
+
+                    for (const week of weeks) {
+                        const exercises = week.exercises || [];
+
+                        for (const exercise of exercises) {
+                            if (exercise.exercise_type === "exam") continue;
+
+                            const submissionsResponse = await axios.get(
+                                `${url}/courses/${course.idcourse}/exercises/${exercise.idexercise}/submissions`,
+                                { headers: { Authorization: `Bearer ${user.access_token}` } }
+                            );
+
+                            const unreviewed = submissionsResponse.data?.unreviewed || [];
+                            if (unreviewed.length > 0) {
+                                marathonCandidates.push(...unreviewed.map((submission) => ({
+                                    ...submission,
+                                    _courseId: course.idcourse,
+                                    _exercise: exercise,
+                                })));
+                            }
+                        }
+                    }
+                } catch (courseError) {
+                    console.warn("Failed to inspect course for marathon", course.idcourse, courseError);
+                }
+            }
+
+            const nextSubmission = pickRandomUnreviewedSubmission(marathonCandidates);
+            if (nextSubmission) {
+                navigate('/TaskEvaluation', {
+                    state: {
+                        courseId: nextSubmission._courseId,
+                        exercise: nextSubmission._exercise,
+                        submission: nextSubmission,
+                        studentName: nextSubmission.name,
+                        userId: nextSubmission.iduser,
+                        marathon: true,
+                        isAnonymous: true,
+                        triggerMarathon: true,
+                    }
+                });
+                return;
+            }
+
+            setShowNoMarathonModal(true);
+        } catch (error) {
+            console.error("Failed to find unreviewed exercise for marathon", error);
+            setShowNoMarathonModal(true);
+        } finally {
+            setMarathonLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (location.state?.triggerMarathon) {
+            navigate('/home', { replace: true, state: {} });
+            handleMarathonStart();
+        }
+    }, [location.state?.triggerMarathon, navigate, user?.access_token]);
 
     const formatDate = (date) => {
         const today = new Date();
@@ -215,6 +302,70 @@ export default function Home() {
                 setExercises(response.data?.exercises)
                 setExerciseResults(response.data?.exerciseresults)
 
+                const lateStatus = {};
+
+                for (const course of response.data) {
+                    try {
+                        const courseResponse = await axios.get(
+                            url + "/courses/" + course.idcourse,
+                            { headers: {Authorization: "Bearer " + user.access_token}}
+                        );
+
+                        const weeks = courseResponse.data?.weeks || [];
+                        const members = courseResponse.data?.members || [];
+
+                        const students = members.filter(
+                            (member) => member.iduser !== user.id
+                        );
+
+                        const overdueExercises = weeks
+                            .flatMap((week) => week.exercises || [])
+                            .filter(
+                                (exercise) =>
+                                    exercise.exercise_type !== "exam" &&
+                                    exercise.end_time &&
+                                    new Date(exercise.end_time) < new Date()
+                            );
+
+                        let hasLateStudent = false;
+
+                        for (const exercise of overdueExercises) {
+                            const submissionsResponse = await axios.get(
+                                `${url}/courses/${course.idcourse}/exercises/${exercise.idexercise}/submissions`,
+                                {headers: {Authorization: `Bearer ${user.access_token}`}}
+                            );
+
+                            const submissions = [
+                                ...(submissionsResponse.data?.reviewed || []),
+                                ...(submissionsResponse.data?.unreviewed || [])
+                            ];
+
+                            const submittedStudentIds = new Set( submissions.filter((submission) => submission.submittedAt)
+                                .map((submission) => Number(submission.iduser))
+                            )
+                            const studentHasNotSubmitted = students.some((student) => !submittedStudentIds.has(student.iduser));
+
+                            if (studentHasNotSubmitted) {
+                                hasLateStudent = true;
+                                break;
+                            }
+                        }
+
+                        lateStatus[course.idcourse] = hasLateStudent;
+
+                    } catch (error) {
+                        console.warn(
+                            "Failed to check late students for course",
+                            course.idcourse,
+                            error.response?.data || error.message
+                        );
+
+                        lateStatus[course.idcourse] = false;
+                    }
+                }
+
+                setCourseLateStatus(lateStatus);
+
                 // Fetch exams for each course
                 try {
                     const examList = [];
@@ -301,7 +452,7 @@ export default function Home() {
                 </h1>       
 
                 <div className="topbar-right-icons">
-                    <button className="icon-button" onClick={e => navigate("/TaskQuestions")}>
+                    <button className="icon-button" onClick={e => navigate("/Questions")}>
                         <i className="fa-solid fa-envelope"></i>
                     </button>
 
@@ -315,6 +466,22 @@ export default function Home() {
 
                 </div>
             </div>
+
+            {showNoMarathonModal && (
+                <div className="modal-overlay">
+                    <div className="modal-dialog">
+                        <div className="modal-header">
+                            <h3>Ei arvioimattomia tehtäviä</h3>
+                            <button type="button" className="modal-close" onClick={() => setShowNoMarathonModal(false)}>
+                                <i className="fa-solid fa-xmark"></i>
+                            </button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Tällä hetkellä ei ole yhtään arvioimattomia palautuksia. Luo ensin uusi tehtävä tai odota oppilaan palautusta.</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="divider"></div>
             <p className="info-text">
@@ -362,11 +529,12 @@ export default function Home() {
                                                 </div>
                                         </div>
 
-                    <button className="marathon-btn" onClick={e => navigate("/TaskEvaluation")}>
-                            <p>Arviointimaratoni</p>
+                    <button className="marathon-btn" onClick={handleMarathonStart} disabled={marathonLoading}>
+                            <p>{marathonLoading ? "Ladataan arvioimattomia..." : "Arviointimaratoni"}</p>
                             <p className="info-marathon">
-                                Arvioi anonyymisti opiskelijoiden tehtäviä satunnaisessa järjestyksessä 
-                                valitsemaltasi kurssilta!
+                                {marathonLoading
+                                    ? "Haetaan seuraavaa arvioitavaa palautusta..."
+                                    : "Arvioi anonyymisti opiskelijoiden tehtäviä satunnaisessa järjestyksessä valitsemaltasi kurssilta!"}
                             </p>
                     </button>
                 </div>
@@ -387,15 +555,24 @@ export default function Home() {
             <div className="courses-content">
                 {courses && courses.length > 0 ? (
                     courses.map((course, index) => (
-                        <div
-                            key={index}
-                            className={`course-card course-color-${index % 4}`}
-                            >
-                            <h2>{course.coursename}</h2>
-                            <button className="course-arrow" onClick={() => navigate(`/CoursePage/${course.idcourse}`)}>
-                                <i className="fa-regular fa-circle-right arrow-icon"></i>
-                            </button>
-                        </div>
+                    <div key={course.idcourse} className={`course-card course-color-${index % 4}`} >
+                        <h2>{course.coursename}</h2>
+
+                        {courseLateStatus[course.idcourse] && (
+                            <div className="inactive-students-warning">
+                                <i className="fa-solid fa-circle-exclamation"></i>
+                                <span>
+                                    Kurssilla havaittu epäaktiivisia oppilaita
+                                </span>
+                            </div>
+                        )}
+
+                        <button
+                            className="course-arrow"
+                            onClick={() =>navigate(`/CoursePage/${course.idcourse}`)}>
+                            <i className="fa-regular fa-circle-right arrow-icon"></i>
+                        </button>
+                    </div>
                     ))
                 ) : (
                     <p className="no-courses">Et ole luonut vielä yhtään kurssia</p>

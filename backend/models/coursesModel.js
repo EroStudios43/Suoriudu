@@ -225,4 +225,128 @@ const selectUsersExerciseResultsFromCourse = async (iduser, idcourse) => {
     return rows;
 }
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectCourseMembers, updateCourseById, deleteCourseById, removeCourseMember , selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse }
+const selectTeacherQuestion = async (courseId,exerciseId,userId,taskId) => {
+    const [rows] = await pool.promise().query(
+        `
+        SELECT
+            t.idtask,
+            t.idexercise,
+            t.tasktype,
+            t.question,
+            t.answer AS correct_answer,
+            tr.idtaskresult,
+            tr.iduser,
+            tr.answer AS student_answer,
+            tr.points,
+            tr.teacher_comment
+
+        FROM task t
+        INNER JOIN exercises e
+            ON e.idexercise = t.idexercise
+        INNER JOIN weeks w
+            ON w.idweek = e.idweek
+        LEFT JOIN taskresults tr
+            ON tr.idtask = t.idtask
+            AND tr.iduser = ?
+        WHERE w.idcourse = ?
+          AND e.idexercise = ?
+          AND t.idtask = ?
+        `,
+        [
+            userId,
+            courseId,
+            exerciseId,
+            taskId
+        ]
+    );
+
+    return rows;
+};
+
+const updateTeacherQuestionAnswer = async (taskResultId,teacherComment) => {
+    const [result] = await pool.promise().query(
+        `
+        UPDATE taskresults
+        SET teacher_comment = ?
+        WHERE idtaskresult = ?
+        `,
+        [
+            teacherComment,
+            taskResultId
+        ]
+    );
+
+    return result;
+};
+
+const selectTeacherQuestions = async (teacherId) => {
+    const [rows] = await pool.promise().query(
+        `
+        SELECT
+            tc.idtaskcomments,
+            tc.comment,
+            tc.public,
+            tc.anonymous,
+            tc.timestamp_of_message,
+
+            tr.idtaskresult,
+            tr.iduser AS student_id,
+            tr.answer AS student_answer,
+
+            t.idtask,
+            t.question AS task_question,
+            t.tasktype,
+
+            e.idexercise,
+            e.exercise_name,
+            e.exercise_description,
+
+            w.idweek,
+            c.idcourse,
+            c.coursename,
+
+            student.firstname AS student_firstname,
+            student.lastname AS student_lastname,
+
+            commenter.firstname AS commenter_firstname,
+            commenter.lastname AS commenter_lastname
+
+        FROM taskcomments tc
+
+        INNER JOIN taskresults tr
+            ON tr.idtaskresult = tc.idtaskresult
+
+        INNER JOIN task t
+            ON t.idtask = tr.idtask
+
+        INNER JOIN exercises e
+            ON e.idexercise = t.idexercise
+
+        INNER JOIN weeks w
+            ON w.idweek = e.idweek
+
+        INNER JOIN courses c
+            ON c.idcourse = w.idcourse
+
+        INNER JOIN coursemembers cm
+            ON cm.idcourse = c.idcourse
+            AND cm.iduser = ?
+
+        INNER JOIN users student
+            ON student.iduser = tr.iduser
+
+        INNER JOIN users commenter
+            ON commenter.iduser = tc.idcommentor
+
+        WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher'
+
+        ORDER BY tc.timestamp_of_message DESC
+        `,
+        [teacherId]
+    );
+
+    return rows;
+};
+
+
+export { selectTeacherQuestions, updateTeacherQuestionAnswer, selectTeacherQuestion, selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectCourseMembers, updateCourseById, deleteCourseById, removeCourseMember , selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse }

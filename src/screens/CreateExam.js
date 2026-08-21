@@ -1,23 +1,32 @@
-import React, {useState, useEffect} from "react";
+import React, {useState, useEffect, useRef} from "react";
+import axios from "axios";
 import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
+import { useUser } from "../context/useUser.js";
+
+const url = process.env.REACT_APP_API_URL;
 
 function CreateExam() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useUser();
 
   const [examName, setExamName] = useState("");
   const [examDescription, setExamDescription] = useState("");
   const [allowLateSubmissions, setAllowLateSubmissions] = useState(false);
   const weekIndex = location.state?.weekIndex;
 
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState(location.state?.defaultStartTime || "");
+  const [endTime, setEndTime] = useState(location.state?.defaultEndTime || "");
   const [examDuration, setExamDuration] = useState("");
 
   const editMode = location.state?.editMode;
   const editExercise = location.state?.exercise;
+  const source = location.state?.source;
+  const courseId = location.state?.courseId;
+  const initialFormRef = useRef(null);
+
 
   const [tasks, setTasks] = useState([
     {
@@ -26,7 +35,8 @@ function CreateExam() {
       choiceMode: "single",
       options: ["", ""],
       correctAnswers: [],
-      answer: ""
+      answer: "",
+      points: 1
     }
   ]);   
 
@@ -34,15 +44,26 @@ function CreateExam() {
     if (editExercise) {
       setExamName(editExercise.exercise_name || "");
       setExamDescription(editExercise.exercise_description || "");
-      setStartTime(editExercise.start_time || "");
-      setEndTime(editExercise.end_time || "");
+      setStartTime(toDateTimeLocal(editExercise.start_time || ""));
+      setEndTime(toDateTimeLocal(editExercise.end_time || ""));
       setAllowLateSubmissions(!!editExercise.allow_late_submissions);
+      setExamDuration(editExercise.max_time || "");
 
       if (editExercise.tasks) {
-        setTasks(editExercise.tasks);
+        setTasks(editExercise.tasks.map((task) => normalizeTaskFromBackend(task)));
       }
     }
-  }, []);
+    initialFormRef.current = {
+      taskName: editExercise?.exercise_name || "",
+      taskDescription: editExercise?.exercise_description || "",
+      allowLateSubmissions: !!editExercise?.allow_late_submissions,
+      startTime: toDateTimeLocal(editExercise?.start_time) || "",
+      endTime: toDateTimeLocal(editExercise?.end_time) || "",
+      tasks: (editExercise?.tasks || []).map((task) => normalizeTaskFromBackend(task)),
+    };
+  }, [editExercise]);
+
+  
 
 
   const addOption = (taskIndex) => {
@@ -105,7 +126,8 @@ function CreateExam() {
         choiceMode: "single",
         options: ["", ""],
         correctAnswers: [],
-        answer: ""
+        answer: "",
+        points: 1
       }
     ]);
   }
@@ -154,6 +176,15 @@ function CreateExam() {
   const formatDateTimeLocal = (date) => {
     const pad = (n) => String(n).padStart(2, "0");
 
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+
+  const toDateTimeLocal = (value) => {
+    if (!value) return "";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+
+    const pad = (n) => String(n).padStart(2, "0");
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
@@ -222,26 +253,10 @@ function CreateExam() {
     return h * 60 + m;
   };
 
-
-
-
   // create task to spesific week
-  const createTask = () => {
+  const createTask = async () => {
     if (!validateExercise()) return;
-    const availableMinutes =
-      (new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000;
 
-    const durationMinutes = toMinutes(examDuration);
-
-    if (isNaN(availableMinutes) || isNaN(durationMinutes)) {
-      alert("Aloitus- ja lopetusaika sekä kesto täytyy olla asetettu");
-      return;
-    }
-
-    if (durationMinutes > availableMinutes) {
-      alert("Suoritusaika ei voi olla pidempi kuin kokeen aukioloaika.");
-      return;
-    }
 
     const exercise = {
       id: editExercise?.id || Date.now(),
@@ -251,9 +266,101 @@ function CreateExam() {
       exercise_type: "exam",
       start_time: startTime, 
       end_time: endTime,
-      exam_duration: examDuration,
-      tasks
+      max_time: examDuration,
+      tasks,
     };
+
+    console.log(exercise.exercise_type)
+    if (source === "weekOverview" && weekIndex && courseId && user?.access_token) {
+        try {
+          const payload = {
+            idweek: weekIndex,
+            exercise_name: examName,
+            exercise_description: examDescription,
+            exercise_type: "exam",
+            start_time: startTime,
+            end_time: endTime,
+            allow_late_submissions: allowLateSubmissions ? 1 : 0,
+            max_time: examDuration,
+            tasks: normalizeTasksForBackend(),
+          };
+
+          const response = await axios.post(
+            `${url}/courses/${courseId}/exercises`,
+            payload,
+            {
+              headers: {
+                Authorization: `Bearer ${user.access_token}`,
+              },
+            }
+          );
+
+          // Palataan WeekOverviewiin.
+          
+          navigate(-1);
+
+          return;
+
+        } catch (error) {
+          console.error(
+            "Failed to create exercise:",
+            error.response?.data || error.message
+          );
+
+          alert("Tehtävän luominen epäonnistui.");
+          return;
+        }
+      }
+
+    if (source === "teacherExam" && editMode && editExercise?.idexercise && courseId && user?.access_token) {
+      try {
+        await axios.put(
+          `${url}/courses/${courseId}/exercises/${editExercise.idexercise}`,
+          {
+            exercise_name: examName,
+            exercise_description: examDescription,
+            allow_late_submissions: allowLateSubmissions ? 1 : 0,
+            start_time: startTime,
+            end_time: endTime,
+            max_time: examDuration,
+            tasks: normalizeTasksForBackend(tasks),
+          },
+          { headers: { Authorization: `Bearer ${user.access_token}` } }
+        );
+
+        const updatedExercise = {
+            ...editExercise,
+            exercise_name: examName,
+            exercise_description: examDescription,
+            start_time: startTime,
+            end_time: endTime,
+            max_time: examDuration,
+            allow_late_submissions: allowLateSubmissions ? 1 : 0,
+            tasks: tasks.map((task) => normalizeTasksForBackend(task))
+        };
+
+        const currentWeek = location.state?.week || {};
+        const updatedWeek = {
+          ...currentWeek,
+          exercises: Array.isArray(currentWeek.exercises)
+            ? currentWeek.exercises.map((exercise) =>
+                exercise.idexercise === updatedExercise.idexercise ? updatedExercise : exercise
+              )
+            : [updatedExercise]
+        };
+
+      navigate("/StartExamPage", {
+        replace: true,
+        state: { courseId, exercise: updatedExercise }
+      });
+
+      return;
+    } catch (error) {
+      console.error("Failed to update exam", error);
+      alert("Kokeen päivittäminen epäonnistui.");
+      return;
+    }
+  }
 
 
     const saved = JSON.parse(localStorage.getItem("draftExercises")) || {};
@@ -262,9 +369,7 @@ function CreateExam() {
       saved[weekIndex] = [];
     }
     if (editMode) {
-      saved[weekIndex] = saved[weekIndex].map(ex =>
-        ex.id === editExercise.id ? exercise : ex
-      );
+      saved[weekIndex] = saved[weekIndex].map(ex => ex.id === editExercise.id ? exercise : ex );
     } else {
       saved[weekIndex].push(exercise);
     }
@@ -272,6 +377,28 @@ function CreateExam() {
 
     navigate(-1);
   };
+
+  const normalizeTasksForBackend = () => tasks.map((task) => {
+    if (task.type === "choice") {
+      return {
+        tasktype: task.choiceMode === "multiple" ? "multiple_choice" : "single_choice",
+        question: task.instructions || "",
+        answer: JSON.stringify({
+          choiceMode: task.choiceMode || "single",
+          options: task.options || ["", ""],
+          correctAnswers: task.correctAnswers || []
+        }),
+        points: task.points ?? null
+      };
+    }
+
+    return {
+      tasktype: task.type || "essay",
+      question: task.instructions || "",
+      answer: task.answer || "",
+      points: task.points ?? null
+    };
+  });
 
   const validateExercise = () => {
     if (!examName.trim()) {
@@ -287,6 +414,19 @@ function CreateExam() {
     if (tasks.length < 1) {
       alert("Tehtävässä pitää olla vähintään yksi tehtävä");
       return false;
+    }
+
+    const availableMinutes = (new Date(endTime).getTime() - new Date(startTime).getTime()) / 60000;
+    const durationMinutes = toMinutes(examDuration);
+
+    if (isNaN(availableMinutes) || isNaN(durationMinutes)) {
+      alert("Aloitus- ja lopetusaika sekä kesto täytyy olla asetettu");
+      return;
+    }
+
+    if (durationMinutes > availableMinutes) {
+      alert("Suoritusaika ei voi olla pidempi kuin kokeen aukioloaika.");
+      return;
     }
 
     for (const task of tasks) {
@@ -323,6 +463,47 @@ function CreateExam() {
     }
 
     return true;
+  };
+
+  const normalizeTaskFromBackend = (task) => {
+    if (!task) return {
+      instructions: "",
+      type: null,
+      choiceMode: "single",
+      options: ["", ""],
+      correctAnswers: [],
+      answer: "",
+      points: 1
+    };
+
+    if (task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
+      let parsed = {};
+      try {
+        parsed = typeof task.answer === "string" ? JSON.parse(task.answer) : (task.answer || {});
+      } catch {
+        parsed = {};
+      }
+
+      return {
+        instructions: task.question || "",
+        type: "choice",
+        choiceMode: task.tasktype === "multiple_choice" ? "multiple" : "single",
+        options: parsed.options || ["", ""],
+        correctAnswers: parsed.correctAnswers || [],
+        answer: "",
+        points: task.points ?? 1
+      };
+    }
+
+    return {
+      instructions: task.question || "",
+      type: task.tasktype || "essay",
+      choiceMode: "single",
+      options: ["", ""],
+      correctAnswers: [],
+      answer: task.answer || "",
+      points: task.points ?? 1
+    };
   };
 
   return (
@@ -378,7 +559,7 @@ function CreateExam() {
                 <input
                   type="time"
                   value={examDuration}
-                  max={availableDuration()}
+                  max={startTime && endTime ? availableDuration() : ""}
                   onChange={(e) => handleDurationChange(e.target.value)}
                 />
             </div>
@@ -501,6 +682,17 @@ function CreateExam() {
 
               </div>
             )}
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <label className="task-time-label" style={{ margin: 0 }}>Maksimipistemäärä</label>
+              <input
+                type="number"
+                min="0"
+                value={task.points ?? 1}
+                onChange={(e) => updateTask(taskIndex, { ...task, points: Number(e.target.value) })}
+                style={{ width: 120, padding: 8, borderRadius: 8, border: '1px solid #ccc' }}
+              />
+            </div>
 
             {task.type === "essay" && (
               <textarea

@@ -2,8 +2,8 @@ import pool from "../helpers/database.js";
 
 const insertExercise = async (idweek,exercise) => {
   const [result] = await pool.promise().query(
-    `INSERT INTO exercises(idweek, exercise_name, exercise_description, exercise_type, start_time,end_time, allow_late_submissions, exam_duration)VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [idweek, exercise.exercise_name, exercise.exercise_description, exercise.exercise_type, exercise.start_time, exercise.end_time, exercise.allow_late_submissions, exercise.max_time || null]
+    `INSERT INTO exercises(idweek, exercise_name, exercise_description, exercise_type, start_time,end_time, allow_late_submissions, max_time)VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [idweek, exercise.exercise_name, exercise.exercise_description, exercise.exercise_type, exercise.start_time, exercise.end_time, exercise.allow_late_submissions, exercise.max_time ?? null]
   );
 
   return result.insertId;
@@ -11,8 +11,8 @@ const insertExercise = async (idweek,exercise) => {
 
 const insertTask = async (idexercise,task) => {
     const [result] = await pool.promise().query(
-    `INSERT INTO task(idexercise,tasktype,question,answer)VALUES (?, ?, ?, ?)`,
-    [idexercise,task.tasktype,task.question,task.answer]
+    `INSERT INTO task(idexercise,tasktype,question,answer,points)VALUES (?, ?, ?, ?, ?)`,
+    [idexercise,task.tasktype,task.question,task.answer, task.points ?? null]
   );
 
   return result.insertId;
@@ -241,6 +241,10 @@ const updateExercise = async (idexercise, data) => {
     fields.push("allow_late_submissions = ?")
     values.push(data.allow_late_submissions)
   }
+  if (data.max_time !== undefined) {
+    fields.push("max_time = ?")
+    values.push(data.max_time)
+  }
 
   if (fields.length === 0) return null
 
@@ -280,12 +284,12 @@ const replaceExerciseTasks = async (idexercise, tasks = []) => {
       })
     }
 
-    return [idexercise, mappedTask.tasktype, mappedTask.question, mappedTask.answer]
+    return [idexercise, mappedTask.tasktype, mappedTask.question, mappedTask.answer, task.points ?? null]
   })
 
-  const placeholders = tasks.map(() => '(?, ?, ?, ?)').join(', ')
+  const placeholders = tasks.map(() => '(?, ?, ?, ?, ?)').join(', ')
   const [rows] = await pool.promise().query(
-    `INSERT INTO task (idexercise, tasktype, question, answer) VALUES ${placeholders}`,
+    `INSERT INTO task (idexercise, tasktype, question, answer, points) VALUES ${placeholders}`,
     values
   )
 
@@ -453,6 +457,43 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
   return rows
 }
 
+  const selectExerciseForCourse = async (exerciseId, courseId) => {
+    const [rows] = await pool.promise().query(
+      "SELECT e.* FROM exercises e INNER JOIN weeks w ON w.idweek = e.idweek WHERE e.idexercise = ? AND w.idcourse = ?",
+      [exerciseId, courseId]
+    );
+    return rows;
+  };
+
+  const updateExercisePassword = async (exerciseId, password) => {
+    const [result] = await pool.promise().query(
+      "UPDATE exercises SET exam_password_student = ? WHERE idexercise = ?", [password, exerciseId]
+    );
+    return result.affectedRows;
+  };
+
+  const selectExerciseDetailsForEdit = async (courseId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+      `SELECT e.*
+      FROM exercises e
+      INNER JOIN weeks w ON w.idweek = e.idweek
+      WHERE e.idexercise = ? AND w.idcourse = ?`,
+      [exerciseId, courseId]
+    );
+
+    return rows;
+  };
+
+  const deleteExercise = async (idexercise) => {
+    const [result] = await pool.promise().query(
+      `DELETE FROM exercises
+      WHERE idexercise = ?`,
+      [idexercise]
+    );
+
+    return result;
+  };
+
 // Get the exam password for the wanted exercise
 const selectExamPasswordForValidation = async (idexercise, iduser) => {
   const [rows] = await pool.promise().query(
@@ -497,5 +538,4 @@ const checkExerciseResultOwnership = async (iduser, idexerciseresult) => {
   )
   return rows
 }
-
-export { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership };
+export { deleteExercise, selectExerciseDetailsForEdit, selectExerciseForCourse, updateExercisePassword, insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership };

@@ -19,14 +19,18 @@ import CreateCourse from "./screens/CreateCourse.js";
 import CoursePage from "./screens/CoursePage.js";
 import TaskOverview from "./screens/TaskOverview.js";
 import TestOverview from "./screens/TestOverview.js";
+import TestEvaluation from "./screens/TestEvaluation.js";
 import TaskQuestions from "./screens/TaskQuestions.js";
 import TestQuestions from './screens/TestQuestions.js';
 import TaskResults from './screens/TaskResults.js';
 import ExamLobby from './screens/ExamLobby.js';
 import TaskEvaluation from "./screens/TaskEvaluation.js";
 import WeeksExercises from "./screens/WeeksExercises.js";
-import WavePagesLayout from './screens/WavePagesLayout.js';
-import WeekOverview from './screens/WeekOverview.js';
+import WavePagesLayout from "./screens/WavePagesLayout.js";
+import WeekOverview from "./screens/WeekOverview.js";
+import StartExamPage from "./screens/StartExamPage.js";
+import Questions from "./screens/Questions.js";
+import SpecificQuestion from './screens/SpecificQuestion.js';
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
@@ -64,10 +68,14 @@ root.render(
             <Route path="/TaskResults/:idexercise" element={<TaskResults/>} />
             <Route path="/TaskQuestions/:idexercise" element={<TaskQuestions/>} />
             <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
+            <Route path="/TestEvaluation" element={<TestEvaluation/>} />
             <Route path="/TestQuestions/:idexercise" element={<TestQuestions/>} />
             <Route path="/ExamLobby/:idexercise" element={<ExamLobby />} />
             <Route path="/WeekOverview" element={<WeekOverview/>} />
             <Route path="/WeeksExercises/:idweek" element={<WeeksExercises />} />
+            <Route path="/StartExamPage" element={<StartExamPage />} />
+            <Route path="/Questions" element={<Questions />} />
+            <Route path="/SpecificQuestion" element={<SpecificQuestion />} />
           </Route>
 
         </Routes>

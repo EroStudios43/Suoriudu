@@ -25,11 +25,16 @@ import { getUsersCourses,
     insertExerciseResult, 
     insertTaskResult, 
     insertUserExerciseAndTaskResults,
+    getTeacherQuestion,
+    saveTeacherQuestionAnswer,
+    getTeacherQuestions,
     getStudentsCompletedExerciseAndTasks, 
     getUserExerciseData, 
     getExamPasswordForValidation, 
     getUsersExerciseComments, 
-    insertUserTaskComment } from "../controllers/coursesController.js"
+    insertUserTaskComment
+ } from "../controllers/coursesController.js"
+import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
 import { auth } from '../helpers/auth.js'
 
 const router = Router()
@@ -45,6 +50,7 @@ router.get("/userExercisesAndAnswers", auth, getUsersExercisesAndResults)
 router.get("/userTasksAndAnswersWeek", auth, getUsersTasksAndAnswersForWeek)
 router.get("/userExerciseDataAndTasks", auth, getUsersExerciseWithTasks)
 router.get("/weekExercises", auth, getWeeksExercises)
+router.get("/teacher/questions", auth, getTeacherQuestions)
 router.get("/completedExercises", auth, getStudentsCompletedExerciseAndTasks)
 router.get("/exercisedata", auth, getUserExerciseData)
 router.get("/getUserExerciseComments", auth, getUsersExerciseComments)
@@ -62,5 +68,10 @@ router.put("/:courseId/exercises/:exerciseId", auth, updateExerciseAndTasks)
 router.delete("/:courseId/members/:userId", auth, removeCourseMember)
 router.delete("/:courseId", auth, deleteCourse)
 router.post("/", auth, createCourse)
+router.get("/:courseId/exercises/:exerciseId/teacher-exam", auth, getTeacherExamOverview)
+router.post("/:courseId/exercises", auth, createExercise)
+router.delete("/:courseId/exercises/:exerciseId", auth, removeExercise)
+router.get("/:courseId/exercises/:exerciseId/submissions/:userId/question/:taskId",auth,getTeacherQuestion)
+router.put("/:courseId/exercises/:exerciseId/submissions/:userId/question/:taskId",auth,saveTeacherQuestionAnswer)
 
 export default router
