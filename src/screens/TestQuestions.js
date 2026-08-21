@@ -359,7 +359,7 @@ function TestQuestions() {
                         <ProgressBarTimer 
                           studentExamStartTime={startingTime} 
                           exerciseEndTime={exercisedata.end_time} 
-                          examDuration={exercisedata?.exam_duration}
+                          examDuration={exercisedata?.max_time}
                           fiveMinutesLeft={fiveMinutesLeft}
                           setFiveMinutesLeft={setFiveMinutesLeft}
                           zeroTimeRemaining={zeroTimeRemaining}
@@ -386,7 +386,7 @@ function TestQuestions() {
               { /* The box styles are slightly edited, and the changes can be found from exercises.css */}
               {showConfirm && (
                 <div className="modal-overlay modal-overlay-light">
-                    <div className="modal-dialog model-dialog-light">
+                    <div className="modal-dialog modal-dialog-light">
                         <div className="modal-header modal-header-light">
                             <h3>
                               Oletko varma, että haluat palauttaa kokeen?

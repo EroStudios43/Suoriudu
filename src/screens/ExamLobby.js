@@ -151,7 +151,7 @@ function ExamLobby () {
                   </small></span>
                   <span className="d-block">
                     <small className="text-secondary">
-                      Suoritusaika: {exercisedata?.exam_duration || "Ei määritelty"}
+                      Suoritusaika: {exercisedata?.max_time || "Ei määritelty"}
                     </small>
                   </span>
                 </div>

@@ -29,8 +29,17 @@ const ProgressBarTimer = ({ studentExamStartTime, exerciseEndTime, examDuration,
     const studentStart = new Date(studentExamStartTime).getTime()
     const exerciseEnd = new Date(exerciseEndTime).getTime()
 
+    let [hours, minutes, seconds] = [0, 0, 0]
+
     // Convert hours to milliseconds
-    let [hours, minutes, seconds] = examDuration.split(":").map(Number)
+    if (examDuration.length > 6) {
+      [hours, minutes, seconds] = examDuration.split(":").map(Number)
+    } else {
+      [hours, minutes] = examDuration.split(":").map(Number)
+      seconds = 0
+    }
+
+    console.log(hours, minutes, seconds)
 
     // Make sure that all of these are present. If not, set to 0.
     if (!hours || typeof hours === 'undefined') {

@@ -1183,7 +1183,6 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
             max_time: rows[0].max_time,
             active_monitors: rows[0].active_monitors,
             exam_password_student: rows[0].exam_password_student,
-            exam_duration: rows[0].exam_duration,
             idexerciseresult: unfinishedExerciseRows[0].idexerciseresult
         } : null
 

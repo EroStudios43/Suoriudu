@@ -193,7 +193,7 @@ const selectUserExerciseData = async (idexercise, iduser) => {
       
       FROM exercises
       
-      INNER JOIN exerciseresults
+      LEFT JOIN exerciseresults
         ON exercises.idexercise = exerciseresults.idexercise
         AND exerciseresults.iduser = ?
       
