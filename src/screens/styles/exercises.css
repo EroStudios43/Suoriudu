@@ -78,7 +78,57 @@
   color: #00F3FB;
 }
 
-/* Multiple choice box */
+.btn-submit {
+  background-color: #6752AD;
+  color: white;
+}
+
+.btn-submit:hover {
+  background-color: #6752AD;
+  filter: brightness(80%);
+}
+
+.btn-cancel {
+  background-color: #B9AFD9;
+}
+
+.btn-cancel:hover {
+  background-color: #B9AFD9;
+  filter: brightness(80%);
+}
+
+.modal-dialog-light {
+  background-color:#D4CEE8;
+}
+
+.modal-header-light > h3 {
+  color: black;
+}
+
+.modal-close-light {
+  color: black;
+}
+
+.modal-white {
+  background-color: white;
+  color: black;
+}
+
+.chat-icon {
+  font-size: 24px;
+}
+
+.chat-text {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.new-question {
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* Multiple and single choice box */
 .student-multiple-choice, .student-single-choice {
   background-color: #F0EEF7;
   margin: 0;
@@ -101,33 +151,90 @@
   cursor: pointer;
 }
 
-.btn-submit {
-  background-color: #6752AD;
+.student-comment-container {
+  border: 1px solid #B9AFD9;
+  overflow-y: scroll;
+  height: 50vh;
+}
+
+.student-comment-box {
+  border: 1px solid #6752AD;
+}
+
+.student-own-comment {
+  background-color: #9E90CB;
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 30px 15px 5px 30px;
+}
+
+.other-comment {
+  border: 1px solid #D4CEE8;
+  background-color: #F0EEF7;
+  box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 15px 30px 30px 5px;
+}
+
+/* ----- TaskResults ----- */
+.student-multiple-choice-answer, .student-single-choice-answer {
+  background-color: #F0EEF7;
+  margin: 0;
+}
+
+.student-multiple-choice-answer > input, .student-single-choice-answer > input {
+  float: none;
+}
+
+.student-multiple-choice-answer.correct input[type="checkbox"]:checked , .student-single-choice-answer.correct input[type="radio"]:checked {
+  background-color: #28a745;
+  border-color: #28a745;
+}
+
+.student-multiple-choice-answer.incorrect input[type="checkbox"]:checked , .student-single-choice-answer.incorrect input[type="radio"]:checked {
+  background-color: #dc3545;
+  border-color: #dc3545;
+}
+
+.student-multiple-choice-answer.partiallycorrect input[type="checkbox"]:checked , .student-single-choice-answer.partiallycorrect input[type="radio"]:checked {
+  background-color: #ffc107;
+  border-color: #ffc107;
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.show-timer {
+  font-size: 32px;
+}
+
+.show-timer.hide {
+  color: #ababab;
+}
+
+/* ----- ExamLobby.js ----- */
+.warning-picture {
+  height: 150px;
+}
+
+.warning-text {
+  font-size: 20px;
+}
+
+.btn-exam {
+  background-color: #979DAD;
   color: white;
 }
 
-.btn-submit:hover {
-  background-color: #6752AD;
-  filter: brightness(80%);
+.btn-exam:hover {
+  background-color: #525D7D;
 }
 
-.btn-cancel {
-  background-color: #B9AFD9;
+.btn-exam:active {
+  background-color: #3c4a7a;
 }
 
-.btn-cancel:hover {
-  background-color: #B9AFD9;
-  filter: brightness(80%);
-}
-
-.model-dialog-light {
-  background-color:#D4CEE8;
-}
-
-.modal-header-light > h3 {
-  color: black;
-}
-
-.modal-close-light {
-  color: black;
+.btn-exam:disabled {
+  background-color: #979DAD;
+  color: white;
+  opacity: 0.7;
 }
