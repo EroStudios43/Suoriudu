@@ -36,7 +36,7 @@ function CreateTask() {
       options: ["", ""],
       correctAnswers: [],
       answer: "",
-      maxPoints: 1
+      points: 1
     }
   ]);   
 
@@ -58,7 +58,7 @@ function CreateTask() {
       options: ["", ""],
       correctAnswers: [],
       answer: "",
-      maxPoints: task?.maxPoints ?? task?.max_points ?? task?.points ?? 1
+      points: task?.points ?? 1
     };
 
     if (task.type === "choice" || task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
@@ -76,7 +76,7 @@ function CreateTask() {
         options: Array.isArray(parsed.options) && parsed.options.length ? parsed.options : ["", ""],
         correctAnswers: Array.isArray(parsed.correctAnswers) ? parsed.correctAnswers : [],
         answer: "",
-        maxPoints: task.maxPoints ?? task.max_points ?? task.points ?? 1
+        points: task.points ?? 1
       };
     }
 
@@ -87,7 +87,7 @@ function CreateTask() {
       options: ["", ""],
       correctAnswers: [],
       answer: typeof task.answer === "string" ? task.answer : "",
-      maxPoints: task.maxPoints ?? task.max_points ?? task.points ?? 1
+      points: task.points ?? 1
     };
   };
 
@@ -199,7 +199,7 @@ function CreateTask() {
         options: ["", ""],
         correctAnswers: [],
         answer: "",
-        maxPoints: 1
+        points: 1
       }
     ]);
   }
@@ -236,7 +236,7 @@ function CreateTask() {
           options: task.options || ["", ""],
           correctAnswers: task.correctAnswers || []
         }),
-        points: task.maxPoints ?? null
+        points: task.points ?? null
       };
     }
 
@@ -244,7 +244,7 @@ function CreateTask() {
       tasktype: task.type || "essay",
       question: task.instructions || "",
       answer: task.answer || "",
-      points: task.maxPoints ?? null
+      points: task.points ?? null
     };
   });
 
@@ -261,10 +261,14 @@ function CreateTask() {
       exercise_type: "task",
       start_time: startTime,
       end_time: endTime,
-      tasks: normalizeTasksForBackend(),
+      tasks,
     };
+    console.log(exercise.exercise_type)
 
-      if (source === "weekOverview" && weekIndex && courseId && user?.access_token) {
+
+
+    
+    if (source === "weekOverview" && weekIndex && courseId && user?.access_token) {
         try {
           const payload = {
             idweek: weekIndex,
@@ -328,7 +332,7 @@ function CreateTask() {
           start_time: startTime,
           end_time: endTime,
           allow_late_submissions: allowLateSubmissions ? 1 : 0,
-          tasks: tasks.map((task) => normalizeTaskFromBackend(task))
+          tasks: tasks.map((task) => normalizeTasksForBackend(task))
         };
 
         const currentWeek = location.state?.week || {};
@@ -422,7 +426,7 @@ function CreateTask() {
       // answer voi olla vapaaehtoinen -> ei validointia
       continue;
     }
-    if (task.maxPoints === "" || task.maxPoints === null || Number(task.maxPoints) < 1) {
+    if (task.points === "" || task.points === null || Number(task.points) < 1) {
       alert("Tehtävän maksimipisteiden täytyy olla vähintään 1");
       return false;
     }
@@ -638,8 +642,8 @@ function CreateTask() {
               <input
                 type="number"
                 min="0"
-                value={task.maxPoints ?? task.max_points ?? task.points ?? 1}
-                onChange={(e) => updateTask(taskIndex, { ...task, maxPoints: Number(e.target.value) })}
+                value={ task.points ?? 1}
+                onChange={(e) => updateTask(taskIndex, { ...task, points: Number(e.target.value) })}
                 style={{ width: 120, padding: 8, borderRadius: 8, border: '1px solid #ccc' }}
               />
             </div>

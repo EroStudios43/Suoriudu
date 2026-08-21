@@ -90,6 +90,7 @@ const createCourse = async (req, res, next) => {
                         allow_late_submissions: exercise.allow_late_submissions ? 1 : 0,
                         max_time: exercise.max_time
                     };
+                    console.log (normalizedExercise.exercise_type);
 
                     const idexercise = await insertExercise(idweek, normalizedExercise);
 
@@ -107,6 +108,8 @@ const createCourse = async (req, res, next) => {
                             };
 
                             let answer;
+                            console.log("COURSE TASK RECEIVED:", task);
+                            console.log("COURSE TASK TYPE:", task.type);
                             const tasktype = mapTaskType(task);
 
                             if (tasktype === "single_choice" || tasktype === "multiple_choice") {
@@ -123,7 +126,7 @@ const createCourse = async (req, res, next) => {
 
                             const mappedTask = {
                                 tasktype: tasktype,
-                                question: task.instructions || "",
+                                question: task.question || task.instructions || "",
                                 answer: answer,
                                 points: task.points ?? null
                             };
