@@ -304,7 +304,7 @@ export default function Home() {
 
                 const lateStatus = {};
 
-                for (const course of response.data) {
+                for (const course of response.data.courses) {
                     try {
                         const courseResponse = await axios.get(
                             url + "/courses/" + course.idcourse,
@@ -369,7 +369,7 @@ export default function Home() {
                 // Fetch exams for each course
                 try {
                     const examList = [];
-                    for (const c of response.data) {
+                    for (const c of response.data.courses) {
                         try {
                             const resp = await axios.get(url + "/courses/" + c.idcourse, { headers: { Authorization: "Bearer " + user.access_token } });
                             const weeks = resp.data.weeks || [];
@@ -520,7 +520,22 @@ export default function Home() {
                                                                     }
                                                                     <div className="exam-course">{ex.coursename}</div>
                                                                     <div className="exam-name">{ex.examname}</div>
-                                                                    <button className="exam-next">
+                                                                    <button
+                                                                        className="exam-next"
+                                                                        onClick={() =>
+                                                                            navigate("/startExamPage", {
+                                                                                state: {
+                                                                                    courseId: ex.idcourse,
+                                                                                    exercise: {
+                                                                                        idexercise: ex.idexercise,
+                                                                                        exercise_name: ex.examname,
+                                                                                        start_time: ex.start_time,
+                                                                                        end_time: ex.end_time
+                                                                                    }
+                                                                                }
+                                                                            })
+                                                                        }
+                                                                    >
                                                                         <i className="fa-solid fa-caret-right"></i>
                                                                     </button>
                                                                 </div>

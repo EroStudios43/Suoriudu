@@ -8,6 +8,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import ProgressBarTimer from "../components/progressbartimer.js";
 import CountdownTimer from "../components/CountDownTimer.js";
+import confetti from "canvas-confetti";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -24,6 +25,7 @@ function TeacherExamPage() {
   const [elapsedMs, setElapsedMs] = useState(0);
   const [progress, setProgress] = useState(100);
   const [remaining, setRemaining] = useState("");
+  const [confettiShown, setConfettiShown] = useState(false);
    
 
   useEffect(() => {
@@ -143,6 +145,68 @@ function TeacherExamPage() {
     return () => clearInterval(interval);
   }, [data]);
 
+
+  useEffect(() => {
+    if (data?.status !== "ended" ) return;
+
+    const examId = data?.exercise?.idexercise;
+
+    if (!examId) return;
+
+    const confettiKey = `exam-confetti-shown-${examId}`;
+
+    // Onko tämän kokeen konfetti jo näytetty?
+    if (sessionStorage.getItem(confettiKey)) {
+      return;
+    }
+
+    // Merkitään heti näytetyksi
+    sessionStorage.setItem(confettiKey, "true");
+
+    const duration = 2000;
+    const end = Date.now() + duration;
+
+    const colors = ["#a864fd", "#29cdff", "#78ff44", "	#ff718d", "#fdff6a"];
+
+    const frame = () => {
+        // Vasen
+        confetti({
+          particleCount: 10,
+          angle: 60,
+          spread: 300,
+          startVelocity: 55,
+          origin: { x: 0, y: 0.7 },
+          colors,
+        });
+
+        // Oikea
+        confetti({
+          particleCount: 10,
+          angle: 120,
+          spread: 300,
+          startVelocity: 55,
+          origin: { x: 1, y: 0.7 },
+          colors,
+        });
+
+        // Keskeltä
+        confetti({
+          particleCount: 10,
+          spread: 300,
+          startVelocity: 45,
+          origin: { x: 0.5, y: 0.6 },
+          colors,
+        });
+
+      if (Date.now() < end) {
+        requestAnimationFrame(frame);
+      }
+    };
+
+    frame();
+  }, [data?.status]);
+
+
   const formatCountdown = (ms) => {
     if (ms <= 0) return "Koe alkaa pian";
     const totalSeconds = Math.floor(ms / 1000);
@@ -231,6 +295,8 @@ function TeacherExamPage() {
                     { headers: { Authorization: `Bearer ${user.access_token}` } }
                   );
 
+                  console.log("EXAM DETAILS:", response.data);
+                  console.log("EXAM TASKS:", response.data?.exercise?.tasks);
                   navigate('/CreateExam', {
                     state: {
                       courseId,

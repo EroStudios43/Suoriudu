@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import "./styles/specificQuestions.css";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -16,21 +16,13 @@ function SpecificQuestion() {
   const [question, setQuestion] = useState(questionFromState || null);
 
   const [answer, setAnswer] = useState("");
-  const [initialAnswer, setInitialAnswer] = useState("");
 
-  const [showBackModal, setShowBackModal] = useState(false);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  /*
-   * Haetaan kysymyksen tarkat tiedot backendistä.
-   *
-   * Tarvitaan:
-   * courseId
-   * exerciseId
-   * userId
-   * taskId
-   */
+  const commentContainerRef = useRef(null);
+
+ //Kysymyksen tehtävän tarkemmat tiedot ja koko keskustelu
   useEffect(() => {
     const fetchQuestion = async () => {
       if (!questionFromState) {
@@ -92,6 +84,9 @@ function SpecificQuestion() {
 
         const data = response.data;
 
+
+        console.log("KYSYMYS DATA:", data);
+
         const mergedQuestion = {
           ...questionFromState,
           ...data,
@@ -111,8 +106,7 @@ function SpecificQuestion() {
           task_question: data.question || questionFromState.task_question,
           tasktype: data.tasktype || questionFromState.tasktype,
 
-          student_answer: data.student_answer,
-          teacher_comment: data.teacher_comment,
+          comments: data.comments || [],
 
           exercise_description:
             data.exercise_description ||
@@ -120,11 +114,6 @@ function SpecificQuestion() {
         };
 
         setQuestion(mergedQuestion);
-
-        const existingAnswer = data.teacher_comment || "";
-
-        setAnswer(existingAnswer);
-        setInitialAnswer(existingAnswer);
       } catch (error) {
         console.error(
           "Kysymyksen hakeminen epäonnistui:",
@@ -141,6 +130,24 @@ function SpecificQuestion() {
     fetchQuestion();
   }, [questionFromState, user, navigate]);
 
+
+  //Keskustelu uusimpaan viestiin
+  useEffect(() => {
+    const container = commentContainerRef.current;
+
+    if (!container) return;
+
+    const scrollToBottom = () => {
+      container.scrollTop = container.scrollHeight;
+    };
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(scrollToBottom);
+    });
+  }, [question?.comments]);
+
+
+  //Ladataan näkymä
   if (loading) {
     return (
       <div className="specific-question-page">
@@ -150,22 +157,26 @@ function SpecificQuestion() {
       </div>
     );
   }
-
   if (!question) {
     return null;
   }
 
-  const isDirty = answer !== initialAnswer;
-
+  //Takaisin nappi
   const handleBack = () => {
-    if (isDirty) {
-      setShowBackModal(true);
-      return;
+    if (answer.trim()) {
+      const shouldLeave = window.confirm(
+        "Olet kirjoittanut vastauksen, mutta et ole lähettänyt sitä. Haluatko varmasti poistua?"
+      );
+
+      if (!shouldLeave) {
+        return;
+      }
     }
 
     navigate(-1);
   };
 
+  //Uusi opettajan viesti
   const handleSendAnswer = async () => {
     if (!answer.trim()) {
       alert("Kirjoita ensin vastaus.");
@@ -177,31 +188,27 @@ function SpecificQuestion() {
       return;
     }
 
-    const courseId = question.courseId ?? question.idcourse;
-    const exerciseId = question.exerciseId ?? question.idexercise;
-    const userId = question.userId ?? question.iduser;
-    const taskId = question.taskId ?? question.idtask;
+    if (!question.idtaskresult) {
+      console.error(
+        "idtaskresult puuttuu:",
+        question
+      );
 
-    if (!courseId || !exerciseId || !userId || !taskId) {
-      console.error("ID:t puuttuvat:", {
-        courseId,
-        exerciseId,
-        userId,
-        taskId,
-        question,
-      });
+      alert(
+        "Kysymyksen keskustelun tunnistetiedot puuttuvat."
+      );
 
-      alert("Kysymyksen tunnistetietoja puuttuu.");
       return;
     }
 
     setSending(true);
 
     try {
-      const response = await axios.put(
-        `${url}/courses/${courseId}/exercises/${exerciseId}/submissions/${userId}/question/${taskId}`,
+      const response = await axios.post(
+        `${url}/courses/taskComments/teacher`,
         {
-          teacher_comment: answer,
+          idtaskresult: question.idtaskresult,
+          comment: answer.trim(),
         },
         {
           headers: {
@@ -213,14 +220,55 @@ function SpecificQuestion() {
 
       console.log("Opettajan vastaus tallennettu:", response.data);
 
-      setInitialAnswer(answer);
 
-      setQuestion((previous) => ({
-        ...previous,
-        teacher_comment: answer,
-      }));
 
-      alert("Vastaus tallennettu.");
+      //Backend palauttaa uuden kommentin
+      //Lisätään se keskusteluun jos objekti
+      if (response.data.comment){
+        setQuestion((previous) => ({
+          ...previous,
+          comments: [
+            ...(previous.comments || []),
+            response.data.comment,
+          ],
+        }))
+      }else {
+        //Jos palautus vain onnistumisviesti, haetaan keskustelu uudelleen
+        const courseId =
+          question.courseId ?? question.idcourse;
+
+        const exerciseId =
+          question.exerciseId ?? question.idexercise;
+
+        const userId =
+          question.userId ??
+          question.iduser ??
+          question.student_id;
+
+        const taskId =
+          question.taskId ?? question.idtask;
+
+        const refreshResponse = await axios.get(
+          `${url}/courses/${courseId}/exercises/${exerciseId}/submissions/${userId}/question/${taskId}?_=${Date.now()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+              "Cache-Control": "no-cache",
+              Pragma: "no-cache",
+            },
+          }
+        );
+
+        setQuestion((previous) => ({
+          ...previous,
+          ...refreshResponse.data,
+          comments:
+            refreshResponse.data.comments || [],
+        }));
+
+      }
+
+      setAnswer("");
     } catch (error) {
       console.error(
         "Vastauksen lähettäminen epäonnistui:",
@@ -237,21 +285,44 @@ function SpecificQuestion() {
   };
 
   const getTaskTypeLabel = (type) => {
-  switch (type) {
-    case "essay":
-      return "Essee";
-    case "coding":
-      return "Ohjelmointi";
-    case "drawing":
-      return "Piirustus";
-    case "single_choice":
-      return "Yksi vaihtoehto";
-    case "multiple_choice":
-      return "Monivalinta";
-    default:
-      return "Tehtävä";
-  }
-};
+    switch (type) {
+      case "essay":
+        return "Essee";
+      case "coding":
+        return "Ohjelmointi";
+      case "drawing":
+        return "Piirustus";
+      case "single_choice":
+        return "Yksi vaihtoehto";
+      case "multiple_choice":
+        return "Monivalinta";
+      default:
+        return "Tehtävä";
+    }
+  };
+
+  const getChoiceData = () => {
+    if (
+      question.tasktype !== "single_choice" &&
+      question.tasktype !== "multiple_choice"
+    ) {
+      return null;
+    }
+
+    try {
+      const data =
+        typeof question.correct_answer === "string"
+          ? JSON.parse(question.correct_answer)
+          : question.correct_answer;
+
+      return data;
+    } catch (error) {
+      console.error("Vaihtoehtojen lukeminen epäonnistui:", error);
+      return null;
+    }
+  };
+
+
 
   return (
     <div className="specific-question-page">
@@ -311,75 +382,166 @@ function SpecificQuestion() {
                 "Tehtävän sisältöä ei löytynyt."}
             </p>
 
+              {question.tasktype === "essay" && question.correct_answer && (
+                <div className="task-example-answer">
+                  <p className="task-example-answer-title">
+                    Esimerkkivastaus
+                  </p>
+
+                  <p>
+                    {question.correct_answer}
+                  </p>
+                </div>
+              )}
+              {(question.tasktype === "single_choice" ||
+                question.tasktype === "multiple_choice") && (
+                <>
+                  {(() => {
+                    const choiceData = getChoiceData();
+
+                    if (!choiceData?.options?.length) {
+                      return null;
+                    }
+
+                    return (
+                      <div className="task-options">
+                        <p className="task-box-title">Vaihtoehdot</p>
+
+                        {choiceData.options.map((option, index) => {
+                          const isCorrect =
+                            choiceData.correctAnswers?.includes(index);
+
+                          return (
+                            <div
+                              key={index}
+                              className={`task-option ${
+                                isCorrect ? "correct-option" : ""
+                              }`}
+                            >
+                              <span className="task-option-number">
+                                {index + 1}.
+                              </span>
+
+                              <span className="task-option-text">
+                                {option}
+                              </span>
+
+                              {isCorrect && (
+                                <span className="correct-option-label">
+                                  ✓ Oikea vastaus
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
+
           </div>
 
         </section>
 
-        {/* OPISKELIJAN APUPYYNTÖ */}
-
+        {/* Keskustelu */}
         <section className="specific-section">
 
-          <h2>Tehtävän apupyyntö</h2>
+          <div className="specific-chat-header">
+            <h2>Tehtävän kommentit</h2>
+          </div>
 
-          <div className="student-question-box">
+          <div className="specific-chat-box">
+            <div ref={commentContainerRef} className="student-comment-container">
 
-            <div className="student-question-header">
-              <strong>
-                {question.anonymous
-                  ? "Anonyymi opiskelija"
-                  : `${question.student_firstname || ""} ${question.student_lastname || ""}`.trim()
-                }
-              </strong>
+              {question.comments?.length > 0 ? (
+                question.comments.map((comment, index) => {
+                  const isStudent =
+                    comment.idcommentor === question.userId;
+
+                  return (
+                    <div
+                      key={comment.idcomment || comment.idtaskcomments || index}
+                      className={`specific-chat-message-wrapper ${
+                        isStudent ? "student-message" : "teacher-message"
+                      }`}
+                    >
+                      <div
+                        className={`student-comment-box ${
+                          isStudent
+                            ? "student-comment"
+                            : "teacher-comment"
+                        }`}
+                      >
+                        <p className="comment-author">
+                          {isStudent
+                            ? `${question.student_firstname || ""} ${
+                                question.student_lastname || ""
+                              }`.trim() || "Opiskelija"
+                            : "Opettaja"}
+                        </p>
+
+                        <hr />
+
+                        <p className="comment-text">
+                          {comment.comment}
+                        </p>
+
+                        {comment.timestamp_of_message && (
+                          <span className="comment-time">
+                            {new Date(
+                              comment.timestamp_of_message
+                            ).toLocaleString("fi-FI")}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="specific-chat-empty">
+                  Tästä tehtävästä ei ole vielä keskustelua.
+                </p>
+              )}
             </div>
-
-            <p>
-              {question.comment ||
-                "Opiskelijan apupyyntöä ei löytynyt."}
-            </p>
-
           </div>
 
         </section>
 
-        {/* OPISKELIJAN VASTAUS */}
-
-        {question.student_answer && (
-          <section className="specific-section">
-
-            <h2>Opiskelijan vastaus</h2>
-
-            <div className="student-answer-box">
-
-              <p>
-                {question.student_answer}
-              </p>
-
-            </div>
-
-          </section>
-        )}
-
-        {/* OPETTAJAN VASTAUS */}
+        {/* UUSI VASTAUS */}
 
         <section className="specific-section">
 
-          <h2>Vastaus oppilaalle</h2>
+          <h2>
+            Vastaus oppilaalle
+          </h2>
 
           <textarea
             className="teacher-answer-input"
             value={answer}
-            onChange={(event) => setAnswer(event.target.value)}
+            onChange={(event) =>
+              setAnswer(event.target.value)
+            }
             placeholder="Kirjoita tähän vastaus oppilaalle..."
+            maxLength={10000}
           />
 
+          <div className="teacher-answer-character-count">
+            {answer.length}/10000
+          </div>
+
         </section>
+
 
         <div className="specific-question-actions">
 
           <button
             className="send-answer-btn"
             type="button"
-            disabled={sending}
+            disabled={
+              sending ||
+              !answer.trim()
+            }
             onClick={handleSendAnswer}
           >
             {sending
@@ -391,69 +553,8 @@ function SpecificQuestion() {
 
       </div>
 
-      {/* BACK MODAL */}
-
-      {showBackModal && (
-        <div className="specific-modal-overlay">
-
-          <div className="specific-modal">
-
-            <div className="specific-modal-header">
-
-              <h3>
-                Palauttamattomia muutoksia
-              </h3>
-
-              <button
-                type="button"
-                className="specific-modal-close"
-                onClick={() => setShowBackModal(false)}
-              >
-                <i className="fa-solid fa-xmark"></i>
-              </button>
-
-            </div>
-
-            <div className="specific-modal-body">
-
-              <p>
-                Olet kirjoittanut vastauksen, mutta et ole
-                lähettänyt sitä.
-              </p>
-
-              <p>
-                Haluatko varmasti poistua ilman että vastaus
-                tallennetaan?
-              </p>
-
-              <div className="specific-modal-actions">
-
-                <button
-                  type="button"
-                  className="specific-modal-cancel"
-                  onClick={() => setShowBackModal(false)}
-                >
-                  Jatka kirjoittamista
-                </button>
-
-                <button
-                  type="button"
-                  className="specific-modal-leave"
-                  onClick={() => navigate(-1)}
-                >
-                  Poistu ilman tallennusta
-                </button>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-      )}
-
     </div>
+        
   );
 }
 
