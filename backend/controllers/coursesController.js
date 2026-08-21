@@ -1,5 +1,5 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers,selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult   } from '../models/exercisesModel.js'
+import { selectTeacherQuestions, selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers,selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, selectTeacherQuestion, updateTeacherQuestionAnswer } from '../models/coursesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit   } from '../models/exercisesModel.js'
 
 import { emptyOrRows } from '../helpers/utils.js'
 import { isTeacherReviewed } from '../helpers/submissionStatus.js'
@@ -70,7 +70,7 @@ const createCourse = async (req, res, next) => {
                     const r = await insertCourseMember(sid, idcourse, "student");
                     console.log('createCourse: inserted student', sid, 'result:', r?.insertId || r);
                 } catch (err) {
-                    // ignore individual insert errors (e.g. FK violation or duplicate)
+                    // ignore individual insert errors ( FK violation or duplicate)
                     console.warn('Failed to add student', sid, err.message || err);
                 }
             }
@@ -88,7 +88,7 @@ const createCourse = async (req, res, next) => {
                         start_time: exercise.start_time,
                         end_time: exercise.end_time,
                         allow_late_submissions: exercise.allow_late_submissions ? 1 : 0,
-                        max_time: exercise.exam_duration || null
+                        max_time: exercise.max_time
                     };
 
                     const idexercise = await insertExercise(idweek, normalizedExercise);
@@ -124,7 +124,8 @@ const createCourse = async (req, res, next) => {
                             const mappedTask = {
                                 tasktype: tasktype,
                                 question: task.instructions || "",
-                                answer: answer
+                                answer: answer,
+                                points: task.points ?? null
                             };
 
                             await insertTask(idexercise, mappedTask);
@@ -183,13 +184,7 @@ const getExerciseDetailsForEdit = async (req, res, next) => {
     try {
         const { courseId, exerciseId } = req.params;
 
-        const [exerciseRows] = await pool.promise().query(
-            `SELECT e.*
-             FROM exercises e
-             INNER JOIN weeks w ON w.idweek = e.idweek
-             WHERE e.idexercise = ? AND w.idcourse = ?`,
-            [exerciseId, courseId]
-        );
+         const exerciseRows = await selectExerciseDetailsForEdit(courseId, exerciseId);
 
         if (!exerciseRows.length) {
             return res.status(404).json({ error: "Exercise not found" });
@@ -206,6 +201,7 @@ const getExerciseDetailsForEdit = async (req, res, next) => {
                 choiceMode: "single",
                 options: ["", ""],
                 correctAnswers: [],
+                points: task.points ?? null,
             };
 
             if (task.tasktype === "single_choice" || task.tasktype === "multiple_choice") {
@@ -242,6 +238,7 @@ const getExerciseDetailsForEdit = async (req, res, next) => {
                 start_time: exercise.start_time,
                 end_time: exercise.end_time,
                 allow_late_submissions: Boolean(exercise.allow_late_submissions),
+                max_time: exercise.max_time,
                 tasks,
             }
         });
@@ -298,8 +295,26 @@ const normalizeChoiceSelection = (rawValue) => {
             if (typeof parsed === "number") {
                 return [parsed];
             }
+            if (parsed && typeof parsed === "object") {
+                if (Array.isArray(parsed.selectedAnswers)) {
+                    return parsed.selectedAnswers.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+                }
+                if (Array.isArray(parsed.selectedAnswer)) {
+                    return parsed.selectedAnswer.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
+                }
+                if (parsed.selectedAnswer !== undefined && parsed.selectedAnswer !== null && parsed.selectedAnswer !== "") {
+                    const selected = Number(parsed.selectedAnswer);
+                    return Number.isNaN(selected) ? [] : [selected];
+                }
+            }
         } catch (error) {
-            // ignore and continue with numeric conversion below
+            // ignore and continue with legacy conversions below
+        }
+
+        if (trimmed.includes(",")) {
+            return trimmed.split(",")
+                .map((item) => Number(item.trim()))
+                .filter((item) => !Number.isNaN(item));
         }
 
         const number = Number(trimmed);
@@ -321,6 +336,12 @@ const normalizeChoiceSelection = (rawValue) => {
         return selected.map((item) => Number(item)).filter((item) => !Number.isNaN(item));
     }
 
+    if (typeof selected === "string" && selected.includes(",")) {
+        return selected.split(",")
+            .map((item) => Number(item.trim()))
+            .filter((item) => !Number.isNaN(item));
+    }
+
     const number = Number(selected);
     return Number.isNaN(number) ? [] : [number];
 };
@@ -328,8 +349,23 @@ const normalizeChoiceSelection = (rawValue) => {
 const getChoiceAutoScore = (task) => {
     const correctAnswers = Array.isArray(task.correctAnswers) ? task.correctAnswers.map((item) => Number(item)) : [];
     const selectedAnswers = Array.isArray(task.studentSelectedAnswers) ? task.studentSelectedAnswers.map((item) => Number(item)) : [];
+    const points = Number(task.points ?? 0);
 
     if (!correctAnswers.length) return 0;
+
+    // Single correct answer -> full points if correct selected
+    if (correctAnswers.length === 1) {
+        return selectedAnswers.some((item) => correctAnswers.includes(item)) ? points || 0 : 0;
+    }
+
+    // Multiple correct answers -> divide maxPoints equally among correct options
+    if (points && correctAnswers.length > 0) {
+        const per = points / correctAnswers.length;
+        const correctSelectedCount = selectedAnswers.filter((item) => correctAnswers.includes(item)).length;
+        return Number((per * correctSelectedCount).toFixed(2));
+    }
+
+    // Fallback: count correct selections
     return selectedAnswers.filter((item) => correctAnswers.includes(item)).length;
 };
 
@@ -339,9 +375,9 @@ const getStudentExerciseReview = async (req, res, next) => {
 
         const [exerciseRows] = await pool.promise().query(
             `SELECT e.*
-             FROM exercises e
-             INNER JOIN weeks w ON w.idweek = e.idweek
-             WHERE e.idexercise = ? AND w.idcourse = ?`,
+            FROM exercises e
+            INNER JOIN weeks w ON w.idweek = e.idweek
+            WHERE e.idexercise = ? AND w.idcourse = ?`,
             [exerciseId, courseId]
         );
 
@@ -355,16 +391,18 @@ const getStudentExerciseReview = async (req, res, next) => {
         );
 
         const [taskRows] = await pool.promise().query(
-            `SELECT t.idtask, t.tasktype, t.question, t.answer AS task_answer,
-                    tr.idtaskresult, tr.answer AS student_answer, tr.points, tr.teacher_comment
-             FROM task t
-             LEFT JOIN taskresults tr ON tr.idtask = t.idtask AND tr.iduser = ?
-             WHERE t.idexercise = ?
-             ORDER BY t.idtask ASC`,
+            `SELECT t.idtask, t.tasktype, t.question, t.answer AS task_answer, t.points, 
+            tr.teacher_comment, tr.idtaskresult, tr.answer AS student_answer, tr.points AS teacher_points        
+            FROM task t
+            LEFT JOIN taskresults tr ON tr.idtask = t.idtask AND tr.iduser = ?
+            WHERE t.idexercise = ?
+            ORDER BY t.idtask ASC`,
             [userId, exerciseId]
         );
 
         const tasks = taskRows.map((task, index) => {
+
+
             let normalizedType = task.tasktype || "essay";
             let displayAnswer = typeof task.student_answer === "string" && task.student_answer.length > 0
                 ? task.student_answer
@@ -432,10 +470,12 @@ const getStudentExerciseReview = async (req, res, next) => {
                 studentAnswer: displayAnswer,
                 studentSelectedAnswers,
                 exampleAnswer,
-                points: task.points ?? "",
+                points: task.points ?? null,
+                teacherPoints: task.teacher_points ?? "",
                 teacherComment: task.teacher_comment ?? "",
                 hasQuestions: false,
-                autoScore: normalizedType === "choice" ? getChoiceAutoScore({ correctAnswers, studentSelectedAnswers }) : 0,
+                autoScore: normalizedType === "choice" ? getChoiceAutoScore({ correctAnswers, studentSelectedAnswers, points: task.points }) : 0,
+                
             };
         });
 
@@ -494,14 +534,14 @@ const saveStudentExerciseReview = async (req, res, next) => {
                 const [insertResult] = await pool.promise().query(
                     `INSERT INTO taskresults (idtask, iduser, idexerciseresult, answer, points, teacher_comment)
                      VALUES (?, ?, ?, ?, ?, ?)`,
-                    [review.idtask, userId, exerciseRows[0].idexerciseresult, "", review.points ?? null, review.teacher_comment ?? ""]
+                    [review.idtask, userId, exerciseRows[0].idexerciseresult, "", review.teacherPoints ?? null, review.teacher_comment ?? ""]
                 );
 
                 idtaskresult = insertResult.insertId;
             }
 
             await updateTaskResult(idtaskresult, {
-                points: review.points ?? null,
+                points: review.teacherPoints ?? null,
                 teacher_comment: review.teacher_comment ?? "",
             });
         }
@@ -522,7 +562,7 @@ const getExerciseSubmissions = async (req, res, next) => {
         }
 
         const [memberRows] = await pool.promise().query(
-            "SELECT iduser FROM coursemembers WHERE idcourse = ?",
+            "SELECT iduser FROM coursemembers WHERE idcourse = ? AND LOWER(COALESCE(userrole, '')) = 'student'",
             [courseId]
         );
 
@@ -538,13 +578,13 @@ const getExerciseSubmissions = async (req, res, next) => {
             `SELECT tr.iduser, COUNT(*) AS reviewed_task_count
              FROM taskresults tr
              INNER JOIN task t ON tr.idtask = t.idtask
+             INNER JOIN coursemembers cm ON cm.iduser = tr.iduser AND cm.idcourse = ?
              WHERE t.idexercise = ?
-               AND (
-                   (tr.points IS NOT NULL AND tr.points <> '')
-                   OR (tr.teacher_comment IS NOT NULL AND TRIM(tr.teacher_comment) <> '')
-               )
+               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+               AND tr.points IS NOT NULL
+               AND TRIM(CAST(tr.points AS CHAR)) <> ''
              GROUP BY tr.iduser`,
-            [exerciseId]
+            [courseId, exerciseId]
         );
 
         const reviewedTaskCounts = new Map(
@@ -556,9 +596,11 @@ const getExerciseSubmissions = async (req, res, next) => {
                     u.iduser, u.firstname, u.lastname
              FROM exerciseresults er
              INNER JOIN users u ON er.iduser = u.iduser
+             INNER JOIN coursemembers cm ON cm.iduser = u.iduser AND cm.idcourse = ?
              WHERE er.idexercise = ?
+               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
              ORDER BY er.complete_time DESC, er.starting_time DESC`,
-            [exerciseId]
+            [courseId, exerciseId]
         );
 
         const [reviewedRows] = await pool.promise().query(
@@ -566,9 +608,11 @@ const getExerciseSubmissions = async (req, res, next) => {
              FROM taskresults tr
              INNER JOIN task t ON tr.idtask = t.idtask
              INNER JOIN users u ON tr.iduser = u.iduser
+             INNER JOIN coursemembers cm ON cm.iduser = u.iduser AND cm.idcourse = ?
              WHERE t.idexercise = ?
+               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
              ORDER BY tr.idtaskresult DESC`,
-            [exerciseId]
+            [courseId, exerciseId]
         );
 
         const reviewedUserIds = new Map();
@@ -589,7 +633,9 @@ const getExerciseSubmissions = async (req, res, next) => {
             const submittedAt = row.complete_time || row.starting_time || null;
             const userId = Number(row.iduser);
             const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
+            const hasTeacherReview = reviewedTaskCount > 0;
             const isReviewed = totalTasks > 0 ? reviewedTaskCount >= totalTasks : false;
+            const partialReview = hasTeacherReview && !isReviewed;
             const totalPoints = totalPointsByUser.get(userId) || 0;
 
             submissionsByUser.set(userId, {
@@ -598,6 +644,8 @@ const getExerciseSubmissions = async (req, res, next) => {
                 submittedAt,
                 autoCheck: row.ai_notes || "Ei vielä arvioitu",
                 reviewed: isReviewed,
+                partialReview,
+                hasTeacherReview,
                 points: isReviewed ? totalPoints : null,
             });
         });
@@ -606,6 +654,9 @@ const getExerciseSubmissions = async (req, res, next) => {
             const userId = Number(row.iduser);
             if (!submissionsByUser.has(userId)) {
                 const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
+                const hasTeacherReview = reviewedTaskCount > 0;
+                const isReviewed = totalTasks > 0 ? reviewedTaskCount >= totalTasks : false;
+                const partialReview = hasTeacherReview && !isReviewed;
                 const totalPoints = totalPointsByUser.get(userId) || 0;
                 submissionsByUser.set(userId, {
                     iduser: row.iduser,
@@ -613,6 +664,8 @@ const getExerciseSubmissions = async (req, res, next) => {
                     submittedAt: null,
                     autoCheck: "Ei vielä arvioitu",
                     reviewed: totalTasks > 0 ? reviewedTaskCount >= totalTasks : false,
+                    partialReview,
+                    hasTeacherReview,
                     points: totalTasks > 0 && reviewedTaskCount >= totalTasks ? totalPoints : null,
                 });
             }
@@ -844,7 +897,7 @@ const getUsersExercises = async (req, res, next) => {
         }
 
         // Get the exercises for the course the user has selected
-        const exercises = selectAllExercisesFromCourse(idcourse)
+        const exercises = await selectAllExercisesFromCourse(idcourse)
 
         return res.status(200).json(exercises || [])
 
@@ -1189,7 +1242,7 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
 const updateExerciseAndTasks = async (req, res, next) => {
     try {
         const { courseId, exerciseId } = req.params;
-        const { exercise_name, exercise_description, start_time, end_time, allow_late_submissions, tasks = [] } = req.body || {};
+        const { exercise_name, exercise_description, start_time, end_time, allow_late_submissions, max_time, tasks = [] } = req.body || {};
 
         if (!exerciseId || Number.isNaN(Number(exerciseId))) {
             return res.status(400).json({ error: "Exercise id is not valid" });
@@ -1209,6 +1262,7 @@ const updateExerciseAndTasks = async (req, res, next) => {
             start_time,
             end_time,
             allow_late_submissions: allow_late_submissions ? 1 : 0,
+            max_time: max_time || null
         });
 
         await replaceExerciseTasks(exerciseId, tasks);
@@ -1236,7 +1290,7 @@ const getWeeksExercises = async (req, res, next) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
 
         // Get parameters from the request
-        const iduser = Number(req.query.iduser)
+        const iduser = Number(decoded.iduser);
         const idweek = Number(req.query.idweek)
         const idcourse = Number(req.query.idcourse)
 
@@ -1335,4 +1389,126 @@ const insertUserExerciseAndTaskResults = async (req, res, next) => {
     }
 }
 
-export { getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults , getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions}
+    const getTeacherQuestion = async (req, res, next) => {
+        try {
+            const {
+                courseId,
+                exerciseId,
+                userId,
+                taskId
+            } = req.params;
+
+            const rows = await selectTeacherQuestion(
+                courseId,
+                exerciseId,
+                userId,
+                taskId
+            );
+
+            if (!rows.length) {
+                return res.status(404).json({
+                    error: "Question not found"
+                });
+            }
+
+            // Älä cacheta autentikoitua, muuttuvaa kysymysdataa
+            res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+            res.set("Pragma", "no-cache");
+            res.set("Expires", "0");
+
+            return res.status(200).json(rows[0]);
+
+        } catch (error) {
+            console.error("getTeacherQuestion error:", error);
+            return next(error);
+        }
+    }
+
+const saveTeacherQuestionAnswer = async (req, res, next) => {
+    try {
+        const {
+            courseId,
+            exerciseId,
+            userId,
+            taskId
+        } = req.params;
+
+        const {
+            teacher_comment
+        } = req.body;
+
+        if (teacher_comment === undefined) {
+            return res.status(400).json({
+                error: "teacher_comment is required"
+            });
+        }
+
+        // Haetaan ensin task + opiskelijan vastaus
+        // ja samalla varmistetaan että kaikki ID:t kuuluvat yhteen.
+        const rows = await selectTeacherQuestion(
+            courseId,
+            exerciseId,
+            userId,
+            taskId
+        );
+
+        if (!rows.length) {
+            return res.status(404).json({
+                error: "Question not found"
+            });
+        }
+
+        const question = rows[0];
+
+        if (!question.idtaskresult) {
+            return res.status(404).json({
+                error: "Student has not submitted an answer for this question"
+            });
+        }
+
+        await updateTeacherQuestionAnswer(
+            question.idtaskresult,
+            teacher_comment
+        );
+
+        return res.status(200).json({
+            message: "Teacher answer saved",
+            teacher_comment
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+const getTeacherQuestions = async (req, res, next) => {
+    try {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        const userRows = await selectUserByEmail(decoded.email);
+
+        if (!userRows.length) {
+            return res.status(404).json({
+                error: "User not found"
+            });
+        }
+
+        const teacherId = userRows[0].iduser;
+
+        const questions = await selectTeacherQuestions(teacherId);
+
+        return res.status(200).json(questions || []);
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
+
+export { getTeacherQuestions,getTeacherQuestion, saveTeacherQuestionAnswer, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults , getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions}

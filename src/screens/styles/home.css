@@ -266,3 +266,22 @@
     background-color: #525D7D;
     color: #232859;
 }
+
+.inactive-students-warning {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+
+    color: #00F3FB;
+    font-size: 14px;
+    font-weight: 500;
+
+    text-align: center;
+    margin: 10px 45px;
+}
+
+.inactive-students-warning i {
+    font-size: 22px;
+    flex-shrink: 0;
+}

@@ -5,6 +5,7 @@ import "./styles/coursePage.css";
 import "./styles/weekPage.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
+import { pickRandomUnreviewedSubmission } from "../utils/reviewSelection.js";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -66,6 +67,24 @@ function TaskOverview() {
   const progressPercentage = submissions.totalStudents > 0 ? Math.round((returnedCount / submissions.totalStudents) * 100) : 0;
   const completionText = `${returnedCount}/${submissions.totalStudents} oppilasta palauttanut`;
 
+  const handleAnonymousReview = () => {
+    if (loading || !submissions.unreviewed.length) return;
+
+    const nextSubmission = pickRandomUnreviewedSubmission(submissions.unreviewed);
+    if (!nextSubmission) return;
+
+    navigate('/TaskEvaluation', {
+      state: {
+        courseId,
+        exercise,
+        submission: nextSubmission,
+        studentName: nextSubmission.name,
+        userId: nextSubmission.iduser,
+        isAnonymous: true,
+      }
+    });
+  };
+
   return (
     <div className="coursepage task-overview-page">
       <div className="topbar task-overview-topbar">
@@ -75,13 +94,7 @@ function TaskOverview() {
               className="fa-regular fa-circle-left back-icon"
               onClick={() => {
                 if (location.state?.week) {
-                  navigate('/WeekOverview', {
-                    replace: true,
-                    state: {
-                      courseId,
-                      week: location.state.week,
-                    }
-                  });
+                  navigate(-1)
                   return;
                 }
 
@@ -147,7 +160,14 @@ function TaskOverview() {
       <div className="task-overview-section">
         <div className="task-section-header">
           <h3>Arvioimattomat palautukset</h3>
-          <button className="edit-btn task-action-btn" type="button">Arvioi anonyymisti</button>
+          <button
+            className="edit-btn task-action-btn"
+            type="button"
+            onClick={handleAnonymousReview}
+            disabled={loading || submissions.unreviewed.length === 0}
+          >
+            Arvioi anonyymisti
+          </button>
         </div>
 
         <div className="submission-list">

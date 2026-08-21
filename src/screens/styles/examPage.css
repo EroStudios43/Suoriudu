@@ -1,0 +1,63 @@
+
+
+
+.exam-center-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-top: 70px;
+}
+
+.exam-password-box{
+    background-color: #E8DEF8;
+    padding: 10px;
+    color: #4A4459;
+    font-size: 20px;
+    border-radius: 10px;
+}
+.small-info-text{
+    font-style: italic;
+}
+.exam-content-wrapper {
+    position: relative;
+    width: 100%;
+    min-height: 500px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.exam-overview-section {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    text-align: center;
+}
+
+.exam-follow-button {
+    position: absolute;
+    top: 20px;
+    right: 32px;
+}
+
+.exam-password-box {
+    background-color: #E8DEF8;
+    padding: 10px;
+    color: #4A4459;
+    font-size: 20px;
+    border-radius: 10px;
+}
+
+.small-info-text {
+    font-style: italic;
+}
+
+.exam-follow-button{
+    background-color: #6750A4;
+    border-radius: 20px;
+}

@@ -34,6 +34,9 @@ function CoursePage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lateStudents, setLateStudents] = useState([]);
+  const [overallProgress, setOverallProgress] = useState(0)
+  const [courseNameLoaded, setCourseNameLoaded] = useState(false);
 
   const refreshCourseData = async () => {
     if (!user || !user.access_token || !courseId) {
@@ -41,8 +44,10 @@ function CoursePage() {
     }
 
     setLoading(true);
+    setCourseNameLoaded(false);
     try {
       const response = await axios.get(url + "/courses/" + courseId, {
+        params: { iduser: user.id },
         headers: { Authorization: "Bearer " + user.access_token },
       });
 
@@ -50,6 +55,7 @@ function CoursePage() {
       const nextEndDate = response.data.course_end_time ? new Date(response.data.course_end_time) : new Date();
 
       setCourseName(response.data.coursename || "");
+      setCourseNameLoaded(true);
       setCourseDescription(response.data.course_description || "");
       setCourseStartDate(nextStartDate);
       setCourseEndDate(nextEndDate);
@@ -59,6 +65,12 @@ function CoursePage() {
       setEditableEndDate(nextEndDate);
       setWeeks(response.data.weeks || []);
       setCourseMembers(response.data.members || []);
+
+      if (user.role === "student") {
+        setChosenWeek(response.data.weeks?.[0]);
+      }
+      updateToken(response)
+
     } catch (error) {
       console.error("Error fetching course data:", error.response?.data || error.message);
     } finally {
@@ -68,7 +80,7 @@ function CoursePage() {
 
   useEffect(() => {
     refreshCourseData();
-  }, [courseId, user?.access_token]);
+  }, [courseId]);
 
   useEffect(() => {
     if (!user || !user.access_token) {
@@ -111,36 +123,6 @@ function CoursePage() {
       console.log("No user or token yet");
       return;
     }
-
-    const fetchCourseData = async () => {
-      try {
-        const response = await axios.get(
-          url + "/courses/" + courseId,
-          { 
-            params: { iduser: user.id},
-            headers: { Authorization: "Bearer " + user.access_token } 
-          }
-        );
-        console.log("FULL COURSE:", response.data);
-        console.log("Course data response:", response.data);
-        setCourseName(response.data.coursename || "");
-        setCourseDescription(response.data.course_description || "");
-        setWeeks(response.data.weeks || []);
-
-        if (user.role === "student") {
-            setChosenWeek(response.data.weeks[0]);
-        }
-
-        updateToken(response);
-      } catch (error) {
-        console.error("Error fetching course data:", error.response?.data || error.message);
-        if (error.status === 404) {
-            console.log("Course not found. Navigating to home page.");
-            navigate("/home");
-        }
-      }
-    };
-
     const getStudentExerciseData = async () => {
         try {
             // Only do this if the role of the user is student. Otherwise return.
@@ -163,7 +145,6 @@ function CoursePage() {
         }
     }
 
-    fetchCourseData();
     if (user.role === "student") {
         getStudentExerciseData();
     }
@@ -176,6 +157,61 @@ function CoursePage() {
     setEditableEndDate(courseEndDate);
     setShowEditModal(true);
   };
+
+  useEffect(() => {
+    if (!user?.access_token || courseMembers.length === 0 || weeks.length === 0) return;
+
+    const calculateProgress = async () => {
+      try {
+        const allExercises = weeks.flatMap(week => week.exercises || []);
+
+        if (allExercises.length === 0) {
+          setOverallProgress(0);
+          return;
+        }
+
+        const studentIds = courseMembers
+          .filter(m => m.iduser !== user.id)
+          .map(m => Number(m.iduser));
+
+        let totalPossible = studentIds.length * allExercises.length;
+        let totalSubmitted = 0;
+
+        for (const exercise of allExercises) {
+          const res = await axios.get(
+            `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions`,
+            { headers: { Authorization: `Bearer ${user.access_token}` } }
+          );
+
+          const submissions = [
+            ...(res.data?.reviewed || []),
+            ...(res.data?.unreviewed || [])
+          ];
+
+          const submittedIds = new Set(
+            submissions
+              .filter(s => s.submittedAt)
+              .map(s => Number(s.iduser))
+          );
+
+          studentIds.forEach(id => {
+            if (submittedIds.has(id)) {
+              totalSubmitted += 1;
+            }
+          });
+        }
+
+        const percentage = Math.round((totalSubmitted / totalPossible) * 100);
+        setOverallProgress(percentage);
+
+      } catch (err) {
+        console.error("Error calculating progress:", err);
+        setOverallProgress(0);
+      }
+    };
+
+    calculateProgress();
+  }, [weeks, courseMembers, user?.access_token]);
 
   const handleSaveCourse = async () => {
     if (!courseId || !user?.access_token) {
@@ -245,16 +281,6 @@ function CoursePage() {
     );
   };
 
-  const availablePeople = [
-    "Aino Aalto",
-    "Eero Ekholm",
-    "Ilona Iivonen",
-    "Kaisa Korhonen",
-    "Laura Leinonen",
-    "Mikko Mäkelä",
-    "Olli Oksanen",
-    "Sanna Saarinen",
-  ];
 
   const handleDeleteCourse = async () => {
     if (!courseId || !user?.access_token) {
@@ -328,10 +354,98 @@ function CoursePage() {
     { task: "Tehtävä 5", author: "Anonyymi" },
   ];
 
-  const lateStudents = courseMembers
-    .filter((member) => member.iduser !== user?.id)
-    .slice(0, 3)
-    .map((member) => `${member.firstname} ${member.lastname}`);
+  useEffect(() => {
+    if (user?.role !== "teacher" || !user?.access_token || !courseId || courseMembers.length === 0 || weeks.length === 0) {
+      setLateStudents([]);
+      return;
+    }
+
+    const findLateStudents = async () => {
+      try {
+        const now = new Date();
+
+        // Kaikki tehtävät, joiden palautusaika on mennyt.
+        // Kokeita ei lasketa mukaan.
+        const overdueExercises = weeks
+          .flatMap((week) => week.exercises || [])
+          .filter(
+            (exercise) =>
+              exercise.exercise_type !== "exam" &&
+              exercise.end_time &&
+              new Date(exercise.end_time) < now
+          );
+
+        if (overdueExercises.length === 0) {
+          setLateStudents([]);
+          return;
+        }
+
+        const lateStudentIds = new Set();
+
+        // Haetaan jokaisen myöhässä olevan tehtävän palautukset
+        for (const exercise of overdueExercises) {
+          try {
+            const response = await axios.get(
+              `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions`,
+              {
+                headers: {
+                  Authorization: `Bearer ${user.access_token}`,
+                },
+              }
+            );
+
+          const submissions = [
+          ...(response.data?.reviewed || []),
+          ...(response.data?.unreviewed || [])
+        ];
+
+          const submittedStudentIds = new Set(
+            submissions
+              .filter((submission) => submission.submittedAt)
+              .map((submission) => Number(submission.iduser))
+          );
+
+          courseMembers
+            .filter((member) => member.iduser !== user.id)
+            .forEach((member) => {
+            const studentId = Number(member.iduser);
+
+            if (!submittedStudentIds.has(studentId)) {
+              lateStudentIds.add(studentId);
+            }
+          });
+          } catch (error) {
+            console.error(
+              `Palautusten hakeminen epäonnistui tehtävälle ${exercise.idexercise}:`,
+              error.response?.data || error.message
+            );
+          }
+        }
+
+        const lateStudentsList = courseMembers
+          .filter(
+            (member) =>
+              member.iduser !== user.id &&
+              lateStudentIds.has(member.iduser)
+          )
+          .sort((a, b) =>
+            `${a.firstname} ${a.lastname}`.localeCompare(
+              `${b.firstname} ${b.lastname}`,
+              "fi"
+            )
+          );
+
+        setLateStudents(lateStudentsList);
+      } catch (error) {
+        console.error("Myöhässä olevien oppilaiden haku epäonnistui:", error);
+        setLateStudents([]);
+      }
+    };
+
+    findLateStudents();
+  }, [ user?.role, user?.access_token, user?.id, courseId, courseMembers, weeks, ]);
+
+
   const rosterStudents = [...courseMembers]
     .filter((member) => member.iduser !== user?.id)
     .sort((a, b) => `${a.firstname} ${a.lastname}`.localeCompare(`${b.firstname} ${b.lastname}`, "fi"));
@@ -346,7 +460,7 @@ function CoursePage() {
         <div className="topbar-left">
           <div className="course-title">
             <i className="fa-regular fa-circle-left back-icon" onClick={() => navigate("/home")}></i>
-            <h2 className="course-name">{loading ? "Ladataan..." : courseName}</h2>
+            <h2 className="course-name">{!courseNameLoaded ? "Ladataan..." : courseName}</h2>
           </div>
           <p className="course-description">{courseDescription}</p>
         </div>
@@ -450,9 +564,9 @@ function CoursePage() {
           <h3 className="progress-title">Oppilaiden yhteisedistys</h3>
           <div className="progress-bar-wrapper">
             <div className="progress-bar">
-              <div className="progress-fill" style={{ width: "60%" }}></div>
+              <div className="progress-fill" style={{ width: `${overallProgress}%` }}></div>
             </div>
-            <span className="progress-percentage">60%</span>
+            <span className="progress-percentage">{overallProgress}%</span>
           </div>
         </div>
       </div>
@@ -464,9 +578,9 @@ function CoursePage() {
             {lateStudents.length === 0 ? (
               <p className="empty-message">Ei oppilaita</p>
             ) : (
-              lateStudents.map((student, index) => (
-                <div key={index} className="student-item">
-                  {student}
+              lateStudents.map((student) => (
+                <div key={student.iduser} className="student-item">
+                  {student.firstname} {student.lastname}
                 </div>
               ))
             )}

@@ -8,15 +8,13 @@ import { getReviewDisplayName } from "../utils/reviewSelection.js";
 
 const url = process.env.REACT_APP_API_URL;
 
-function TaskEvaluation({ isExamMode = false }) {
+function TestEvaluation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useUser();
   const state = location.state || {};
   const { courseId, exercise, submission, studentName, userId } = state;
   const isAnonymous = Boolean(state.isAnonymous || state.marathon);
-  const overviewPath = isExamMode ? '/TestOverview' : '/TaskOverview';
-  const issueLabel = isExamMode ? 'Tekoälyn merkinnät' : 'Ongelmia tehtävässä?';
 
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState(null);
@@ -47,7 +45,6 @@ function TaskEvaluation({ isExamMode = false }) {
           `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/review`,
           { headers: { Authorization: `Bearer ${user.access_token}` } }
         );
-        console.log("REVIEW DATA:", response.data)
 
         setStudentData(response.data?.student || null);
         setTasks((response.data?.tasks || []).map((task) => {
@@ -58,15 +55,13 @@ function TaskEvaluation({ isExamMode = false }) {
             options: Array.isArray(task.options) ? task.options : [],
             correctAnswers: Array.isArray(task.correctAnswers) ? task.correctAnswers.map((value) => Number(value)) : [],
             studentSelectedAnswers: Array.isArray(task.studentSelectedAnswers) ? task.studentSelectedAnswers.map((value) => Number(value)) : [],
-            points: task.points ?? (task.idtaskresult ? null : task.points) ?? null,
+            points: task.points ?? null,
           };
-
-          
 
           return nextTask;
         }));
       } catch (error) {
-        console.error("Failed to fetch student review data", error);
+        console.error("Failed to fetch exam review data", error);
       } finally {
         setLoading(false);
       }
@@ -175,20 +170,16 @@ function TaskEvaluation({ isExamMode = false }) {
   };
 
   const getTaskPoints = (task) => {
-    if (
-      task.teacherPoints !== null &&
-      task.teacherPoints !== undefined &&
-      task.teacherPoints !== ""
-    ) {
-      return task.teacherPoints;
-    }
+  if ( task.teacherPoints !== null && task.teacherPoints !== undefined && task.teacherPoints !== "") {
+    return task.teacherPoints;
+  }
 
-    if (task.type === "choice") {
-      return getChoiceAutoPoints(task);
-    }
+  if (task.type === "choice") {
+    return getChoiceAutoPoints(task);
+  }
 
-    return "";
-  };
+  return "";
+};
 
 
   const handleSaveTask = async (taskIndex) => {
@@ -209,7 +200,7 @@ function TaskEvaluation({ isExamMode = false }) {
         { headers: { Authorization: `Bearer ${user.access_token}` } }
       );
     } catch (error) {
-      console.error("Failed to save review", error);
+      console.error("Failed to save exam review", error);
     } finally {
       setSaving(false);
     }
@@ -232,24 +223,9 @@ function TaskEvaluation({ isExamMode = false }) {
         { headers: { Authorization: `Bearer ${user.access_token}` } }
       );
 
-      if (location.state?.marathon) {
-        navigate('/home', {
-          replace: true,
-          state: { triggerMarathon: true },
-        });
-        return;
-      }
-
-      navigate(overviewPath, {
-        replace: true,
-        state: {
-          courseId,
-          exercise,
-          week: location.state?.week,
-        }
-      });
+      navigate('/TestOverview', { replace: true, state: { courseId, exercise, week: location.state?.week } });
     } catch (error) {
-      console.error("Failed to save evaluation", error);
+      console.error("Failed to save exam evaluation", error);
     } finally {
       setSaving(false);
     }
@@ -261,23 +237,9 @@ function TaskEvaluation({ isExamMode = false }) {
         <div className="task-header">
           <i
             className="fa-regular fa-circle-left back-arrow"
-            onClick={() => {
-              if (location.state?.marathon) {
-                navigate('/home', { replace: true });
-                return;
-              }
-
-              navigate(overviewPath, {
-                replace: true,
-                state: {
-                  courseId,
-                  exercise,
-                  week: location.state?.week,
-                }
-              });
-            }}
+            onClick={() => navigate('/TestOverview', { replace: true, state: { courseId, exercise, week: location.state?.week } })}
           ></i>
-          <h1>{exercise?.exercise_name || "Tehtävän arviointi"}</h1>
+          <h1>{exercise?.exercise_name || "Kokeen arviointi"}</h1>
         </div>
 
         {loading ? (
@@ -286,7 +248,7 @@ function TaskEvaluation({ isExamMode = false }) {
           <>
             <div className="task-content">
               <div>
-                <h2>{exercise?.exercise_name || "Tehtävä"}</h2>
+                <h2>{exercise?.exercise_name || "Koe"}</h2>
                 <p className="task-time-label">{studentDisplayName}</p>
               </div>
             </div>
@@ -294,7 +256,7 @@ function TaskEvaluation({ isExamMode = false }) {
             <div className="divider"></div>
 
             {tasks.length === 0 ? (
-              <p>Ei tehtäviä arvioitavaksi.</p>
+              <p>Ei arvioitavia tehtäviä.</p>
             ) : (
               tasks.map((task, index) => (
                 <div key={task.idtask || index} className="single-task-section" style={{ width: "100%" }}>
@@ -359,7 +321,7 @@ function TaskEvaluation({ isExamMode = false }) {
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, gap: 12 }}>
-                    <span className="task-time-label" style={{ margin: 0 }}>{issueLabel}</span>
+                    <span className="task-time-label" style={{ margin: 0 }}>Tekoälyn merkinnät</span>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span
                         style={{
@@ -376,7 +338,10 @@ function TaskEvaluation({ isExamMode = false }) {
                   </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 18, marginBottom: 12 }}>
-                    <label className="task-time-label" style={{ margin: 0 }}>Arviointi</label>
+                    <label className="task-time-label" style={{ margin: 0 }}>
+                      Arviointi
+                    </label>
+
                     <input
                       type="number"
                       min="0"
@@ -446,4 +411,4 @@ function TaskEvaluation({ isExamMode = false }) {
   );
 }
 
-export default TaskEvaluation;
+export default TestEvaluation;
