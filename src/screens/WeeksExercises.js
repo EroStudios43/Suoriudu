@@ -44,6 +44,7 @@ function WeeksExercises() {
       return null
     }
 
+
     try {
       const response = await axios.get(
         url + "/courses/weekExercises",
@@ -53,9 +54,9 @@ function WeeksExercises() {
           signal
         }
       )
-      console.log("EEEE")
-      console.log(response.data)
-      setWeek({...week, exercises: response.data})
+      console.log("WeekExercises: ", response.data)
+      setWeek({...week, exercises: response.data.exercises, exerciseresults: response.data.exerciseresults})
+      setStudentExerciseResults(response.data.exerciseresults)
     } catch (error) {
       console.log("Error fetching exercise data:", error.response?.data || error.message)
       if (error.status === 404) {
@@ -138,6 +139,7 @@ function WeeksExercises() {
               <div className="row text-start">
                 <h3>Viikon tehtäväpaketit</h3>
                 {week?.exercises?.map((exercise, index) => {
+                  if (exercise.exercise_type === "task") {
                   return (
                     <div className={`col-xl-4 col-lg-6 p-2`} key={exercise.idexercise}>
                       <div className={`course-color-${index % 4} p-3 rounded-3 exercise-box`} onClick={() => toggleBox(exercise.idexercise)}>
@@ -163,13 +165,17 @@ function WeeksExercises() {
                                   return (amountOfDoneTasks + "/" + exerciseTasks?.length)
                                 })()}
                                 {
-                                  studentExerciseResults?.some(ex => 
+                                  studentExerciseResults?.some(ex =>
                                     ex.idexercise === exercise.idexercise &&
                                     ex.complete_time != null
                                   ) ? (
                                     <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>
-                                  ) :
-                                  (
+                                  ) : new Date(exercise.end_time) < new Date() ? (
+                                    <i
+                                      className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1"
+                                      style={{ color: "#00F3FB" }}
+                                    ></i>
+                                  ) : (
                                     <i className="fa-regular fa-circle ps-3 pe-3 pt-1"></i>
                                   )
                                 }
@@ -216,15 +222,151 @@ function WeeksExercises() {
                               : 
                               <p><small>Myöhästyneitä palautuksia ei sallita</small></p>
                             }
-                            <div className="text-end">
-                              <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskQuestions/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Suorita tehtävä</button>
+                            <div className="d-flex justify-content-end gap-3">
+                              {
+                                studentExerciseResults?.some(ex => 
+                                  ex.idexercise === exercise.idexercise &&
+                                  ex.complete_time != null
+                                ) ? (
+                                  <>
+                                    {(new Date(exercise.end_time) > new Date() || exercise.allow_late_submissions) ? 
+                                      <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskQuestions/${exercise.idexercise}`, {state: { idweek: idweek, idcourse: idcourse }})}>Yritä uudelleen</button>
+                                      : <></>
+                                    }
+                                    <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskResults/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Tarkastele tuloksia</button>
+                                  </>
+                                ) :
+                                (
+                                  <>
+                                    {(new Date(exercise.end_time) > new Date() || exercise.allow_late_submissions) ?
+                                      <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskQuestions/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Suorita tehtävä</button>
+                                      : <></>
+                                    }
+                                  </>
+                                )
+                              }
                             </div>
-                            
                           </div>
                         </div>
                       </div>
                     </div>
-                  )
+                  )}
+                })}
+
+                </div>
+                <br />
+                <div className="row text-start">
+                <h3>Viikon Kokeet</h3>
+                {week?.exercises?.map((exercise, index) => {
+                  if (exercise.exercise_type === "exam") {
+                  return (
+                    <div className={`col-xl-4 col-lg-6 p-2`} key={exercise.idexercise}>
+                      <div className={`course-color-${index % 4} p-3 rounded-3 exercise-box`} onClick={() => toggleBox(exercise.idexercise)}>
+                        <div className="row">
+                          <div className="col-sm-6">
+                            <p className="mb-0">{exercise.exercise_name}</p>
+                          </div>
+                          <div className="col-sm-6 text-end">
+                              <p className="mb-0">
+                                {(() => {
+                                  // Get all the task ids from the taskresults
+                                  const taskResultTaskIds = new Set(
+                                    taskResults?.map(t => t.idtask)
+                                  )
+
+                                  // Get all tasks that are in this exercise
+                                  const exerciseTasks = tasks?.filter(t => t.idexercise === exercise.idexercise) || []
+
+                                  // Count the amount of done tasks for this exercise
+                                  const amountOfDoneTasks = exerciseTasks?.filter(task => taskResultTaskIds?.has(task.idtask))?.length
+
+                                  // Return the correct number
+                                  return (amountOfDoneTasks + "/" + exerciseTasks?.length)
+                                })()}
+                                {
+                                  studentExerciseResults?.some(ex =>
+                                    ex.idexercise === exercise.idexercise &&
+                                    ex.complete_time != null
+                                  ) ? (
+                                    <i className="fa-regular fa-circle-check ps-3 pe-3 pt-1"></i>
+                                  ) : new Date(exercise.end_time) < new Date() ? (
+                                    <i
+                                      className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1"
+                                      style={{ color: "#00F3FB" }}
+                                    ></i>
+                                  ) : (
+                                    <i className="fa-regular fa-circle ps-3 pe-3 pt-1"></i>
+                                  )
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        <div className={`collapse ${openBoxes[exercise.idexercise] ? "show" : ""} mt-3`}>
+                          <hr/>
+                          <div className="row">
+                            <h5>Kokeen kuvaus</h5>
+                            <p className="mb-0">{exercise.exercise_description}</p>
+                          </div>
+                          
+                          <br />
+                          <hr />
+                          
+                          <div className="row">
+                            <div className="col-sm-6">
+                              <h5>Avautuu:</h5>
+                              <p>
+                                {new Date(exercise.start_time).toLocaleString("fi-FI", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "2-digit",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </p>
+                            </div>
+                            <div className="col-sm-6">
+                              <h5>Sulkeutuu:</h5>
+                                <p>
+                                  {new Date(exercise.end_time).toLocaleString("fi-FI", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </p>
+                            </div>
+                            {exercise.allow_late_submissions ? 
+                              <p><small>Myöhästyneet palautukset sallittu</small></p>
+                              : 
+                              <p><small>Myöhästyneitä palautuksia ei sallita</small></p>
+                            }
+                            <div className="row m-0 p-0">
+                              {
+                                studentExerciseResults?.some(ex => 
+                                  ex.idexercise === exercise.idexercise &&
+                                  ex.complete_time != null
+                                ) ? (
+                                  <div className="text-end m-0">
+                                    <button className="btn to-exercise-btn" onClick={() => navigate(`/TaskResults/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Tarkastele tuloksia</button>
+                                  </div>
+                                ) :
+                                (
+                                  <>
+                                  {(new Date(exercise.end_time) > new Date() || exercise.allow_late_submissions) ? 
+                                    <div className="text-end">
+                                      <button className="btn to-exercise-btn" onClick={() => navigate(`/ExamLobby/${exercise.idexercise}`, {state: {idweek: idweek, idcourse: idcourse}})}>Suorita koe</button>
+                                    </div> : <></>
+                                    }
+                                  </>
+                                )
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 })}
                 {week.exercises?.length < 1 && <p>Viikolla ei ole tehtäviä.</p>}
               </div>

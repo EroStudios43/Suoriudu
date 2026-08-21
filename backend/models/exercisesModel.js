@@ -32,6 +32,31 @@ const selectAllExerciseTasks = async (idexercise) => {
   return rows;
 }
 
+const selectExerciseById = async (idexercise) => {
+  const [rows] = await pool.promise().query(
+    `SELECT * FROM exercises WHERE idexercise = ?`,
+    [idexercise]
+  )
+  return rows
+}
+
+const selectWeekExerciseResults = async (idweek, iduser) => {
+  const [rows] = await pool.promise().query(
+    `SELECT 
+      exerciseresults.idexerciseresult,
+      exerciseresults.iduser,
+      exerciseresults.idexercise,
+      exerciseresults.starting_time,
+      exerciseresults.complete_time
+    FROM exercises
+    INNER JOIN exerciseresults ON exerciseresults.idexercise = exercises.idexercise
+      AND exerciseresults.iduser = ?
+    WHERE exercises.idweek = ?`,
+    [iduser, idweek]
+  )
+  return rows
+}
+
 const selectUsersExerciseTaskResults = async (iduser, idexercise) => {
   const [rows] = await pool.promise().query(`
     SELECT * 
@@ -69,7 +94,7 @@ const selectUsersTasksAndResultsForWeek = async (iduser, idweek) => {
 
 // Select user's exercise data and task results, that haven't been returned yet.
 // This is done so that the frontend get's the data from any exercises / tasks not returned yet.
-const selectUsersExerciseTasksAndResults = async (iduser, idexercise) => {
+const selectUsersUncompletedExerciseTasksAndResults = async (iduser, idexercise) => {
   const [rows] = await pool.promise().query(`
     SELECT 
       task.idtask,
@@ -88,23 +113,94 @@ const selectUsersExerciseTasksAndResults = async (iduser, idexercise) => {
 
       FROM task
 
-      LEFT JOIN taskresults ON taskresults.idtask = task.idtask
-        AND taskresults.iduser = ?
-
       INNER JOIN exercises ON task.idexercise = exercises.idexercise
 
-      LEFT JOIN exerciseresults
+      INNER JOIN exerciseresults
         ON exerciseresults.idexercise = exercises.idexercise
         AND exerciseresults.iduser = ?
+        AND exerciseresults.complete_time IS NULL
+
+      LEFT JOIN taskresults ON taskresults.idtask = task.idtask
+        AND taskresults.iduser = ?
+        AND taskresults.idexerciseresult = exerciseresults.idexerciseresult
       
-      WHERE task.idexercise = ?
-        AND (
-          exerciseresults.complete_time IS NULL
-          OR exerciseresults.idexerciseresult IS NULL
-        )`,
+      WHERE task.idexercise = ?`,
     [iduser, iduser, idexercise]
   )
   return rows
+}
+
+const selectUserExerciseAndTaskResultsByExerciseId = async (idexercise, iduser) => {
+  const [result] = await pool.promise().query(`
+    SELECT 
+      exercises.*,
+
+      exerciseresults.idexerciseresult,
+      exerciseresults.iduser,
+      exerciseresults.starting_time,
+      exerciseresults.complete_time,
+
+      task.idtask,
+      task.tasktype,
+      task.question,
+      task.answer,
+      task.points,
+      
+      taskresults.idtaskresult,
+      taskresults.answer AS student_answer,
+      taskresults.points AS student_points,
+      taskresults.teacher_comment
+
+      FROM exercises
+
+      INNER JOIN exerciseresults
+        ON exerciseresults.idexercise = exercises.idexercise
+        AND exerciseresults.iduser = ?
+        AND exerciseresults.complete_time IS NOT NULL
+
+      INNER JOIN task
+        ON task.idexercise = exercises.idexercise
+
+      LEFT JOIN taskresults
+        ON taskresults.idtask = task.idtask
+        AND taskresults.idexerciseresult = exerciseresults.idexerciseresult
+
+      WHERE exercises.idexercise = ?
+    `,
+    [iduser, idexercise]
+  )
+  return result
+}
+
+const selectUserExerciseData = async (idexercise, iduser) => {
+  const [result] = await pool.promise().query(
+    `SELECT
+      exercises.idexercise,
+      exercises.idweek,
+      exercises.exercise_name,
+      exercises.exercise_description,
+      exercises.exercise_type,
+      exercises.start_time,
+      exercises.end_time,
+      exercises.allow_late_submissions,
+      exercises.max_time,
+      exercises.active_monitors,
+      exercises.exam_duration,
+      
+      exerciseresults.idexerciseresult,
+      exerciseresults.starting_time,
+      exerciseresults.complete_time
+      
+      FROM exercises
+      
+      LEFT JOIN exerciseresults
+        ON exercises.idexercise = exerciseresults.idexercise
+        AND exerciseresults.iduser = ?
+      
+      WHERE exercises.idexercise = ?`,
+      [iduser, idexercise]
+  )
+  return result
 }
 
 const insertTaskResult = async (idtask, iduser, idexerciseresult, answer, points, teacher_comment) => {
@@ -325,7 +421,7 @@ const selectExerciseResult = async (idexerciseresult) => {
 // Select unfinished exercise result with USER ID and EXERCISE ID
 const selectUnfinishedExerciseResult = async (idexercise, iduser) => {
   const [rows] = await pool.promise().query(
-    `SELECT idexerciseresult FROM exerciseresults WHERE idexercise = ? AND iduser = ? AND complete_time IS NULL LIMIT 1`, [idexercise, iduser]
+    `SELECT idexerciseresult, starting_time FROM exerciseresults WHERE idexercise = ? AND iduser = ? AND complete_time IS NULL LIMIT 1`, [idexercise, iduser]
   )
   return rows
 }
@@ -398,6 +494,48 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
     return result;
   };
 
+// Get the exam password for the wanted exercise
+const selectExamPasswordForValidation = async (idexercise, iduser) => {
+  const [rows] = await pool.promise().query(
+    `SELECT exercises.exam_password_student
+    FROM exercises
+    INNER JOIN weeks
+      ON exercises.idweek = weeks.idweek
+    INNER JOIN courses
+      ON weeks.idcourse = courses.idcourse
+    INNER JOIN coursemembers
+      ON coursemembers.idcourse = courses.idcourse
+      AND coursemembers.iduser = ?
+    WHERE exercises.idexercise = ?
+    `,
+    [iduser, idexercise]
+  )
   
+  return rows
+}
 
-export { deleteExercise, selectExerciseDetailsForEdit, selectExerciseForCourse, updateExercisePassword, insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult };
+// Used for checking if an user already has a task result for a particular task in an exercise attempt
+const selectExistingTaskResultId = async (iduser, idtask, idexerciseresult) => {
+  const [rows] = await pool.promise().query(
+    `SELECT taskresults.idtaskresult
+    FROM taskresults
+    WHERE idtask = ?
+      AND iduser = ?
+      AND idexerciseresult = ?
+    LIMIT 1`,
+    [idtask, iduser, idexerciseresult]
+  )
+  return rows
+}
+
+const checkExerciseResultOwnership = async (iduser, idexerciseresult) => {
+  const [rows] = await pool.promise().query(
+    `SELECT idexerciseresult
+    FROM exerciseresults
+    WHERE idexerciseresult = ?
+      AND iduser = ?`,
+      [idexerciseresult, iduser]
+  )
+  return rows
+}
+export { deleteExercise, selectExerciseDetailsForEdit, selectExerciseForCourse, updateExercisePassword, insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership };

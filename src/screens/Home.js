@@ -21,6 +21,11 @@ export default function Home() {
     const [studentCourseSearchResults, setStudentCourseSearchResults] = useState([])
     const [showStudentCourseSearch, setShowStudentCourseSearch] = useState(false)
 
+    // Variables for user exercises and exerciseresults
+    //      -> Used in user percentage etc.
+    const [exercises, setExercises] = useState([])
+    const [exerciseResults, setExerciseResults] = useState([])
+
     // The variables for the box for adding student to course
     const [showJoinCourseBox, setShowJoinCourseBox] = useState(false)
     const [studentChosenCourse, setStudentChosenCourse] = useState()
@@ -42,7 +47,7 @@ export default function Home() {
     }
 
     useEffect(() => {
-        console.log("USER CHANGED:", user);
+        console.log("USER CHANGED:");
     }, [user]);
         
 
@@ -229,7 +234,7 @@ export default function Home() {
 
         // Check if token is valid
         if (!user || !user.access_token) {
-            console.log("NO TOKEN YET", user);
+            console.log("NO TOKEN YET");
             return;
         }
 
@@ -276,7 +281,7 @@ export default function Home() {
     
     useEffect(() => {
         if (!user || !user.access_token) {
-            console.log("NO TOKEN YET", user);
+            console.log("NO TOKEN YET");
             return;
         }
 
@@ -289,13 +294,13 @@ export default function Home() {
                     { headers: { Authorization: "Bearer " + user.access_token } }
                 );
 
-                console.log(response)
-
                 // Update token
                 updateToken(response)
 
                 console.log("COURSES RESPONSE:", response.data);
-                setCourses(response.data);
+                setCourses(response.data.courses);
+                setExercises(response.data?.exercises)
+                setExerciseResults(response.data?.exerciseresults)
 
                 const lateStatus = {};
 
@@ -399,6 +404,44 @@ export default function Home() {
 
         getCourses();
     }, [user?.access_token, refresh]);
+
+    const CourseProgress = ({course}) => {
+        const courseExercises = []
+        const courseExerciseResults = new Map
+        const lateExercises = new Set
+
+        exercises.map((exercise, index) => {
+            if (exercise.idcourse === course.idcourse && exercise.idexercise !== null) {
+                courseExercises.push(exercise)
+                if (new Date(exercise.end_time) < new Date()) {
+                    lateExercises.add(exercise.idexercise)
+                }
+            }
+        })
+
+        exerciseResults.map((exerciseresult, index) => {
+            if (exerciseresult.idcourse === course.idcourse && !courseExerciseResults.has(exerciseresult.idexercise) && exerciseresult.complete_time !== null) {
+                courseExerciseResults.set(exerciseresult.idexercise, exerciseresult)
+                if (lateExercises.has(exerciseresult.idexercise)) {
+                    lateExercises.delete(exerciseresult.idexercise)
+                }
+            }
+        })
+
+        const percentage = (Array.from(courseExerciseResults.values()).length / (courseExercises.length || 1)) * 100
+        //console.log(course.coursename, percentage, "\n", courseExercises, "\n", Array.from(courseExerciseResults.values()), "\n", Array.from(lateExercises))
+        
+        return (
+            <div className="text-end">
+                <p className="d-inline m-0 p-0 text-white align-bottom" style={{opacity: 0.6}}>
+                    {percentage}%             
+                </p>
+                {
+                    Array.from(lateExercises).length > 0 && <i className="fa-solid fa-circle-exclamation ps-3 pe-3 pt-1" style={{ color: "#00F3FB", fontSize: "24px"}}></i>
+                }
+            </div>
+        )
+    }
 
   if (user.role === "teacher"){
     return (
@@ -733,8 +776,9 @@ export default function Home() {
                         >
                         <div className="text-truncate">
                             <h2 className="text-truncate">{course.coursename}</h2>
-                            <p className="text-truncate">{course.course_description}</p>
+                            <p className="text-truncate m-0">{course.course_description}</p>
                         </div>
+                        <CourseProgress course={course} />
                     </div>
                 ))
             ) : (

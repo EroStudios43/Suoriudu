@@ -134,7 +134,6 @@ function CoursePage() {
                         headers: { Authorization: "Bearer " + user.access_token }
                     }
                 );
-                console.log(response.data)
                 setStudentExerciseResults(response.data.exerciseResults)
                 setCourseExercises(response.data.exercises)
             } else {
@@ -778,6 +777,16 @@ function CoursePage() {
   );
   }
   if (user.role === "student"){
+    // Set the percentage variables for student
+    const amountOfCompletedUniqueExercises = new Set(
+        studentExerciseResults?.filter(r => r.complete_time != null).map(r => r.idexercise)
+    ).size || 0
+
+    const totalExercises = courseExercises?.length || 1
+
+    const progressPercent = Math.floor((amountOfCompletedUniqueExercises / totalExercises) * 100)
+
+    // Return the page
     return (
         <div className="coursepage d-flex flex-column min-vh-100">
             { /* Topbar */}
@@ -801,22 +810,12 @@ function CoursePage() {
                                     <div 
                                         className="progress-fill-student" 
                                         style={{
-                                            width: `${
-                                                Math.floor(
-                                                    (
-                                                        (studentExerciseResults?.filter(r => r.complete_time != null).length) || 0 / 
-                                                        (courseExercises?.length || 1)
-                                                    ) * 100) 
-                                                || 0 }%`
+                                            width: `${progressPercent}%`
                                             }}
                                             ></div>
                                 </div>
                                 <span className="progress-percentage-student">
-                                    {Math.floor(
-                                        (
-                                            (studentExerciseResults?.filter(r => r.complete_time != null).length) || 0 / 
-                                            (courseExercises?.length || 1)
-                                        ) * 100) || 0}%
+                                    {progressPercent}%
                                 </span>
                             </div>
                         </div>

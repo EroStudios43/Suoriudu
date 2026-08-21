@@ -27,9 +27,13 @@ import { getUsersCourses,
     insertUserExerciseAndTaskResults,
     getTeacherQuestion,
     saveTeacherQuestionAnswer,
-    getTeacherQuestions
+    getTeacherQuestions,
+    getStudentsCompletedExerciseAndTasks, 
+    getUserExerciseData, 
+    getExamPasswordForValidation, 
+    getUsersExerciseComments, 
+    insertUserTaskComment
  } from "../controllers/coursesController.js"
-
 import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
 import { auth } from '../helpers/auth.js'
 
@@ -47,10 +51,17 @@ router.get("/userTasksAndAnswersWeek", auth, getUsersTasksAndAnswersForWeek)
 router.get("/userExerciseDataAndTasks", auth, getUsersExerciseWithTasks)
 router.get("/weekExercises", auth, getWeeksExercises)
 router.get("/teacher/questions", auth, getTeacherQuestions)
-
+router.get("/completedExercises", auth, getStudentsCompletedExerciseAndTasks)
+router.get("/exercisedata", auth, getUserExerciseData)
+router.get("/getUserExerciseComments", auth, getUsersExerciseComments)
 router.get("/:courseId", auth, getCourseById)
 router.post("/addExerciseAndTaskResults", auth, insertUserExerciseAndTaskResults)
+router.post("/validateExamPassword", auth, getExamPasswordForValidation)
 router.post("/addUserOnCourse", auth, insertUserIntoCourse)
+router.post("/insertTaskComment/student", auth, insertUserTaskComment)
+// Add a separate function to add a teacher comment, since the student's version 
+// only let's inserts through if the user owns the taskresult
+//router.post("/insertTaskComment/teacher", auth, insertTaskCommentTeacher)
 router.post("/:courseId/members", auth, addCourseMember)
 router.put("/:courseId", auth, updateCourse)
 router.put("/:courseId/exercises/:exerciseId", auth, updateExerciseAndTasks)
