@@ -1,6 +1,6 @@
 import { selectTeacherQuestions, selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, selectTeacherQuestion, updateTeacherQuestionAnswer } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership } from '../models/exercisesModel.js'
-import { selectUsersExerciseComments, insertTaskComment } from '../models/commentModel.js'
+import { selectUsersExerciseComments, insertTaskComment, updateCommentReadStatus } from '../models/commentModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { isTeacherReviewed } from '../helpers/submissionStatus.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -1137,6 +1137,7 @@ const getUsersTasksAndAnswersForWeek = async (req, res, next) => {
                     idexercise: row.idexercise,
                     tasktype: row.tasktype,
                     question: row.question,
+                    full_points: row.full_points
                 })
             }
 
@@ -1898,4 +1899,49 @@ const insertUserTaskComment = async (req, res, next) => {
     }
 }
 
-export { getTeacherQuestions, getTeacherQuestion, saveTeacherQuestionAnswer, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }
+const updateTaskCommentReadStatus = async (req, res, next) => {
+    try {
+        // Check that the user is authorized (has token and it's correct)
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return next(new Error("Unauthorized"));
+        }
+
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+
+        // Get parameters from the request
+        const iduser = Number(req.user.iduser)
+        const idtaskcomments = Number(req.body.idtaskcomments)
+        const idcourse = Number(req.body.idcourse)
+
+        // Check that all the values are valid
+        if (!iduser || Number.isNaN(iduser)) {
+            return next(new Error("User id is not valid"))
+        }
+
+        if (!idtaskcomments || Number.isNaN(idtaskcomments)) {
+            return next(new Error("Comment id is not valid"))
+        }
+
+        if (!idcourse || Number.isNaN(idcourse)) {
+            return next(new Error("Course id is not valid"))
+        }
+
+        // Check that the user is attended on the course itself
+        const attendedCourse = await selectUserCourseById(iduser, idcourse)
+
+        if(!attendedCourse[0]) {
+            return res.status(404).json({error: "Course not found"})
+        }
+
+        // Update the read-field of the comment
+        const updatedCommentRows = updateCommentReadStatus(idtaskcomments)
+
+        return res.status(200).json({message: "Comment read status successfully updated."})
+    } catch (error) {
+        return next(error)
+    }
+}
+
+export { getTeacherQuestions, getTeacherQuestion, saveTeacherQuestionAnswer, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment, updateTaskCommentReadStatus }
