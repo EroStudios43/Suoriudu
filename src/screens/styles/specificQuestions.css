@@ -8,7 +8,6 @@
 
 .specific-question-topbar {
     min-height: 120px;
-
     display: flex;
     align-items: center;
 }
@@ -57,12 +56,9 @@
         #2B385B 0%,
         #202B44 100%
     );
-
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-
     padding: 25px;
-
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
@@ -98,29 +94,19 @@
 .teacher-answer-input {
     width: 100%;
     min-height: 220px;
-
     resize: vertical;
-
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: 16px;
-
     padding: 20px;
-
     font-size: 16px;
     font-family: inherit;
-
     background: rgba(255, 255, 255, 0.07);
     color: #ffffff;
-
     outline: none;
 }
 
 .teacher-answer-input::placeholder {
     color: #8b8b8b;
-}
-
-.teacher-answer-input:focus {
-    border-color: #3ddc97;
 }
 
 .teacher-answer-input:focus {
@@ -135,14 +121,10 @@
 .send-answer-btn {
     border: none;
     border-radius: 12px;
-
     padding: 14px 28px;
-
     font-size: 16px;
     font-weight: 600;
-
     cursor: pointer;
-
     background: #3ddc97;
 }
 
@@ -151,37 +133,28 @@
     cursor: not-allowed;
 }
 
-/* MODAL */
-
 .specific-modal-overlay {
     position: fixed;
     inset: 0;
-
     background: rgba(0, 0, 0, 0.45);
-
     display: flex;
     align-items: center;
     justify-content: center;
-
     z-index: 1000;
 }
 
 .specific-modal {
     width: min(550px, 90%);
-
     background: white;
     border-radius: 18px;
-
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
 }
 
 .specific-modal-header {
     padding: 20px 25px;
-
     display: flex;
     align-items: center;
     justify-content: space-between;
-
     border-bottom: 1px solid #eee;
 }
 
@@ -192,7 +165,6 @@
 .specific-modal-close {
     border: none;
     background: transparent;
-
     font-size: 20px;
     cursor: pointer;
 }
@@ -207,7 +179,6 @@
 
 .specific-modal-actions {
     margin-top: 25px;
-
     display: flex;
     justify-content: space-between;
     gap: 15px;
@@ -216,9 +187,7 @@
 .specific-modal-cancel,
 .specific-modal-leave {
     padding: 12px 20px;
-
     border-radius: 10px;
-
     cursor: pointer;
     font-size: 15px;
 }
@@ -232,4 +201,156 @@
     border: none;
     background: #e85d5d;
     color: white;
+}
+
+.specific-chat-header {
+    margin-bottom: 12px;
+}
+
+.specific-chat-header h2 {
+    margin-bottom: 0;
+}
+
+.specific-chat-box {
+    width: 100%;
+    padding: 15px;
+    background-color: white;
+    border: 1px solid #D4CEE8;
+    border-radius: 20px;
+}
+
+.specific-chat-box .student-comment-container {
+    height: 45vh;
+    min-height: 300px;
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    border: 1px solid #B9AFD9;
+    border-radius: 20px;
+    background-color: #faf9fd;
+    scroll-behavior: smooth;
+}
+
+.specific-chat-message-wrapper {
+    display: flex;
+    width: 100%;
+    flex-shrink: 0;
+    margin-bottom: 12px;
+}
+
+.specific-chat-message-wrapper.student-message {
+    justify-content: flex-start;
+}
+
+.specific-chat-message-wrapper.teacher-message {
+    justify-content: flex-end;
+}
+
+.student-comment-box {
+    max-width: 70%;
+    padding: 14px 18px;
+    box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.18);
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+}
+
+.student-comment-box.student-comment {
+    background-color: #F0EEF7;
+    border: 1px solid #D4CEE8;
+    border-radius: 5px 20px 20px 20px;
+    color: #000000;
+}
+
+.student-comment-box.teacher-comment {
+    background-color: #9E90CB;
+    border: 1px solid #6752AD;
+    border-radius: 20px 5px 20px 20px;
+    color: #000000;
+}
+
+.comment-author {
+    margin: 0;
+    padding: 0;
+    font-weight: bold;
+    font-size: 15px;
+}
+
+.student-comment-box hr {
+    margin-top: 5px;
+    margin-bottom: 8px;
+    opacity: 0.35;
+}
+
+.comment-text {
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
+}
+
+.comment-time {
+    display: block;
+    margin-top: 8px;
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+.specific-chat-empty {
+    margin: auto;
+    color: #777;
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .specific-question-page {
+        padding: 20px 4%;
+    }
+
+    .specific-question-title-wrapper h1 {
+        font-size: 24px;
+    }
+
+    .specific-question-content {
+        padding-top: 20px;
+    }
+
+    .specific-chat-box .student-comment-container {
+        height: 400px;
+        min-height: 0;
+    }
+
+    .student-comment-box {
+        max-width: 85%;
+    }
+}
+.task-options {
+  margin-top: 25px;
+}
+
+.task-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 15px;
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.task-option-number {
+  font-weight: 700;
+  min-width: 22px;
+}
+
+.task-example-answer {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.task-example-answer p:last-child {
+  white-space: pre-wrap;
 }

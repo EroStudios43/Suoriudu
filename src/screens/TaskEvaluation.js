@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import "./styles/createTask.css";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,6 +22,17 @@ function TaskEvaluation({ isExamMode = false }) {
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
+  const commentMessagesRef = useRef(null);
+
+  const [commentModal, setCommentModal] = useState({
+    open: false,
+    task: null,
+    comments: [],
+    loading: false,
+    sending: false,
+  });
+
+  const [commentText, setCommentText] = useState("");
 
   const studentDisplayName = useMemo(() => getReviewDisplayName({
     studentData,
@@ -50,25 +61,128 @@ function TaskEvaluation({ isExamMode = false }) {
         console.log("REVIEW DATA:", response.data)
 
         setStudentData(response.data?.student || null);
-        setTasks((response.data?.tasks || []).map((task) => {
-            const nextTask = {
+
+        const loadedTasks = (response.data?.tasks || []).map((task) => {
+          const nextTask = {
             ...task,
-            teacherPoints: task.teacherPoints !== "" && task.teacherPoints !== null && task.teacherPoints !== undefined ? Number(task.teacherPoints) : getChoiceAutoPoints(task),
+            teacherPoints:
+              task.teacherPoints !== "" &&
+              task.teacherPoints !== null &&
+              task.teacherPoints !== undefined
+                ? Number(task.teacherPoints)
+                : getChoiceAutoPoints(task),
+
             teacherComment: task.teacherComment ?? "",
-            options: Array.isArray(task.options) ? task.options : [],
-            correctAnswers: Array.isArray(task.correctAnswers) ? task.correctAnswers.map((value) => Number(value)) : [],
-            studentSelectedAnswers: Array.isArray(task.studentSelectedAnswers) ? task.studentSelectedAnswers.map((value) => Number(value)) : [],
-            points: task.points ?? (task.idtaskresult ? null : task.points) ?? null,
+
+            options: Array.isArray(task.options)
+              ? task.options
+              : [],
+
+            correctAnswers: Array.isArray(task.correctAnswers)
+              ? task.correctAnswers.map((value) => Number(value))
+              : [],
+
+            studentSelectedAnswers: Array.isArray(task.studentSelectedAnswers)
+              ? task.studentSelectedAnswers.map((value) => Number(value))
+              : [],
+
+            points:
+              task.points ??
+              (task.idtaskresult ? null : task.points) ??
+              null,
+
+            hasStudentComment: false,
           };
 
-          
-
           return nextTask;
-        }));
+        });
+
+        setTasks(loadedTasks);
+        await loadStudentCommentStatus(loadedTasks);
+
       } catch (error) {
         console.error("Failed to fetch student review data", error);
       } finally {
         setLoading(false);
+      }
+    };
+    const loadStudentCommentStatus = async (loadedTasks) => {
+      const targetUserId = userId || submission?.iduser;
+
+      if (
+        !courseId ||
+        !exercise?.idexercise ||
+        !targetUserId ||
+        !user?.access_token ||
+        !loadedTasks?.length
+      ) {
+        return;
+      }
+
+      try {
+        const results = await Promise.all(
+          loadedTasks.map(async (task) => {
+            if (!task.idtask) {
+              return {
+                idtask: task.idtask,
+                hasStudentComment: false,
+              };
+            }
+
+            try {
+              const response = await axios.get(
+                `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${task.idtask}?_=${Date.now()}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${user.access_token}`,
+                    "Cache-Control": "no-cache",
+                    Pragma: "no-cache",
+                  },
+                }
+              );
+
+              const comments = response.data?.comments || [];
+
+              // Vain opiskelijan viesti tekee pallerosta oranssin.
+              // Opettajan viesti yksin ei tee sitä oranssiksi.
+              const hasStudentComment = comments.some(
+                (comment) => comment.role !== "teacher"
+              );
+
+              return {
+                idtask: task.idtask,
+                hasStudentComment,
+              };
+            } catch (error) {
+              console.error(
+                `Tehtävän ${task.idtask} keskustelun hakeminen epäonnistui:`,
+                error
+              );
+
+              return {
+                idtask: task.idtask,
+                hasStudentComment: false,
+              };
+            }
+          })
+        );
+
+        setTasks((previous) =>
+          previous.map((task) => {
+            const result = results.find(
+              (item) => item.idtask === task.idtask
+            );
+
+            return result
+              ? {
+                  ...task,
+                  hasStudentComment: result.hasStudentComment,
+                }
+              : task;
+          })
+        );
+      } catch (error) {
+        console.error("Keskustelujen tilojen hakeminen epäonnistui:", error);
       }
     };
 
@@ -255,6 +369,188 @@ function TaskEvaluation({ isExamMode = false }) {
     }
   };
 
+
+  const openCommentModal = async (task) => {
+    const targetUserId = userId || submission?.iduser;
+
+    if (
+      !courseId ||
+      !exercise?.idexercise ||
+      !targetUserId ||
+      !task?.idtask ||
+      !user?.access_token
+    ) {
+      return;
+    }
+
+    setCommentText("");
+
+    setCommentModal({
+      open: true,
+      task,
+      comments: [],
+      loading: true,
+      sending: false,
+    });
+
+    try {
+      const response = await axios.get(
+        `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${task.idtask}?_=${Date.now()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      const comments = response.data?.comments || [];
+
+      setCommentModal((previous) => ({
+        ...previous,
+        comments,
+        loading: false,
+        task: {
+          ...task,
+          idtaskresult:
+            response.data?.idtaskresult ?? task.idtaskresult,
+        },
+      }));
+
+      // Oranssi pallero vain jos opettaja on kirjoittanut viestin.
+      const hasStudentComment = comments.some(
+        (comment) => comment.role !== "teacher"
+      );
+
+      setTasks((previous) =>
+        previous.map((currentTask) =>
+          currentTask.idtask === task.idtask
+            ? {
+                ...currentTask,
+                hasStudentComment,
+              }
+            : currentTask
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Tehtävän keskustelun hakeminen epäonnistui:",
+        error.response?.data || error.message
+      );
+
+      setCommentModal((previous) => ({
+        ...previous,
+        loading: false,
+      }));
+    }
+  };
+
+
+
+  const handleSendComment = async () => {
+    if (!commentText.trim()) {
+      return;
+    }
+
+    const taskResultId = commentModal.task?.idtaskresult;
+
+    if (!taskResultId || !user?.access_token) {
+      console.error(
+        "idtaskresult puuttuu:",
+        commentModal.task
+      );
+      return;
+    }
+
+    try {
+      setCommentModal((previous) => ({
+        ...previous,
+        sending: true,
+      }));
+
+      await axios.post(
+        `${url}/courses/taskComments/teacher`,
+        {
+          idtaskresult: taskResultId,
+          comment: commentText.trim(),
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      setCommentText("");
+
+      // Haetaan keskustelu uudelleen
+      const targetUserId = userId || submission?.iduser;
+
+      const response = await axios.get(
+        `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${commentModal.task.idtask}?_=${Date.now()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
+
+      const comments = response.data?.comments || [];
+
+      setCommentModal((previous) => ({
+        ...previous,
+        comments,
+        sending: false,
+      }));
+
+      // Päivitetään pallero oransiksi jos oppilaalla vviestiä
+      setTasks((previous) =>
+        previous.map((task) =>
+          task.idtask === commentModal.task.idtask
+            ? {
+                ...task,
+                hasStudentComment: comments.some(
+                  (comment) => comment.role !== "teacher"
+                ),
+              }
+            : task
+        )
+      );
+    } catch (error) {
+      console.error(
+        "Viestin lähettäminen epäonnistui:",
+        error.response?.data || error.message
+      );
+
+      setCommentModal((previous) => ({
+        ...previous,
+        sending: false,
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (!commentModal.open || commentModal.loading) return;
+
+    const container = commentMessagesRef.current;
+
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [
+    commentModal.open,
+    commentModal.loading,
+    commentModal.comments,
+  ]);
+
+
+
+
+
   return (
     <div className="task-page">
       <div className="task-paper">
@@ -358,22 +654,37 @@ function TaskEvaluation({ isExamMode = false }) {
                     )}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, gap: 12 }}>
-                    <span className="task-time-label" style={{ margin: 0 }}>{issueLabel}</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span
+                  <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, gap: 12,}}
+                    >
+                      <span className="task-time-label" style={{ margin: 0 }}>
+                        {issueLabel}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => openCommentModal(task)}
+                        title="Avaa tehtävän keskustelu"
                         style={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          background: task.hasQuestions ? "#f4c542" : "#d9d9d9",
-                          display: "inline-block",
-                          boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          border: "none",
+                          background: "transparent",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 9,
+                          padding: "5px 8px",
+                          borderRadius: 8,
                         }}
-                      ></span>
-                      <i className="fa-regular fa-comment-dots" style={{ fontSize: 20, color: "#1d283a" }}></i>
+                      >
+                        <span style={{ width: 12,height: 12, borderRadius: "50%",background: task.hasStudentComment ? "#f28c28" : "#d9d9d9", display: "inline-block",
+                            boxShadow: task.hasStudentComment
+                            ? "0 0 0 4px rgba(242,140,40,0.15)"
+                            : "none",
+                          }}
+                        />
+
+                        <i className="fa-regular fa-comment-dots"  style={{fontSize: 21, color: "#1d283a", }}/>
+                      </button>
                     </div>
-                  </div>
 
                   <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 18, marginBottom: 12 }}>
                     <label className="task-time-label" style={{ margin: 0 }}>Arviointi</label>
@@ -442,6 +753,258 @@ function TaskEvaluation({ isExamMode = false }) {
           </>
         )}
       </div>
+
+      {commentModal.open && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.45)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+          onClick={() =>
+            setCommentModal((previous) => ({
+              ...previous,
+              open: false,
+            }))
+          }
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 700,
+              maxHeight: "85vh",
+              background: "#fff",
+              borderRadius: 16,
+              boxShadow: "0 15px 50px rgba(0,0,0,0.25)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+
+            {/* Otsikko */}
+
+            <div
+              style={{
+                padding: "18px 22px",
+                borderBottom: "1px solid #e5e5e5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0 }}>
+                  Tehtävän keskustelu
+                </h2>
+
+                <p
+                  style={{
+                    margin: "5px 0 0",
+                    color: "#6b7280",
+                    fontSize: 14,
+                  }}
+                >
+                  {commentModal.task?.title ||
+                    `Tehtävä ${
+                      tasks.findIndex(
+                        (task) =>
+                          task.idtask ===
+                          commentModal.task?.idtask
+                      ) + 1
+                    }`}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setCommentModal((previous) => ({
+                    ...previous,
+                    open: false,
+                  }))
+                }
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 28,
+                  cursor: "pointer",
+                  color: "#555",
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Keskustelu */}
+
+            <div
+              ref={commentMessagesRef}
+              style={{
+                padding: 20,
+                overflowY: "auto",
+                minHeight: 250,
+                maxHeight: 500,
+                background: "#f8f9fb",
+              }}
+            >
+              {commentModal.loading ? (
+                <p style={{ textAlign: "center", color: "#777" }}>
+                  Ladataan keskustelua...
+                </p>
+              ) : commentModal.comments?.length > 0 ? (
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 12,
+                  }}
+                >
+                  {commentModal.comments.map(
+                    (comment, index) => {
+                      const isTeacher =
+                        comment.role === "teacher";
+
+                      return (
+                        <div
+                          key={
+                            comment.idtaskcomments ||
+                            index
+                          }
+                          style={{
+                            display: "flex",
+                            justifyContent: isTeacher
+                              ? "flex-end"
+                              : "flex-start",
+                          }}
+                        >
+                          <div
+                            style={{
+                              maxWidth: "80%",
+                              padding: "12px 15px",
+                              borderRadius: 12,
+                              background: isTeacher
+                                ? "#eaf3ff"
+                                : "#fff",
+                              border: "1px solid #e1e5ea",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontWeight: 700,
+                                fontSize: 13,
+                                marginBottom: 6,
+                                color: "#344054",
+                              }}
+                            >
+                              {isTeacher
+                                ? "Opettaja"
+                                : `${comment.firstname || ""} ${
+                                    comment.lastname || ""
+                                  }`.trim() ||
+                                  "Opiskelija"}
+                            </div>
+
+                            <div
+                              style={{
+                                whiteSpace: "pre-wrap",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {comment.comment}
+                            </div>
+
+                            {comment.timestamp_of_message && (
+                              <div
+                                style={{
+                                  marginTop: 7,
+                                  fontSize: 11,
+                                  color: "#8a8f98",
+                                }}
+                              >
+                                {new Date(
+                                  comment.timestamp_of_message
+                                ).toLocaleString("fi-FI")}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    textAlign: "center",
+                    color: "#888",
+                    padding: "50px 20px",
+                  }}
+                >
+                  Tästä tehtävästä ei ole vielä keskustelua.
+                </div>
+              )}
+            </div>
+
+            {/* Uusi viesti */}
+
+            <div
+              style={{
+                padding: 18,
+                borderTop: "1px solid #e5e5e5",
+                background: "#fff",
+              }}
+            >
+              <textarea
+                value={commentText}
+                onChange={(event) =>
+                  setCommentText(event.target.value)
+                }
+                placeholder="Kirjoita tähän viesti oppilaalle..."
+                maxLength={10000}
+                style={{
+                  width: "100%",
+                  minHeight: 100,
+                  resize: "vertical",
+                  padding: 12,
+                  borderRadius: 10,
+                  border: "1px solid #ccc",
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                }}
+              />
+
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  marginTop: 10,
+                }}
+              >
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handleSendComment}
+                  disabled={
+                    commentModal.sending ||
+                    !commentText.trim()
+                  }
+                >
+                  {commentModal.sending
+                    ? "Lähetetään..."
+                    : "Lähetä viesti"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
