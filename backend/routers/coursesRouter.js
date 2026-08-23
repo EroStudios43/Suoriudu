@@ -36,6 +36,7 @@ import { getUsersCourses,
     updateTaskCommentReadStatus
  } from "../controllers/coursesController.js"
 import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
+import { updateUserAiNotes } from "../controllers/aiNotesController.js"
 import { auth } from '../helpers/auth.js'
 
 const router = Router()
@@ -61,6 +62,7 @@ router.post("/validateExamPassword", auth, getExamPasswordForValidation)
 router.post("/addUserOnCourse", auth, insertUserIntoCourse)
 router.post("/insertTaskComment/student", auth, insertUserTaskComment)
 router.put("/updateCommentAsRead", auth, updateTaskCommentReadStatus)
+router.post("/updateAiNotes", auth, updateUserAiNotes)
 router.post("/:courseId/members", auth, addCourseMember)
 router.put("/:courseId", auth, updateCourse)
 router.put("/:courseId/exercises/:exerciseId", auth, updateExerciseAndTasks)

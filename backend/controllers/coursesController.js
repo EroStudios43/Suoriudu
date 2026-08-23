@@ -1848,7 +1848,7 @@ const insertUserTaskComment = async (req, res, next) => {
         }
 
         if (!idexerciseresult || Number.isNaN(idexerciseresult)) {
-            return next(new Error("Task id is not valid"))
+            return next(new Error("Exerciseresult id is not valid"))
         }
 
         if (!question || question.length < 15) {

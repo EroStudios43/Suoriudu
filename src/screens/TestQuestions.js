@@ -147,6 +147,10 @@ function TestQuestions() {
   const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
   const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
 
+  // Variables for detecting page focus and visibility
+  const [ isPageFocused, setIsPageFocused ] = useState(true)
+  const [ isPageVisible, setIsPageVisible ] = useState(true)
+
   // Fetch data when landing on the page
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -255,6 +259,120 @@ function TestQuestions() {
       window.removeEventListener("popstate", handlePopState)
     }
   }, [canGoBack])
+
+  // A function for sending visibility data to the backend
+  const sendVisibilityChange = () => {
+    console.log("Sending visibility change to backend")
+    if (!user || !user.access_token) {
+      console.log("No user or token yet")
+      return
+    }
+
+    if (!idcourse) {
+      console.log("Idcourse not set")
+      return
+    }
+
+    if (!idexercise) {
+      console.log("Idexercise not set")
+      return
+    }
+
+    // Have to use fetch with keepalive to make sure the request doesn't break when page isn't visible
+    fetch(url + "/courses/updateAiNotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + user.access_token
+      },
+      body: JSON.stringify({
+        ai_notes: "Page not visible",
+        idcourse,
+        idexercise
+      })
+    })
+      .then(response => {
+        console.log("Visibility request:", response.status)
+      })
+      .catch(error => {
+        console.error("Visibility request failed:", error)
+      })
+  }
+
+  // Check for the case of page being not visible or out of focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(document.visibilityState === 'visible')
+      if (document.visibilityState === 'hidden') {
+        console.log("Page not visible")
+        sendVisibilityChange()
+      }
+    }
+
+    console.log("LISTEREN ")
+    const handleWindowFocus = () => {
+      setIsPageFocused(true)
+    }
+
+    const handleWindowBlur = () => {
+      setIsPageFocused(false)
+    }
+
+    // Tab switches, minimization
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Window focus
+    window.addEventListener('focus',handleWindowFocus )
+    window.addEventListener('blur', handleWindowBlur)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      document.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('blur', handleWindowBlur)
+    }
+  }, [])
+
+  // Checks for page visibility and focus variables
+  useEffect(() => {
+    if (isPageFocused === false && isPageVisible === true) {
+      console.log("Page not in focus")
+
+      // Send info to db
+      const updatePageFocusInfo = async () => {
+        try {
+          // Check that user has access token
+          if (!user || !user.access_token) {
+            console.log("No user or token yet");
+            return
+          }
+
+          if (!idcourse) {
+            console.log("Idcourse not set")
+            return
+          }
+
+          if (!idexercise) {
+            console.log("Idexercise not set")
+            return
+          }
+
+          const ai_note_object = {
+            idexercise: idexercise,
+            ai_notes: "Page not in focus",
+            idcourse: idcourse
+          }
+
+          const res = await axios.post(url + "/courses/updateAiNotes", ai_note_object, {headers: {Authorization: "Bearer " + user.access_token}})
+          console.log("Notes successfully updated")
+
+        } catch (error) {
+          console.log("Error updating ai-notes:", error.response?.data || error.message)
+        }
+      }
+
+      updatePageFocusInfo()
+    }
+  }, [isPageFocused, isPageVisible])
 
   // Check if the exam has 5 minutes remaining
   //     -> The time is checked and variable is updated in the progressbartimer component
