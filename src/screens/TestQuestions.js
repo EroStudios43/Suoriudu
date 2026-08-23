@@ -260,8 +260,8 @@ function TestQuestions() {
     }
   }, [canGoBack])
 
-  // A function for sending visibility data to the backend
-  const sendVisibilityChange = () => {
+  // A function for sending visibility data and page leaving data to the backend
+  const sendExamNoteData = (cause) => {
     console.log("Sending visibility change to backend")
     if (!user || !user.access_token) {
       console.log("No user or token yet")
@@ -278,7 +278,7 @@ function TestQuestions() {
       return
     }
 
-    // Have to use fetch with keepalive to make sure the request doesn't break when page isn't visible
+    // Have to use fetch (previously with keepalive) to make sure the request doesn't break when page isn't visible
     fetch(url + "/courses/updateAiNotes", {
       method: "POST",
       headers: {
@@ -286,10 +286,11 @@ function TestQuestions() {
         "Authorization": "Bearer " + user.access_token
       },
       body: JSON.stringify({
-        ai_notes: "Page not visible",
+        ai_notes: cause,
         idcourse,
         idexercise
-      })
+      }),
+      keepalive: true
     })
       .then(response => {
         console.log("Visibility request:", response.status)
@@ -305,7 +306,7 @@ function TestQuestions() {
       setIsPageVisible(document.visibilityState === 'visible')
       if (document.visibilityState === 'hidden') {
         console.log("Page not visible")
-        sendVisibilityChange()
+        sendExamNoteData("Page not visible")
       }
     }
 
@@ -318,6 +319,10 @@ function TestQuestions() {
       setIsPageFocused(false)
     }
 
+    const handlePageHide = () => {
+      sendExamNoteData("Student left the exam page")
+    }
+
     // Tab switches, minimization
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
@@ -325,10 +330,14 @@ function TestQuestions() {
     window.addEventListener('focus',handleWindowFocus )
     window.addEventListener('blur', handleWindowBlur)
 
+    // Leaving the page completely
+    window.addEventListener('pagehide', handlePageHide)
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
       document.removeEventListener('focus', handleWindowFocus)
       document.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('pagehide', handlePageHide)
     }
   }, [])
 
