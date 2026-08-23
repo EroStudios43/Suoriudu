@@ -47,12 +47,36 @@ function Questions() {
     fetchQuestions();
   }, [user?.access_token]);
 
-  const openQuestion = (question) => {
-    navigate("/SpecificQuestion", {
-      state: {
-        question,
-      },
-    });
+  const openQuestion = async (question) => {
+    try {
+      await axios.put(
+        `${url}/courses/teacher/questions/${question.idtaskresult}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+          },
+        }
+      );
+
+      navigate("/SpecificQuestion", {
+        state: {
+          question,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "Kysymyksen merkitseminen luetuksi epäonnistui:",
+        error.response?.data || error.message
+      );
+
+      // Navigoidaan silti keskusteluun, vaikka read-päivitys epäonnistuisi
+      navigate("/SpecificQuestion", {
+        state: {
+          question,
+        },
+      });
+    }
   };
 
   return (
@@ -94,11 +118,20 @@ function Questions() {
                 onClick={() => openQuestion(question)}
               >
                 <div className="question-student">
-                  <h3>
-                    {question.anonymous
-                      ? "Anonyymi opiskelija"
-                      : `${question.student_firstname} ${question.student_lastname}`}
-                  </h3>
+                  <div className="question-student-name">
+                    <h3>
+                      {question.anonymous
+                        ? "Anonyymi opiskelija"
+                        : `${question.student_firstname} ${question.student_lastname}`}
+                    </h3>
+
+                    {Number(question.has_unread) === 1 && (
+                      <span className="unread-indicator">
+                        <span className="unread-dot"></span>
+                        Uusi viesti
+                      </span>
+                    )}
+                  </div>
 
                   <span className="question-time">
                     {new Date(question.timestamp_of_message).toLocaleString("fi-FI")}

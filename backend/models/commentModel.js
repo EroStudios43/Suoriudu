@@ -106,48 +106,72 @@ const selectTaskComments = async (taskResultId) => {
 const selectTeacherQuestions = async (teacherId) => {
     const [rows] = await pool.promise().query(
         `
-        SELECT
-            tc.idtaskcomments,
-            tc.comment,
-            tc.public,
-            tc.anonymous,
-            tc.timestamp_of_message,
-            tr.idtaskresult,
-            tr.iduser AS student_id,
-            tr.answer AS student_answer,
-            t.idtask,
-            t.question AS task_question,
-            t.tasktype,
-            e.idexercise,
-            e.exercise_name,
-            e.exercise_description,
-            w.idweek,
-            c.idcourse,
-            c.coursename,
-            student.firstname AS student_firstname,
-            student.lastname AS student_lastname,
-            commenter.firstname AS commenter_firstname,
-            commenter.lastname AS commenter_lastname
-        FROM taskcomments tc
-        INNER JOIN taskresults tr
-            ON tr.idtaskresult = tc.idtaskresult
-        INNER JOIN task t
-            ON t.idtask = tr.idtask
-        INNER JOIN exercises e
-            ON e.idexercise = t.idexercise
-        INNER JOIN weeks w
-            ON w.idweek = e.idweek
-        INNER JOIN courses c
-            ON c.idcourse = w.idcourse
-        INNER JOIN coursemembers cm
-            ON cm.idcourse = c.idcourse
-            AND cm.iduser = ?
-        INNER JOIN users student
-            ON student.iduser = tr.iduser
-        INNER JOIN users commenter
-            ON commenter.iduser = tc.idcommentor
-        WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher'
-        ORDER BY tc.timestamp_of_message DESC
+        SELECT *
+        FROM (
+            SELECT
+                tc.idtaskcomments,
+                tc.comment,
+                tc.public,
+                tc.anonymous,
+                tc.comment_read,
+                tc.timestamp_of_message,
+
+                tr.idtaskresult,
+                tr.iduser AS student_id,
+                tr.answer AS student_answer,
+
+                t.idtask,
+                t.question AS task_question,
+                t.tasktype,
+
+                e.idexercise,
+                e.exercise_name,
+                e.exercise_description,
+
+                w.idweek,
+
+                c.idcourse,
+                c.coursename,
+
+                student.firstname AS student_firstname,
+                student.lastname AS student_lastname,
+
+                commenter.firstname AS commenter_firstname,
+                commenter.lastname AS commenter_lastname,
+
+                ROW_NUMBER() OVER (
+                    PARTITION BY tr.idtaskresult
+                    ORDER BY
+                        tc.timestamp_of_message DESC,
+                        tc.idtaskcomments DESC
+                ) AS row_num,
+
+                MAX(
+                    CASE
+                        WHEN tc.comment_read = 0 THEN 1
+                        ELSE 0
+                    END
+                ) OVER (
+                    PARTITION BY tr.idtaskresult
+                ) AS has_unread
+
+            FROM taskcomments tc
+            INNER JOIN taskresults tr ON tr.idtaskresult = tc.idtaskresult
+            INNER JOIN task t ON t.idtask = tr.idtask
+            INNER JOIN exercises e ON e.idexercise = t.idexercise
+            INNER JOIN weeks w ON w.idweek = e.idweek
+            INNER JOIN courses c ON c.idcourse = w.idcourse
+            INNER JOIN coursemembers cm ON cm.idcourse = c.idcourse AND cm.iduser = ?
+            INNER JOIN users student ON student.iduser = tr.iduser
+            INNER JOIN users commenter ON commenter.iduser = tc.idcommentor
+            WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher'
+        ) AS latest_questions
+
+        WHERE row_num = 1
+
+        ORDER BY
+            has_unread DESC,
+            timestamp_of_message DESC
         `,
         [teacherId]
     );
@@ -178,4 +202,38 @@ const checkTeacherTaskResult = async (teacherId, taskResultId) => {
     return rows;
 };
 
-export { selectUsersExerciseComments, insertTaskComment, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult }
+const markTaskCommentsAsRead = async (taskResultId) => {
+    const [result] = await pool.promise().query(
+        `
+        UPDATE taskcomments
+        SET comment_read = 1
+        WHERE idtaskresult = ?
+        `,
+        [taskResultId]
+    );
+
+    return result;
+};
+
+
+const selectUnreadTeacherQuestions = async (teacherId) => {
+    const [rows] = await pool.promise().query(
+        `
+        SELECT COUNT(DISTINCT tc.idtaskresult) AS unreadCount
+        FROM taskcomments tc
+
+        INNER JOIN taskresults tr ON tr.idtaskresult = tc.idtaskresult
+        INNER JOIN task  ON t.idtask = tr.idtask
+        INNER JOIN exercises e ON e.idexercise = t.idexercise
+        INNER JOIN weeks w ON w.idweek = e.idweek
+        INNER JOIN courses c ON c.idcourse = w.idcourse
+        INNER JOIN coursemembers cm ON cm.idcourse = c.idcourse AND cm.iduser = ?
+        WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher' AND tc.comment_read = 0
+        `,
+        [teacherId]
+    );
+
+    return Number(rows[0]?.unreadCount || 0);
+};
+
+export { selectUsersExerciseComments, insertTaskComment, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult, markTaskCommentsAsRead, selectUnreadTeacherQuestions }

@@ -1,6 +1,6 @@
 import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership } from '../models/exercisesModel.js'
-import { selectUsersExerciseComments, insertTaskComment, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult } from '../models/commentModel.js'
+import { selectUsersExerciseComments, insertTaskComment, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult, markTaskCommentsAsRead, selectUnreadTeacherQuestions } from '../models/commentModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { isTeacherReviewed } from '../helpers/submissionStatus.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -1903,5 +1903,65 @@ const insertTeacherTaskComment = async (req, res, next) => {
     }
 };
 
+const markTeacherQuestionAsRead = async (req, res, next) => {
+    try {
+        const teacherId = Number(req.user.iduser);
+        const taskResultId = Number(req.params.taskResultId);
 
-export { getTeacherQuestions,insertTeacherTaskComment, getTeacherQuestion, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }
+        if (!teacherId || Number.isNaN(teacherId)) {
+            return res.status(400).json({
+                error: "Teacher id is not valid"
+            });
+        }
+
+        if (!taskResultId || Number.isNaN(taskResultId)) {
+            return res.status(400).json({
+                error: "Task result id is not valid"
+            });
+        }
+
+        const teacherTaskResult = await checkTeacherTaskResult(
+            teacherId,
+            taskResultId
+        );
+
+        if (!teacherTaskResult.length) {
+            return res.status(403).json({
+                error: "You are not allowed to access this task."
+            });
+        }
+
+        await markTaskCommentsAsRead(taskResultId);
+
+        return res.status(200).json({
+            message: "Question marked as read."
+        });
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
+const getUnreadTeacherQuestions = async (req, res, next) => {
+    try {
+        const teacherId = Number(req.user.iduser);
+
+        if (!teacherId || Number.isNaN(teacherId)) {
+            return res.status(400).json({
+                error: "Teacher id is not valid"
+            });
+        }
+
+        const unreadCount = await selectUnreadTeacherQuestions(teacherId);
+
+        return res.status(200).json({
+            unreadCount
+        });
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
+
+export {getUnreadTeacherQuestions, markTeacherQuestionAsRead, getTeacherQuestions,insertTeacherTaskComment, getTeacherQuestion, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }

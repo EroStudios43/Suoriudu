@@ -32,7 +32,9 @@ import { getUsersCourses,
     getExamPasswordForValidation, 
     getUsersExerciseComments, 
     insertUserTaskComment,
-    insertTeacherTaskComment
+    insertTeacherTaskComment,
+    markTeacherQuestionAsRead,
+    getUnreadTeacherQuestions
  } from "../controllers/coursesController.js"
 import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
 import { auth } from '../helpers/auth.js'
@@ -73,5 +75,7 @@ router.post("/:courseId/exercises", auth, createExercise)
 router.delete("/:courseId/exercises/:exerciseId", auth, removeExercise)
 router.get("/:courseId/exercises/:exerciseId/submissions/:userId/question/:taskId",auth,getTeacherQuestion)
 router.post("/taskComments/teacher", auth, insertTeacherTaskComment)
+router.put("/teacher/questions/:taskResultId/read", auth, markTeacherQuestionAsRead)
+router.get("/teacher/questions/unread", auth, getUnreadTeacherQuestions);
 
 export default router
