@@ -310,7 +310,6 @@ function TestQuestions() {
       }
     }
 
-    console.log("LISTEREN ")
     const handleWindowFocus = () => {
       setIsPageFocused(true)
     }
