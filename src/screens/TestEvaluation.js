@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import "./styles/createTask.css";
+import "./styles/overviews.css";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
@@ -20,6 +21,11 @@ function TestEvaluation() {
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  const [aiModal, setAiModal] = useState({
+    open: false,
+    task: null,
+  });
 
   const studentDisplayName = useMemo(() => getReviewDisplayName({
     studentData,
@@ -230,14 +236,63 @@ function TestEvaluation() {
       setSaving(false);
     }
   };
+  const handleBack = () => {
+    if (location.state?.week) {
+      navigate("/WeekOverview", {
+        replace: true,
+        state: {
+          courseId,
+          week: location.state.week,
+        },
+      });
+      return;
+    }
 
+    navigate(-1);
+  };
+
+  const openAiModal = (task) => {
+    const rawLogs = task.ai_logs || task.ai_notes;
+    const parsedLogs = parseAiNotes(rawLogs);
+
+    setAiModal({
+      open: true,
+      task: {
+        ...task,
+        parsedLogs: parsedLogs
+      },
+    });
+  };
+
+  const closeAiModal = () => {
+    setAiModal({
+      open: false,
+      task: null,
+    });
+  };
+
+  const parseAiNotes = (lista) => {
+    if (!Array.isArray(lista)) return [];
+
+    return lista
+      .map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return {
+            cause: item.cause || item.teksti || "Merkintä",
+            timestamp: item.timestamp || item.aika || "",
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
   return (
     <div className="task-page">
       <div className="task-paper">
         <div className="task-header">
           <i
             className="fa-regular fa-circle-left back-arrow"
-            onClick={() => navigate('/TestOverview', { replace: true, state: { courseId, exercise, week: location.state?.week } })}
+            onClick={handleBack}          
           ></i>
           <h1>{exercise?.exercise_name || "Kokeen arviointi"}</h1>
         </div>
@@ -258,50 +313,90 @@ function TestEvaluation() {
             {tasks.length === 0 ? (
               <p>Ei arvioitavia tehtäviä.</p>
             ) : (
-              tasks.map((task, index) => (
-                <div key={task.idtask || index} className="single-task-section" style={{ width: "100%" }}>
-                  <h3 className="task-time-title">{task.title || `Tehtävä ${index + 1}`}</h3>
-                  <p className="task-time-label">{task.instruction || "Tehtävänanto"}</p>
+              tasks.map((task, index) => {
+                const hasAiLogs = Boolean(task.ai_logs && task.ai_logs.length > 0);
+                return (
+                  <div
+                    key={task.idtask || index}
+                    className="single-task-section"
+                  >
+                  <h3 className="task-time-title">
+                    {task.title || `Tehtävä ${index + 1}`}
+                  </h3>
+
+                  <p className="task-time-label">
+                    {task.instruction || "Tehtävänanto"}
+                  </p>
 
                   {task.type !== "choice" && task.exampleAnswer ? (
-                    <div className="option-card" style={{ marginBottom: 12 }}>
+                    <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
                     </div>
                   ) : null}
 
-                  <div style={{ marginTop: 18 }}>
+                  <div className="student-answer-wrapper">
                     {task.type === "choice" ? (
-                      <div className="option-card" style={{ marginBottom: 12 }}>
+                      <div className="option-card">
                         <strong>Oppilaan vastaus</strong>
-                        <div style={{ display: "grid", gap: 8 }}>
+
+                        <div className="choice-options">
                           {(task.options || []).map((option, optionIndex) => {
-                            const isSelected = getChoiceStudentSelections(task).includes(optionIndex);
-                            const isCorrect = (task.correctAnswers || []).includes(optionIndex);
-                            const isWrongSelected = isSelected && !isCorrect;
+                            const isSelected =
+                              getChoiceStudentSelections(task).includes(optionIndex);
+
+                            const isCorrect =
+                              (task.correctAnswers || []).includes(optionIndex);
+
+                            const isWrongSelected =
+                              isSelected && !isCorrect;
 
                             return (
-                              <label key={`${task.idtask}-${optionIndex}`} style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 12,
-                                padding: "8px 10px",
-                                borderRadius: 10,
-                                background: isSelected ? "#eef9f1" : "#f7f7f7",
-                                border: `1.5px solid ${isCorrect ? "#67c58b" : isWrongSelected ? "#f1b24a" : "#ddd"}`,
-                                color: isCorrect ? "#1a6138" : "#1d283a",
-                              }}>
+                              <label
+                                key={`${task.idtask}-${optionIndex}`}
+                                className={[
+                                  "choice-option",
+                                  isSelected
+                                    ? "choice-option-selected"
+                                    : "",
+                                  isCorrect
+                                    ? "choice-option-correct"
+                                    : "",
+                                  isWrongSelected
+                                    ? "choice-option-wrong"
+                                    : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              >
                                 <input
-                                  type={task.choiceMode === "multiple" ? "checkbox" : "radio"}
+                                  type={
+                                    task.choiceMode === "multiple"
+                                      ? "checkbox"
+                                      : "radio"
+                                  }
                                   checked={isSelected}
                                   readOnly
-                                  style={{ accentColor: isCorrect ? "#2c9b5f" : "#5b6b7d" }}
+                                  className={
+                                    isCorrect
+                                      ? "choice-input-correct"
+                                      : "choice-input"
+                                  }
                                 />
-                                <span>{option || `Vaihtoehto ${optionIndex + 1}`}</span>
+
+                                <span>
+                                  {option ||
+                                    `Vaihtoehto ${optionIndex + 1}`}
+                                </span>
+
                                 {isCorrect ? (
-                                  <span style={{ marginLeft: "auto", color: "#1c7b4c", fontWeight: 700 }}>Oikea</span>
+                                  <span className="choice-status choice-status-correct">
+                                    Oikea
+                                  </span>
                                 ) : isSelected ? (
-                                  <span style={{ marginLeft: "auto", color: "#9a6b00", fontWeight: 700 }}>Valittu</span>
+                                  <span className="choice-status choice-status-selected">
+                                    Valittu
+                                  </span>
                                 ) : null}
                               </label>
                             );
@@ -310,7 +405,10 @@ function TestEvaluation() {
                       </div>
                     ) : (
                       <div>
-                        <div style={{ marginBottom: 8 }}><strong>Oppilaan vastaus</strong></div>
+                        <div className="student-answer-label">
+                          <strong>Oppilaan vastaus</strong>
+                        </div>
+
                         <textarea
                           className="large-answer-input"
                           value={formatStudentAnswer(task)}
@@ -320,25 +418,28 @@ function TestEvaluation() {
                     )}
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, gap: 12 }}>
-                    <span className="task-time-label" style={{ margin: 0 }}>Tekoälyn merkinnät</span>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span
-                        style={{
-                          width: 12,
-                          height: 12,
-                          borderRadius: "50%",
-                          background: task.hasQuestions ? "#f4c542" : "#d9d9d9",
-                          display: "inline-block",
-                          boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
-                        }}
-                      ></span>
-                      <i className="fa-regular fa-comment-dots" style={{ fontSize: 20, color: "#1d283a" }}></i>
+                  <div className="issue-row">
+                    <span className="task-time-label issue-label">
+                      Tekoälyn merkinnät
+                    </span>
+
+                    <div 
+                        className="ai-marking-indicator"
+                        style={{ cursor: "pointer" }}
+                        onClick={() => openAiModal(task)}
+                      >
+                        <span
+                          className={`ai-status-dot ${
+                            hasAiLogs ? "ai-status-dot-active" : ""
+                          }`}
+                        />
+
+                      <i className="fa-regular fa-comment-dots ai-comment-icon" />
                     </div>
                   </div>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 18, marginBottom: 12 }}>
-                    <label className="task-time-label" style={{ margin: 0 }}>
+                  <div className="evaluation-row">
+                    <label className="task-time-label evaluation-label">
                       Arviointi
                     </label>
 
@@ -351,62 +452,152 @@ function TestEvaluation() {
                       onChange={(e) => {
                         const value = e.target.value;
 
-                        // Sallitaan tyhjä arvo avoimille tehtäville
                         if (value === "") {
-                          updateTaskField(index, "teacherPoints", "");
+                          updateTaskField(
+                            index,
+                            "teacherPoints",
+                            ""
+                          );
                           return;
                         }
+
                         let points = Number(value);
                         const maxPoints = getMaxPoints(task);
+
                         if (!Number.isFinite(points)) {
                           return;
                         }
-                        // Ei negatiivisia
-                        points = Math.max(0, points);
 
-                        // Ei yli maksimipisteiden
+                        points = Math.max(0, points);
                         points = Math.min(points, maxPoints);
 
-                        updateTaskField(index, "teacherPoints", points);
+                        updateTaskField(
+                          index,
+                          "teacherPoints",
+                          points
+                        );
                       }}
-                      style={{width: 110,padding: 10,borderRadius: 8,border: "1px solid #ccc"}}
+                      className="points-input"
                     />
 
-                    <span style={{ fontWeight: 700 }}>
+                    <span className="points-total">
                       / {getMaxPoints(task)} p
                     </span>
                   </div>
 
-                  <div style={{ marginTop: 12 }}>
-                    <label className="task-time-label">Palaute oppilaalle</label>
+                  <div className="feedback-wrapper">
+                    <label className="task-time-label">
+                      Palaute oppilaalle
+                    </label>
+
                     <textarea
-                      className="large-answer-input"
-                      style={{ minHeight: 120 }}
+                      className="large-answer-input feedback-input"
                       value={task.teacherComment || ""}
-                      onChange={(e) => updateTaskField(index, "teacherComment", e.target.value)}
+                      onChange={(e) =>
+                        updateTaskField(
+                          index,
+                          "teacherComment",
+                          e.target.value
+                        )
+                      }
                       placeholder="Kirjoita oppilaalle palaute..."
                     />
                   </div>
 
-                  <div className="task-bottom-actions" style={{ justifyContent: "flex-start", marginTop: 20 }}>
-                    <button className="save-btn" type="button" onClick={() => handleSaveTask(index)} disabled={saving}>
-                      {saving ? "Tallennetaan..." : "Tallenna tämä kohta"}
+                  <div className="task-bottom-actions task-save-actions">
+                    <button
+                      className="save-btn"
+                      type="button"
+                      onClick={() => handleSaveTask(index)}
+                      disabled={saving}
+                    >
+                      {saving
+                        ? "Tallennetaan..."
+                        : "Tallenna tämä kohta"}
                     </button>
                   </div>
 
-                  <div className="divider" style={{ marginTop: 30 }}></div>
+                  <div className="divider task-divider" />
                 </div>
-              ))
+                )
+              })
             )}
 
-            <div className="task-bottom-actions" style={{ marginTop: 24 }}>
-              <button className="save-btn" type="button" onClick={handleSaveAll} disabled={saving}>
-                {saving ? "Tallennetaan..." : "Tallenna koko arviointi"}
+            <div className="task-bottom-actions save-all-actions">
+              <button
+                className="save-btn"
+                type="button"
+                onClick={handleSaveAll}
+                disabled={saving}
+              >
+                {saving
+                  ? "Tallennetaan..."
+                  : "Tallenna koko arviointi"}
               </button>
             </div>
           </>
         )}
       </div>
+      {aiModal.open && (
+        <div className="comment-modal-overlay" onClick={closeAiModal}>
+          <div
+            className="comment-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="comment-modal-header">
+              <div>
+                <h2 className="comment-modal-title">Tekoälyn merkinnät</h2>
+                <p className="comment-modal-task-title">
+                  {aiModal.task?.title || "Tehtävä"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeAiModal}
+                className="comment-modal-close"
+              >
+                x
+              </button>
+            </div>
+
+            <div className="comment-messages">
+              {aiModal.task?.parsedLogs && aiModal.task.parsedLogs.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px", padding: "10px 0" }}>
+                  {aiModal.task.parsedLogs.map((log, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "8px",
+                        backgroundColor: "#f8f9fa",
+                        borderLeft: "4px solid #e74c3c",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "4px"
+                      }}
+                    >
+                      {/* Tulostetaan teksti ensin */}
+                      <div style={{ fontWeight: "600", color: "#2c3e50", fontSize: "0.95rem" }}>
+                        {log.cause}
+                      </div>
+                      
+                      {/* Tulostetaan aika sen alle */}
+                      <div style={{ fontSize: "0.8rem", color: "#7f8c8d" }}>
+                        Aika: {log.timestamp ? new Date(log.timestamp).toLocaleString("fi-FI") : "Ei aikaa"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="no-comments">
+                  Ei tekoälyn merkintöjä tässä tehtävässä.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

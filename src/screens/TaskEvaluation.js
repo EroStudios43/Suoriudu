@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import "./styles/createTask.css";
+import "./styles/overviews.css"
 import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
@@ -59,6 +60,16 @@ function TaskEvaluation({ isExamMode = false }) {
           { headers: { Authorization: `Bearer ${user.access_token}` } }
         );
         console.log("REVIEW DATA:", response.data)
+        console.log(
+          "TASK IDS:",
+          (response.data?.tasks || []).map(task => ({
+            idtask: task.idtask,
+            title: task.title,
+            type: task.type,
+            options: task.options,
+            studentSelectedAnswers: task.studentSelectedAnswers,
+          }))
+        );
 
         setStudentData(response.data?.student || null);
 
@@ -91,7 +102,7 @@ function TaskEvaluation({ isExamMode = false }) {
               (task.idtaskresult ? null : task.points) ??
               null,
 
-            hasStudentComment: false,
+            hasUnreadStudentComment: false,
           };
 
           return nextTask;
@@ -107,12 +118,8 @@ function TaskEvaluation({ isExamMode = false }) {
       }
     };
     const loadStudentCommentStatus = async (loadedTasks) => {
-      const targetUserId = userId || submission?.iduser;
 
       if (
-        !courseId ||
-        !exercise?.idexercise ||
-        !targetUserId ||
         !user?.access_token ||
         !loadedTasks?.length
       ) {
@@ -125,13 +132,13 @@ function TaskEvaluation({ isExamMode = false }) {
             if (!task.idtask) {
               return {
                 idtask: task.idtask,
-                hasStudentComment: false,
+                hasUnreadStudentComment: false,
               };
             }
 
             try {
               const response = await axios.get(
-                `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${task.idtask}?_=${Date.now()}`,
+                `${url}/courses/teacher/questions/${task.idtaskresult}?_=${Date.now()}`,
                 {
                   headers: {
                     Authorization: `Bearer ${user.access_token}`,
@@ -143,15 +150,16 @@ function TaskEvaluation({ isExamMode = false }) {
 
               const comments = response.data?.comments || [];
 
-              // Vain opiskelijan viesti tekee pallerosta oranssin.
-              // Opettajan viesti yksin ei tee sitä oranssiksi.
-              const hasStudentComment = comments.some(
-                (comment) => comment.role !== "teacher"
+              // Lukematon oppilaan viesti oranssiksi palleroksi
+              const hasUnreadStudentComment = comments.some(
+                (comment) =>
+                  comment.role !== "teacher" &&
+                  Number(comment.comment_read) === 0
               );
 
               return {
                 idtask: task.idtask,
-                hasStudentComment,
+                hasUnreadStudentComment,
               };
             } catch (error) {
               console.error(
@@ -161,7 +169,7 @@ function TaskEvaluation({ isExamMode = false }) {
 
               return {
                 idtask: task.idtask,
-                hasStudentComment: false,
+                hasUnreadStudentComment: false,
               };
             }
           })
@@ -176,7 +184,7 @@ function TaskEvaluation({ isExamMode = false }) {
             return result
               ? {
                   ...task,
-                  hasStudentComment: result.hasStudentComment,
+                  hasUnreadStudentComment: result.hasUnreadStudentComment,
                 }
               : task;
           })
@@ -369,169 +377,159 @@ function TaskEvaluation({ isExamMode = false }) {
     }
   };
 
-
-  const openCommentModal = async (task) => {
-    const targetUserId = userId || submission?.iduser;
-
-    if (
-      !courseId ||
-      !exercise?.idexercise ||
-      !targetUserId ||
-      !task?.idtask ||
-      !user?.access_token
-    ) {
-      return;
+  const loadComments = async (taskResultId) => {
+    if (!taskResultId || !user?.access_token) {
+      return [];
     }
+
+    const response = await axios.get(
+      `${url}/courses/teacher/questions/${taskResultId}?_=${Date.now()}`,
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
+      }
+    );
+
+    return response.data?.comments || [];
+  };
+
+const openCommentModal = async (task) => {
+  const taskResultId = task?.idtaskresult;
+
+  if (!taskResultId || !user?.access_token) {
+    return;
+  }
+
+  setCommentText("");
+
+  setCommentModal({
+    open: true,
+    task,
+    comments: [],
+    loading: true,
+    sending: false,
+  });
+
+  try {
+    const comments = await loadComments(taskResultId);
+
+    setCommentModal((previous) => ({
+      ...previous,
+      comments,
+      loading: false,
+      task: {
+        ...task,
+        idtaskresult: taskResultId,
+      },
+    }));
+
+    await axios.put(
+      `${url}/courses/teacher/questions/${taskResultId}/read`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+        },
+      }
+    );
+
+    setTasks((previous) =>
+      previous.map((currentTask) =>
+        currentTask.idtask === task.idtask
+          ? {
+              ...currentTask,
+              hasUnreadStudentComment: false,
+            }
+          : currentTask
+      )
+    );
+  } catch (error) {
+    console.error(
+      "Tehtävän keskustelun hakeminen epäonnistui:",
+      error.response?.data || error.message
+    );
+
+    setCommentModal((previous) => ({
+      ...previous,
+      loading: false,
+    }));
+  }
+};
+
+
+const handleSendComment = async () => {
+  const message = commentText.trim();
+
+  if (!message) {
+    return;
+  }
+
+  const taskResultId = commentModal.task?.idtaskresult;
+
+  if (!taskResultId || !user?.access_token) {
+    console.error(
+      "idtaskresult puuttuu:",
+      commentModal.task
+    );
+    return;
+  }
+
+  try {
+    setCommentModal((previous) => ({
+      ...previous,
+      sending: true,
+    }));
+
+    await axios.post(
+      `${url}/courses/taskComments/teacher`,
+      {
+        idtaskresult: taskResultId,
+        comment: message,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${user.access_token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
     setCommentText("");
 
-    setCommentModal({
-      open: true,
-      task,
-      comments: [],
-      loading: true,
+    // Haetaan keskustelu samalla endpointilla
+    // jota käytetään modalin avaamisessa.
+    const comments = await loadComments(taskResultId);
+
+    setCommentModal((previous) => ({
+      ...previous,
+      comments,
       sending: false,
+    }));
+
+    // Vieritetään keskustelu uusimman viestin kohdalle
+    requestAnimationFrame(() => {
+      const container = commentMessagesRef.current;
+
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
     });
 
-    try {
-      const response = await axios.get(
-        `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${task.idtask}?_=${Date.now()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${user.access_token}`,
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        }
-      );
+  } catch (error) {
+    console.error(
+      "Viestin lähettäminen epäonnistui:",
+      error.response?.data || error.message
+    );
 
-      const comments = response.data?.comments || [];
-
-      setCommentModal((previous) => ({
-        ...previous,
-        comments,
-        loading: false,
-        task: {
-          ...task,
-          idtaskresult:
-            response.data?.idtaskresult ?? task.idtaskresult,
-        },
-      }));
-
-      // Oranssi pallero vain jos opettaja on kirjoittanut viestin.
-      const hasStudentComment = comments.some(
-        (comment) => comment.role !== "teacher"
-      );
-
-      setTasks((previous) =>
-        previous.map((currentTask) =>
-          currentTask.idtask === task.idtask
-            ? {
-                ...currentTask,
-                hasStudentComment,
-              }
-            : currentTask
-        )
-      );
-    } catch (error) {
-      console.error(
-        "Tehtävän keskustelun hakeminen epäonnistui:",
-        error.response?.data || error.message
-      );
-
-      setCommentModal((previous) => ({
-        ...previous,
-        loading: false,
-      }));
-    }
-  };
-
-
-
-  const handleSendComment = async () => {
-    if (!commentText.trim()) {
-      return;
-    }
-
-    const taskResultId = commentModal.task?.idtaskresult;
-
-    if (!taskResultId || !user?.access_token) {
-      console.error(
-        "idtaskresult puuttuu:",
-        commentModal.task
-      );
-      return;
-    }
-
-    try {
-      setCommentModal((previous) => ({
-        ...previous,
-        sending: true,
-      }));
-
-      await axios.post(
-        `${url}/courses/taskComments/teacher`,
-        {
-          idtaskresult: taskResultId,
-          comment: commentText.trim(),
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${user.access_token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      setCommentText("");
-
-      // Haetaan keskustelu uudelleen
-      const targetUserId = userId || submission?.iduser;
-
-      const response = await axios.get(
-        `${url}/courses/${courseId}/exercises/${exercise.idexercise}/submissions/${targetUserId}/question/${commentModal.task.idtask}?_=${Date.now()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${user.access_token}`,
-            "Cache-Control": "no-cache",
-            Pragma: "no-cache",
-          },
-        }
-      );
-
-      const comments = response.data?.comments || [];
-
-      setCommentModal((previous) => ({
-        ...previous,
-        comments,
-        sending: false,
-      }));
-
-      // Päivitetään pallero oransiksi jos oppilaalla vviestiä
-      setTasks((previous) =>
-        previous.map((task) =>
-          task.idtask === commentModal.task.idtask
-            ? {
-                ...task,
-                hasStudentComment: comments.some(
-                  (comment) => comment.role !== "teacher"
-                ),
-              }
-            : task
-        )
-      );
-    } catch (error) {
-      console.error(
-        "Viestin lähettäminen epäonnistui:",
-        error.response?.data || error.message
-      );
-
-      setCommentModal((previous) => ({
-        ...previous,
-        sending: false,
-      }));
-    }
-  };
+    setCommentModal((previous) => ({
+      ...previous,
+      sending: false,
+    }));
+  }
+};
 
   useEffect(() => {
     if (!commentModal.open || commentModal.loading) return;
@@ -593,49 +591,77 @@ function TaskEvaluation({ isExamMode = false }) {
               <p>Ei tehtäviä arvioitavaksi.</p>
             ) : (
               tasks.map((task, index) => (
-                <div key={task.idtask || index} className="single-task-section" style={{ width: "100%" }}>
-                  <h3 className="task-time-title">{task.title || `Tehtävä ${index + 1}`}</h3>
-                  <p className="task-time-label">{task.instruction || "Tehtävänanto"}</p>
+                <div key={task.idtask || index} className="single-task-section">
+                  <h3 className="task-time-title">
+                    {task.title || `Tehtävä ${index + 1}`}
+                  </h3>
+
+                  <p className="task-time-label">
+                    {task.instruction || "Tehtävänanto"}
+                  </p>
 
                   {task.type !== "choice" && task.exampleAnswer ? (
-                    <div className="option-card" style={{ marginBottom: 12 }}>
+                    <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
                     </div>
                   ) : null}
 
-                  <div style={{ marginTop: 18 }}>
+                  <div className="student-answer-wrapper">
                     {task.type === "choice" ? (
-                      <div className="option-card" style={{ marginBottom: 12 }}>
+                      <div className="option-card">
                         <strong>Oppilaan vastaus</strong>
-                        <div style={{ display: "grid", gap: 8 }}>
+
+                        <div className="choice-options">
                           {(task.options || []).map((option, optionIndex) => {
-                            const isSelected = getChoiceStudentSelections(task).includes(optionIndex);
-                            const isCorrect = (task.correctAnswers || []).includes(optionIndex);
-                            const isWrongSelected = isSelected && !isCorrect;
+                            const isSelected =
+                              getChoiceStudentSelections(task).includes(optionIndex);
+
+                            const isCorrect =
+                              (task.correctAnswers || []).includes(optionIndex);
+
+                            const isWrongSelected =
+                              isSelected && !isCorrect;
 
                             return (
-                              <label key={`${task.idtask}-${optionIndex}`} style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 12,
-                                padding: "8px 10px",
-                                borderRadius: 10,
-                                background: isSelected ? "#eef9f1" : "#f7f7f7",
-                                border: `1.5px solid ${isCorrect ? "#67c58b" : isWrongSelected ? "#f1b24a" : "#ddd"}`,
-                                color: isCorrect ? "#1a6138" : "#1d283a",
-                              }}>
+                              <label
+                                key={`${task.idtask}-${optionIndex}`}
+                                className={[
+                                  "choice-option",
+                                  isSelected ? "choice-option-selected" : "",
+                                  isCorrect ? "choice-option-correct" : "",
+                                  isWrongSelected ? "choice-option-wrong" : "",
+                                ]
+                                  .filter(Boolean)
+                                  .join(" ")}
+                              >
                                 <input
-                                  type={task.choiceMode === "multiple" ? "checkbox" : "radio"}
+                                  type={
+                                    task.choiceMode === "multiple"
+                                      ? "checkbox"
+                                      : "radio"
+                                  }
                                   checked={isSelected}
                                   readOnly
-                                  style={{ accentColor: isCorrect ? "#2c9b5f" : "#5b6b7d" }}
+                                  className={
+                                    isCorrect
+                                      ? "choice-input-correct"
+                                      : "choice-input"
+                                  }
                                 />
-                                <span>{option || `Vaihtoehto ${optionIndex + 1}`}</span>
+
+                                <span>
+                                  {option || `Vaihtoehto ${optionIndex + 1}`}
+                                </span>
+
                                 {isCorrect ? (
-                                  <span style={{ marginLeft: "auto", color: "#1c7b4c", fontWeight: 700 }}>Oikea</span>
+                                  <span className="choice-status choice-status-correct">
+                                    Oikea
+                                  </span>
                                 ) : isSelected ? (
-                                  <span style={{ marginLeft: "auto", color: "#9a6b00", fontWeight: 700 }}>Valittu</span>
+                                  <span className="choice-status choice-status-selected">
+                                    Valittu
+                                  </span>
                                 ) : null}
                               </label>
                             );
@@ -644,7 +670,10 @@ function TaskEvaluation({ isExamMode = false }) {
                       </div>
                     ) : (
                       <div>
-                        <div style={{ marginBottom: 8 }}><strong>Oppilaan vastaus</strong></div>
+                        <div className="student-answer-label">
+                          <strong>Oppilaan vastaus</strong>
+                        </div>
+
                         <textarea
                           className="large-answer-input"
                           value={formatStudentAnswer(task)}
@@ -654,40 +683,34 @@ function TaskEvaluation({ isExamMode = false }) {
                     )}
                   </div>
 
-                  <div style={{display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, gap: 12,}}
+                  <div className="issue-row">
+                    <span className="task-time-label issue-label">
+                      {issueLabel}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => openCommentModal(task)}
+                      title="Avaa tehtävän keskustelu"
+                      className="comment-button"
                     >
-                      <span className="task-time-label" style={{ margin: 0 }}>
-                        {issueLabel}
-                      </span>
+                      <span
+                        className={`comment-status-dot ${
+                          task.hasUnreadStudentComment
+                            ? "comment-status-dot-unread"
+                            : ""
+                        }`}
+                      />
 
-                      <button
-                        type="button"
-                        onClick={() => openCommentModal(task)}
-                        title="Avaa tehtävän keskustelu"
-                        style={{
-                          border: "none",
-                          background: "transparent",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 9,
-                          padding: "5px 8px",
-                          borderRadius: 8,
-                        }}
-                      >
-                        <span style={{ width: 12,height: 12, borderRadius: "50%",background: task.hasStudentComment ? "#f28c28" : "#d9d9d9", display: "inline-block",
-                            boxShadow: task.hasStudentComment
-                            ? "0 0 0 4px rgba(242,140,40,0.15)"
-                            : "none",
-                          }}
-                        />
+                      <i className="fa-regular fa-comment-dots comment-icon" />
+                    </button>
+                  </div>
 
-                        <i className="fa-regular fa-comment-dots"  style={{fontSize: 21, color: "#1d283a", }}/>
-                      </button>
-                    </div>
+                  <div className="evaluation-row">
+                    <label className="task-time-label evaluation-label">
+                      Arviointi
+                    </label>
 
-                  <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 18, marginBottom: 12 }}>
-                    <label className="task-time-label" style={{ margin: 0 }}>Arviointi</label>
                     <input
                       type="number"
                       min="0"
@@ -697,56 +720,75 @@ function TaskEvaluation({ isExamMode = false }) {
                       onChange={(e) => {
                         const value = e.target.value;
 
-                        // Sallitaan tyhjä arvo avoimille tehtäville
                         if (value === "") {
                           updateTaskField(index, "teacherPoints", "");
                           return;
                         }
+
                         let points = Number(value);
                         const maxPoints = getMaxPoints(task);
+
                         if (!Number.isFinite(points)) {
                           return;
                         }
-                        // Ei negatiivisia
-                        points = Math.max(0, points);
 
-                        // Ei yli maksimipisteiden
+                        points = Math.max(0, points);
                         points = Math.min(points, maxPoints);
 
                         updateTaskField(index, "teacherPoints", points);
                       }}
-                      style={{width: 110,padding: 10,borderRadius: 8,border: "1px solid #ccc"}}
+                      className="points-input"
                     />
 
-                    <span style={{ fontWeight: 700 }}>
+                    <span className="points-total">
                       / {getMaxPoints(task)} p
                     </span>
                   </div>
 
-                  <div style={{ marginTop: 12 }}>
-                    <label className="task-time-label">Palaute oppilaalle</label>
+                  <div className="feedback-wrapper">
+                    <label className="task-time-label">
+                      Palaute oppilaalle
+                    </label>
+
                     <textarea
-                      className="large-answer-input"
-                      style={{ minHeight: 120 }}
+                      className="large-answer-input feedback-input"
                       value={task.teacherComment || ""}
-                      onChange={(e) => updateTaskField(index, "teacherComment", e.target.value)}
+                      onChange={(e) =>
+                        updateTaskField(
+                          index,
+                          "teacherComment",
+                          e.target.value
+                        )
+                      }
                       placeholder="Kirjoita oppilaalle palaute..."
                     />
                   </div>
 
-                  <div className="task-bottom-actions" style={{ justifyContent: "flex-start", marginTop: 20 }}>
-                    <button className="save-btn" type="button" onClick={() => handleSaveTask(index)} disabled={saving}>
-                      {saving ? "Tallennetaan..." : "Tallenna tämä kohta"}
+                  <div className="task-bottom-actions task-save-actions">
+                    <button
+                      className="save-btn"
+                      type="button"
+                      onClick={() => handleSaveTask(index)}
+                      disabled={saving}
+                    >
+                      {saving
+                        ? "Tallennetaan..."
+                        : "Tallenna tämä kohta"}
                     </button>
                   </div>
 
-                  <div className="divider" style={{ marginTop: 30 }}></div>
+                  <div className="divider task-divider" />
                 </div>
               ))
             )}
 
-            <div className="task-bottom-actions" style={{ marginTop: 24 }}>
-              <button className="save-btn" type="button" onClick={handleSaveAll} disabled={saving}>
+            <div className="task-bottom-actions save-all-actions">
+              <button
+                className="save-btn"
+                type="button"
+                onClick={handleSaveAll}
+                disabled={saving}
+              >
                 {saving ? "Tallennetaan..." : "Tallenna koko arviointi"}
               </button>
             </div>
@@ -756,16 +798,7 @@ function TaskEvaluation({ isExamMode = false }) {
 
       {commentModal.open && (
         <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0, 0, 0, 0.45)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-            padding: 20,
-          }}
+          className="comment-modal-overlay"
           onClick={() =>
             setCommentModal((previous) => ({
               ...previous,
@@ -774,43 +807,16 @@ function TaskEvaluation({ isExamMode = false }) {
           }
         >
           <div
-            style={{
-              width: "100%",
-              maxWidth: 700,
-              maxHeight: "85vh",
-              background: "#fff",
-              borderRadius: 16,
-              boxShadow: "0 15px 50px rgba(0,0,0,0.25)",
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
+            className="comment-modal"
             onClick={(event) => event.stopPropagation()}
           >
-
-            {/* Otsikko */}
-
-            <div
-              style={{
-                padding: "18px 22px",
-                borderBottom: "1px solid #e5e5e5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
+            <div className="comment-modal-header">
               <div>
-                <h2 style={{ margin: 0 }}>
+                <h2 className="comment-modal-title">
                   Tehtävän keskustelu
                 </h2>
 
-                <p
-                  style={{
-                    margin: "5px 0 0",
-                    color: "#6b7280",
-                    fontSize: 14,
-                  }}
-                >
+                <p className="comment-modal-task-title">
                   {commentModal.task?.title ||
                     `Tehtävä ${
                       tasks.findIndex(
@@ -830,42 +836,22 @@ function TaskEvaluation({ isExamMode = false }) {
                     open: false,
                   }))
                 }
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  fontSize: 28,
-                  cursor: "pointer",
-                  color: "#555",
-                }}
+                className="comment-modal-close"
               >
                 ×
               </button>
             </div>
 
-            {/* Keskustelu */}
-
             <div
               ref={commentMessagesRef}
-              style={{
-                padding: 20,
-                overflowY: "auto",
-                minHeight: 250,
-                maxHeight: 500,
-                background: "#f8f9fb",
-              }}
+              className="comment-messages"
             >
               {commentModal.loading ? (
-                <p style={{ textAlign: "center", color: "#777" }}>
+                <p className="comment-loading">
                   Ladataan keskustelua...
                 </p>
               ) : commentModal.comments?.length > 0 ? (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 12,
-                  }}
-                >
+                <div className="comment-list">
                   {commentModal.comments.map(
                     (comment, index) => {
                       const isTeacher =
@@ -874,35 +860,22 @@ function TaskEvaluation({ isExamMode = false }) {
                       return (
                         <div
                           key={
-                            comment.idtaskcomments ||
-                            index
+                            comment.idtaskcomments || index
                           }
-                          style={{
-                            display: "flex",
-                            justifyContent: isTeacher
-                              ? "flex-end"
-                              : "flex-start",
-                          }}
+                          className={`comment-row ${
+                            isTeacher
+                              ? "comment-row-teacher"
+                              : "comment-row-student"
+                          }`}
                         >
                           <div
-                            style={{
-                              maxWidth: "80%",
-                              padding: "12px 15px",
-                              borderRadius: 12,
-                              background: isTeacher
-                                ? "#eaf3ff"
-                                : "#fff",
-                              border: "1px solid #e1e5ea",
-                            }}
+                            className={`comment-bubble ${
+                              isTeacher
+                                ? "comment-bubble-teacher"
+                                : ""
+                            }`}
                           >
-                            <div
-                              style={{
-                                fontWeight: 700,
-                                fontSize: 13,
-                                marginBottom: 6,
-                                color: "#344054",
-                              }}
-                            >
+                            <div className="comment-author">
                               {isTeacher
                                 ? "Opettaja"
                                 : `${comment.firstname || ""} ${
@@ -911,23 +884,12 @@ function TaskEvaluation({ isExamMode = false }) {
                                   "Opiskelija"}
                             </div>
 
-                            <div
-                              style={{
-                                whiteSpace: "pre-wrap",
-                                lineHeight: 1.5,
-                              }}
-                            >
+                            <div className="comment-content">
                               {comment.comment}
                             </div>
 
                             {comment.timestamp_of_message && (
-                              <div
-                                style={{
-                                  marginTop: 7,
-                                  fontSize: 11,
-                                  color: "#8a8f98",
-                                }}
-                              >
+                              <div className="comment-timestamp">
                                 {new Date(
                                   comment.timestamp_of_message
                                 ).toLocaleString("fi-FI")}
@@ -940,27 +902,13 @@ function TaskEvaluation({ isExamMode = false }) {
                   )}
                 </div>
               ) : (
-                <div
-                  style={{
-                    textAlign: "center",
-                    color: "#888",
-                    padding: "50px 20px",
-                  }}
-                >
+                <div className="no-comments">
                   Tästä tehtävästä ei ole vielä keskustelua.
                 </div>
               )}
             </div>
 
-            {/* Uusi viesti */}
-
-            <div
-              style={{
-                padding: 18,
-                borderTop: "1px solid #e5e5e5",
-                background: "#fff",
-              }}
-            >
+            <div className="comment-compose">
               <textarea
                 value={commentText}
                 onChange={(event) =>
@@ -968,25 +916,10 @@ function TaskEvaluation({ isExamMode = false }) {
                 }
                 placeholder="Kirjoita tähän viesti oppilaalle..."
                 maxLength={10000}
-                style={{
-                  width: "100%",
-                  minHeight: 100,
-                  resize: "vertical",
-                  padding: 12,
-                  borderRadius: 10,
-                  border: "1px solid #ccc",
-                  boxSizing: "border-box",
-                  fontFamily: "inherit",
-                }}
+                className="comment-input"
               />
 
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "flex-end",
-                  marginTop: 10,
-                }}
-              >
+              <div className="comment-send-actions">
                 <button
                   type="button"
                   className="save-btn"

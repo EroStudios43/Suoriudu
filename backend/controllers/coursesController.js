@@ -1,10 +1,8 @@
-import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, } from '../models/coursesModel.js'
-import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership } from '../models/exercisesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, selectCourseStudentMembers, selectExerciseSubmissionSummary, selectExerciseReviewedTasks, selectExerciseTotalTaskCount, selectExerciseReviewSummary } from '../models/coursesModel.js'
+import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership,selectTaskResultForReview, selectLatestExerciseResult, createTaskResultForReview,  selectStudentExerciseReviewExercise, selectStudentForExerciseReview, selectStudentExerciseReviewTasks,  } from '../models/exercisesModel.js'
 import { selectUsersExerciseComments, insertTaskComment, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult, markTaskCommentsAsRead, selectUnreadTeacherQuestions } from '../models/commentModel.js'
-import { emptyOrRows } from '../helpers/utils.js'
-import { isTeacherReviewed } from '../helpers/submissionStatus.js'
+
 import { selectUserByEmail } from '../models/userModel.js'
-import pool from '../helpers/database.js'
 import jwt from 'jsonwebtoken'
 
 const getUsersCourses = async(req, res, next) => {
@@ -129,7 +127,6 @@ const createCourse = async (req, res, next) => {
                         allow_late_submissions: exercise.allow_late_submissions ? 1 : 0,
                         max_time: exercise.max_time
                     };
-                    console.log (normalizedExercise.exercise_type);
 
                     const idexercise = await insertExercise(idweek, normalizedExercise);
 
@@ -147,8 +144,7 @@ const createCourse = async (req, res, next) => {
                             };
 
                             let answer;
-                            console.log("COURSE TASK RECEIVED:", task);
-                            console.log("COURSE TASK TYPE:", task.type);
+                            
                             const tasktype = mapTaskType(task);
 
                             if (tasktype === "single_choice" || tasktype === "multiple_choice") {
@@ -415,31 +411,20 @@ const getStudentExerciseReview = async (req, res, next) => {
     try {
         const { courseId, exerciseId, userId } = req.params;
 
-        const [exerciseRows] = await pool.promise().query(
-            `SELECT e.*
-            FROM exercises e
-            INNER JOIN weeks w ON w.idweek = e.idweek
-            WHERE e.idexercise = ? AND w.idcourse = ?`,
-            [exerciseId, courseId]
+         const exerciseRows = await selectStudentExerciseReviewExercise(
+            exerciseId,
+            courseId
         );
 
         if (!exerciseRows.length) {
             return res.status(404).json({ error: "Exercise not found" });
         }
 
-        const [studentRows] = await pool.promise().query(
-            `SELECT iduser, firstname, lastname FROM users WHERE iduser = ?`,
-            [userId]
-        );
+        const studentRows = await selectStudentForExerciseReview(userId);
 
-        const [taskRows] = await pool.promise().query(
-            `SELECT t.idtask, t.tasktype, t.question, t.answer AS task_answer, t.points, 
-            tr.teacher_comment, tr.idtaskresult, tr.answer AS student_answer, tr.points AS teacher_points        
-            FROM task t
-            LEFT JOIN taskresults tr ON tr.idtask = t.idtask AND tr.iduser = ?
-            WHERE t.idexercise = ?
-            ORDER BY t.idtask ASC`,
-            [userId, exerciseId]
+        const taskRows = await selectStudentExerciseReviewTasks(
+            userId,
+            exerciseId
         );
 
         const tasks = taskRows.map((task, index) => {
@@ -500,6 +485,18 @@ const getStudentExerciseReview = async (req, res, next) => {
                 exampleAnswer = task.task_answer || "";
             }
 
+            let aiLogs = [];
+            if (task.ai_notes) {
+                try {
+                    const parsed = JSON.parse(task.ai_notes);
+                    aiLogs = Array.isArray(parsed) ? parsed : [{ log_type: task.ai_notes }];
+                } catch (e) {
+                    // Jos ai_notes on pelkkää merkkijonoa
+                    aiLogs = [{ log_type: task.ai_notes }];
+                }
+            }
+
+
             return {
                 idtask: task.idtask,
                 idtaskresult: task.idtaskresult,
@@ -517,6 +514,7 @@ const getStudentExerciseReview = async (req, res, next) => {
                 teacherComment: task.teacher_comment ?? "",
                 hasQuestions: false,
                 autoScore: normalizedType === "choice" ? getChoiceAutoScore({ correctAnswers, studentSelectedAnswers, points: task.points }) : 0,
+                ai_logs: aiLogs
                 
             };
         });
@@ -544,39 +542,36 @@ const saveStudentExerciseReview = async (req, res, next) => {
         const { reviews = [] } = req.body || {};
 
         if (!Array.isArray(reviews)) {
-            return res.status(400).json({ error: "Reviews must be an array" });
+            return res.status(400).json({
+                error: "Reviews must be an array"
+            });
         }
 
         for (const review of reviews) {
             if (!review || !review.idtask) continue;
 
-            const [rows] = await pool.promise().query(
-                `SELECT tr.idtaskresult, tr.idexerciseresult
-                 FROM taskresults tr
-                 INNER JOIN task t ON t.idtask = tr.idtask
-                 WHERE tr.iduser = ? AND t.idexercise = ? AND tr.idtask = ?
-                 LIMIT 1`,
-                [userId, exerciseId, review.idtask]
+            const rows = await selectTaskResultForReview(
+                userId,
+                exerciseId,
+                review.idtask
             );
 
             let idtaskresult = rows[0]?.idtaskresult;
 
             if (!idtaskresult) {
-                const [exerciseRows] = await pool.promise().query(
-                    `SELECT idexerciseresult
-                     FROM exerciseresults
-                     WHERE iduser = ? AND idexercise = ?
-                     ORDER BY idexerciseresult DESC
-                     LIMIT 1`,
-                    [userId, exerciseId]
+                const exerciseRows = await selectLatestExerciseResult(
+                    userId,
+                    exerciseId
                 );
 
                 if (!exerciseRows.length) continue;
 
-                const [insertResult] = await pool.promise().query(
-                    `INSERT INTO taskresults (idtask, iduser, idexerciseresult, answer, points, teacher_comment)
-                     VALUES (?, ?, ?, ?, ?, ?)`,
-                    [review.idtask, userId, exerciseRows[0].idexerciseresult, "", review.teacherPoints ?? null, review.teacher_comment ?? ""]
+                const insertResult = await createTaskResultForReview(
+                    review.idtask,
+                    userId,
+                    exerciseRows[0].idexerciseresult,
+                    review.teacherPoints ?? null,
+                    review.teacher_comment ?? ""
                 );
 
                 idtaskresult = insertResult.insertId;
@@ -584,11 +579,16 @@ const saveStudentExerciseReview = async (req, res, next) => {
 
             await updateTaskResult(idtaskresult, {
                 points: review.teacherPoints ?? null,
-                teacher_comment: review.teacher_comment ?? "",
+                teacher_comment: review.teacher_comment ?? ""
             });
         }
 
-        return res.status(200).json({ success: true, courseId, exerciseId, userId });
+        return res.status(200).json({
+            success: true,
+            courseId,
+            exerciseId,
+            userId
+        });
     } catch (error) {
         return next(error);
     }
@@ -599,129 +599,98 @@ const getExerciseSubmissions = async (req, res, next) => {
         const { courseId, exerciseId } = req.params;
 
         const course = await selectCourseById(courseId);
+
         if (!course) {
-            return res.status(404).json({ error: "Course not found" });
+            return res.status(404).json({
+                error: "Course not found"
+            });
         }
 
-        const [memberRows] = await pool.promise().query(
-            "SELECT iduser FROM coursemembers WHERE idcourse = ? AND LOWER(COALESCE(userrole, '')) = 'student'",
-            [courseId]
+        const memberRows = await selectCourseStudentMembers(courseId);
+        const taskCountRows = await selectExerciseTotalTaskCount(exerciseId);
+        const reviewSummaryRows = await selectExerciseReviewSummary(
+            courseId,
+            exerciseId
+        );
+        const submissionRows = await selectExerciseSubmissionSummary(
+            courseId,
+            exerciseId
+        );
+        const reviewedRows = await selectExerciseReviewedTasks(
+            courseId,
+            exerciseId
         );
 
         const totalStudents = memberRows.length;
-
-        const [taskCountRows] = await pool.promise().query(
-            "SELECT COUNT(*) AS total_tasks FROM task WHERE idexercise = ?",
-            [exerciseId]
-        );
-        const totalTasks = Number(taskCountRows[0]?.total_tasks || 0);
-
-        const [reviewSummaryRows] = await pool.promise().query(
-            `SELECT tr.iduser, COUNT(*) AS reviewed_task_count
-             FROM taskresults tr
-             INNER JOIN task t ON tr.idtask = t.idtask
-             INNER JOIN coursemembers cm ON cm.iduser = tr.iduser AND cm.idcourse = ?
-             WHERE t.idexercise = ?
-               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
-               AND tr.points IS NOT NULL
-               AND TRIM(CAST(tr.points AS CHAR)) <> ''
-             GROUP BY tr.iduser`,
-            [courseId, exerciseId]
+        const totalTasks = Number(
+            taskCountRows[0]?.total_tasks || 0
         );
 
         const reviewedTaskCounts = new Map(
-            reviewSummaryRows.map((row) => [Number(row.iduser), Number(row.reviewed_task_count || 0)])
+            reviewSummaryRows.map(row => [
+                Number(row.iduser),
+                Number(row.reviewed_task_count || 0)
+            ])
         );
 
-        const [submissionRows] = await pool.promise().query(
-            `SELECT er.idexerciseresult, er.starting_time, er.complete_time, er.ai_notes,
-                    u.iduser, u.firstname, u.lastname
-             FROM exerciseresults er
-             INNER JOIN users u ON er.iduser = u.iduser
-             INNER JOIN coursemembers cm ON cm.iduser = u.iduser AND cm.idcourse = ?
-             WHERE er.idexercise = ?
-               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
-             ORDER BY er.complete_time DESC, er.starting_time DESC`,
-            [courseId, exerciseId]
-        );
-
-        const [reviewedRows] = await pool.promise().query(
-            `SELECT tr.idtaskresult, tr.points, tr.teacher_comment, u.iduser, u.firstname, u.lastname
-             FROM taskresults tr
-             INNER JOIN task t ON tr.idtask = t.idtask
-             INNER JOIN users u ON tr.iduser = u.iduser
-             INNER JOIN coursemembers cm ON cm.iduser = u.iduser AND cm.idcourse = ?
-             WHERE t.idexercise = ?
-               AND LOWER(COALESCE(cm.userrole, '')) = 'student'
-             ORDER BY tr.idtaskresult DESC`,
-            [courseId, exerciseId]
-        );
-
-        const reviewedUserIds = new Map();
         const totalPointsByUser = new Map();
 
-        reviewedRows.forEach((row) => {
+        reviewedRows.forEach(row => {
             const userId = Number(row.iduser);
-            reviewedUserIds.set(userId, row);
+            const points = Number(row.points);
 
-            const parsedPoints = Number(row.points);
-            const safePoints = Number.isFinite(parsedPoints) ? parsedPoints : 0;
-            totalPointsByUser.set(userId, (totalPointsByUser.get(userId) || 0) + safePoints);
+            const safePoints = Number.isFinite(points)
+                ? points
+                : 0;
+
+            totalPointsByUser.set(
+                userId,
+                (totalPointsByUser.get(userId) || 0) + safePoints
+            );
         });
 
         const submissionsByUser = new Map();
 
-        submissionRows.forEach((row) => {
-            const submittedAt = row.complete_time || row.starting_time || null;
+        submissionRows.forEach(row => {
             const userId = Number(row.iduser);
-            const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
+            const reviewedTaskCount =
+                reviewedTaskCounts.get(userId) || 0;
+
             const hasTeacherReview = reviewedTaskCount > 0;
-            const isReviewed = totalTasks > 0 ? reviewedTaskCount >= totalTasks : false;
-            const partialReview = hasTeacherReview && !isReviewed;
-            const totalPoints = totalPointsByUser.get(userId) || 0;
+            const isReviewed =
+                totalTasks > 0 &&
+                reviewedTaskCount >= totalTasks;
 
             submissionsByUser.set(userId, {
                 iduser: row.iduser,
-                name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
-                submittedAt,
-                autoCheck: row.ai_notes || "Ei vielä arvioitu",
+                name:
+                    `${row.firstname || ""} ${row.lastname || ""}`.trim() ||
+                    "Opiskelija",
+                submittedAt:
+                    row.complete_time ||
+                    row.starting_time ||
+                    null,
+                autoCheck: "Ei vielä arvioitu",
+                ai_logs: row.ai_notes ,
                 reviewed: isReviewed,
-                partialReview,
+                partialReview:
+                    hasTeacherReview && !isReviewed,
                 hasTeacherReview,
-                points: isReviewed ? totalPoints : null,
+                points: isReviewed
+                    ? totalPointsByUser.get(userId) || 0
+                    : null
             });
         });
 
-        reviewedRows.forEach((row) => {
-            const userId = Number(row.iduser);
-            if (!submissionsByUser.has(userId)) {
-                const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
-                const hasTeacherReview = reviewedTaskCount > 0;
-                const isReviewed = totalTasks > 0 ? reviewedTaskCount >= totalTasks : false;
-                const partialReview = hasTeacherReview && !isReviewed;
-                const totalPoints = totalPointsByUser.get(userId) || 0;
-                submissionsByUser.set(userId, {
-                    iduser: row.iduser,
-                    name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
-                    submittedAt: null,
-                    autoCheck: "Ei vielä arvioitu",
-                    reviewed: totalTasks > 0 ? reviewedTaskCount >= totalTasks : false,
-                    partialReview,
-                    hasTeacherReview,
-                    points: totalTasks > 0 && reviewedTaskCount >= totalTasks ? totalPoints : null,
-                });
-            }
-        });
-
-        const submissions = Array.from(submissionsByUser.values());
-        const reviewed = submissions.filter((submission) => submission.reviewed);
-        const unreviewed = submissions.filter((submission) => !submission.reviewed);
+        const submissions = Array.from(
+            submissionsByUser.values()
+        );
 
         return res.status(200).json({
             exerciseId,
             totalStudents,
-            reviewed,
-            unreviewed,
+            reviewed: submissions.filter(s => s.reviewed),
+            unreviewed: submissions.filter(s => !s.reviewed)
         });
     } catch (error) {
         return next(error);
@@ -981,7 +950,7 @@ const getUsersExerciseAnswers = async (req, res, next) => {
         }
 
         // Get the done exercises for the course the user has selected
-        const doneExercises = selectUsersExerciseResultsFromCourse(iduser, idcourse)
+        const doneExercises =  await selectUsersExerciseResultsFromCourse(iduser, idcourse)
 
         return res.status(200).json(doneExercises || [])
 
@@ -1372,7 +1341,6 @@ const getWeeksExercises = async (req, res, next) => {
         const exercises = await selectWeekExercises(idweek)
         const exerciseresults = await selectWeekExerciseResults(idweek, iduser)
 
-        console.log(req.user)
 
         return res.status(200).json({exercises, exerciseresults})
     } catch (error) {
@@ -1599,7 +1567,6 @@ const insertUserExerciseAndTaskResults = async (req, res, next) => {
         const idexercise = req.body.idexercise
         const taskResults = req.body.taskResults
 
-        console.log(req.body)
 
         // Check that if the exercise end_time has passed, and the allow_late_submissions
         // Also allow the submits after 5 minutes after the initial closing time, so we take bad internet connections etc. into account.
@@ -1644,18 +1611,16 @@ const insertUserExerciseAndTaskResults = async (req, res, next) => {
 
 const getTeacherQuestion = async (req, res, next) => {
     try {
-        const {
-            courseId,
-            exerciseId,
-            userId,
-            taskId
-        } = req.params;
+        const taskResultId = Number(req.params.taskResultId);
+
+        if (!taskResultId || Number.isNaN(taskResultId)) {
+            return res.status(400).json({
+                error: "Task result id is not valid"
+            });
+        }
 
         const rows = await selectTeacherQuestion(
-            courseId,
-            exerciseId,
-            userId,
-            taskId
+            taskResultId
         );
 
         if (!rows.length) {
@@ -1666,13 +1631,9 @@ const getTeacherQuestion = async (req, res, next) => {
 
         const question = rows[0];
 
-        let comments = [];
-
-        if (question.idtaskresult) {
-            comments = await selectTaskComments(
-                question.idtaskresult
-            );
-        }
+        const comments = await selectTaskComments(
+            question.idtaskresult
+        );
 
         return res.status(200).json({
             ...question,
@@ -1680,10 +1641,14 @@ const getTeacherQuestion = async (req, res, next) => {
         });
 
     } catch (error) {
-        console.error("getTeacherQuestion error:", error);
+        console.error(
+            "getTeacherQuestionByTaskResult error:",
+            error
+        );
+
         return next(error);
     }
-}
+};
 
 const getTeacherQuestions = async (req, res, next) => {
     try {
@@ -1832,7 +1797,6 @@ const insertUserTaskComment = async (req, res, next) => {
         if (!existingTaskResultIdRows[0]) {
             // If no existing task result, create a new empty one
             const newTaskResult = await insertTaskResult(idtask, iduser, exerciseResultOwnershipRows[0].idexerciseresult)
-            console.log(newTaskResult.insertId)
             const idtaskresult = newTaskResult.insertId
             // After a task result is created, create the comment
             const now = new Date()
@@ -1931,7 +1895,7 @@ const markTeacherQuestionAsRead = async (req, res, next) => {
             });
         }
 
-        await markTaskCommentsAsRead(taskResultId);
+        await markTaskCommentsAsRead(taskResultId, teacherId);
 
         return res.status(200).json({
             message: "Question marked as read."
@@ -1964,4 +1928,4 @@ const getUnreadTeacherQuestions = async (req, res, next) => {
 };
 
 
-export {getUnreadTeacherQuestions, markTeacherQuestionAsRead, getTeacherQuestions,insertTeacherTaskComment, getTeacherQuestion, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }
+export {getUnreadTeacherQuestions, markTeacherQuestionAsRead, getTeacherQuestions,insertTeacherTaskComment, getTeacherQuestion, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment }

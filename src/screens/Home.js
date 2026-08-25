@@ -72,7 +72,7 @@ export default function Home() {
                 { headers: { Authorization: "Bearer " + user.access_token } }
             );
 
-            const myCourses = myCoursesResponse.data || [];
+            const myCourses = myCoursesResponse.data?.courses || [];
             const marathonCandidates = [];
 
             for (const course of myCourses) {
@@ -95,7 +95,17 @@ export default function Home() {
                                 { headers: { Authorization: `Bearer ${user.access_token}` } }
                             );
 
+
+                            console.log(
+                                "SUBMISSIONS",
+                                course.coursename,
+                                exercise.exercise_name,
+                                submissionsResponse.data
+                            );
+
                             const unreviewed = submissionsResponse.data?.unreviewed || [];
+
+                            console.log("UNREVIEWED:", unreviewed);
                             if (unreviewed.length > 0) {
                                 marathonCandidates.push(...unreviewed.map((submission) => ({
                                     ...submission,
@@ -109,7 +119,7 @@ export default function Home() {
                     console.warn("Failed to inspect course for marathon", course.idcourse, courseError);
                 }
             }
-
+                console.log("MARATHON CANDIDATES:", marathonCandidates);
             const nextSubmission = pickRandomUnreviewedSubmission(marathonCandidates);
             if (nextSubmission) {
                 navigate('/TaskEvaluation', {

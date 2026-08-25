@@ -225,4 +225,96 @@ const selectUsersExerciseResultsFromCourse = async (iduser, idcourse) => {
     return rows;
 }
 
-export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectCourseMembers, updateCourseById, deleteCourseById, removeCourseMember , selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse }
+
+const selectCourseStudentMembers = async (courseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT iduser
+         FROM coursemembers
+         WHERE idcourse = ?
+           AND LOWER(COALESCE(userrole, '')) = 'student'`,
+        [courseId]
+    );
+
+    return rows;
+};
+
+const selectExerciseSubmissionSummary = async (courseId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT er.idexerciseresult,
+                er.starting_time,
+                er.complete_time,
+                er.ai_notes,
+                u.iduser,
+                u.firstname,
+                u.lastname
+         FROM exerciseresults er
+         INNER JOIN users u ON er.iduser = u.iduser
+         INNER JOIN coursemembers cm
+             ON cm.iduser = u.iduser
+            AND cm.idcourse = ?
+         WHERE er.idexercise = ?
+           AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+         ORDER BY er.complete_time DESC, er.starting_time DESC`,
+        [courseId, exerciseId]
+    );
+
+    return rows;
+};
+
+const selectExerciseReviewedTasks = async (courseId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT tr.idtaskresult,
+                tr.points,
+                tr.teacher_comment,
+                u.iduser,
+                u.firstname,
+                u.lastname
+         FROM taskresults tr
+         INNER JOIN task t ON tr.idtask = t.idtask
+         INNER JOIN users u ON tr.iduser = u.iduser
+         INNER JOIN coursemembers cm
+             ON cm.iduser = u.iduser
+            AND cm.idcourse = ?
+         WHERE t.idexercise = ?
+           AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+         ORDER BY tr.idtaskresult DESC`,
+        [courseId, exerciseId]
+    );
+
+    return rows;
+};
+
+const selectExerciseTotalTaskCount = async (exerciseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT COUNT(*) AS total_tasks
+         FROM task
+         WHERE idexercise = ?`,
+        [exerciseId]
+    );
+
+    return rows;
+};
+
+const selectExerciseReviewSummary = async (courseId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT tr.iduser,
+                COUNT(*) AS reviewed_task_count
+         FROM taskresults tr
+         INNER JOIN task t
+             ON tr.idtask = t.idtask
+         INNER JOIN coursemembers cm
+             ON cm.iduser = tr.iduser
+            AND cm.idcourse = ?
+         WHERE t.idexercise = ?
+           AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+           AND tr.points IS NOT NULL
+           AND TRIM(CAST(tr.points AS CHAR)) <> ''
+         GROUP BY tr.iduser`,
+        [courseId, exerciseId]
+    );
+
+    return rows;
+};
+
+
+export { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, insertWeek, selectCourseWeeks, selectCourseByName, selectUserCourseById, selectUnattendedCoursesByName, selectCourseMembers, updateCourseById, deleteCourseById, removeCourseMember , selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse , selectCourseStudentMembers, selectExerciseSubmissionSummary, selectExerciseReviewedTasks, selectExerciseTotalTaskCount, selectExerciseReviewSummary };

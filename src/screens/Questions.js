@@ -62,6 +62,7 @@ function Questions() {
       navigate("/SpecificQuestion", {
         state: {
           question,
+          from: "/Questions",
         },
       });
     } catch (error) {
@@ -74,6 +75,7 @@ function Questions() {
       navigate("/SpecificQuestion", {
         state: {
           question,
+          from: "/Questions",
         },
       });
     }
@@ -85,7 +87,7 @@ function Questions() {
         <div className="questions-title-wrapper">
           <i
             className="fa-regular fa-circle-left questions-back-icon"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/Home", { replace: true })}
           ></i>
 
           <div>

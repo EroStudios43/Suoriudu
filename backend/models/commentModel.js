@@ -27,7 +27,7 @@ const insertTaskComment = async(idtaskresult, idcommentor, publicComment, anonym
 }
 
 
-const selectTeacherQuestion = async (courseId, exerciseId, userId, taskId) => {
+const selectTeacherQuestion = async (taskResultId) => {
     const [rows] = await pool.promise().query(
         `
         SELECT
@@ -36,39 +36,29 @@ const selectTeacherQuestion = async (courseId, exerciseId, userId, taskId) => {
             t.tasktype,
             t.question,
             t.answer AS correct_answer,
+
             tr.idtaskresult,
             tr.iduser,
             tr.answer AS student_answer,
             tr.points,
+
             e.exercise_name,
             e.exercise_description,
+
             c.idcourse,
             c.coursename,
+
             student.firstname AS student_firstname,
             student.lastname AS student_lastname
-        FROM task t
-        INNER JOIN exercises e
-            ON e.idexercise = t.idexercise
-        INNER JOIN weeks w
-            ON w.idweek = e.idweek
-        INNER JOIN courses c
-            ON c.idcourse = w.idcourse
-        LEFT JOIN taskresults tr
-            ON tr.idtask = t.idtask
-            AND tr.iduser = ?
-        LEFT JOIN users student
-            ON student.iduser = ?
-        WHERE w.idcourse = ?
-          AND e.idexercise = ?
-          AND t.idtask = ?
+
+        FROM taskresults tr INNER JOIN task t ON t.idtask = tr.idtask
+        INNER JOIN exercises e ON e.idexercise = t.idexercise
+        INNER JOIN weeks w ON w.idweek = e.idweek
+        INNER JOIN courses c ON c.idcourse = w.idcourse
+        INNER JOIN users student ON student.iduser = tr.iduser
+        WHERE tr.idtaskresult = ?
         `,
-        [
-            userId,
-            userId,
-            courseId,
-            exerciseId,
-            taskId
-        ]
+        [taskResultId]
     );
 
     return rows;
@@ -84,6 +74,7 @@ const selectTaskComments = async (taskResultId) => {
             tc.public,
             tc.anonymous,
             tc.comment,
+            tc.comment_read,
             tc.timestamp_of_message,
             u.firstname,
             u.lastname,
@@ -148,7 +139,9 @@ const selectTeacherQuestions = async (teacherId) => {
 
                 MAX(
                     CASE
-                        WHEN tc.comment_read = 0 THEN 1
+                        WHEN tc.comment_read = 0
+                            AND commenter.iduser <> ?
+                        THEN 1
                         ELSE 0
                     END
                 ) OVER (
@@ -173,7 +166,7 @@ const selectTeacherQuestions = async (teacherId) => {
             has_unread DESC,
             timestamp_of_message DESC
         `,
-        [teacherId]
+        [teacherId, teacherId]
     );
 
     return rows;
@@ -202,18 +195,22 @@ const checkTeacherTaskResult = async (teacherId, taskResultId) => {
     return rows;
 };
 
-const markTaskCommentsAsRead = async (taskResultId) => {
+const markTaskCommentsAsRead = async (taskResultId, teacherId) => {
     const [result] = await pool.promise().query(
         `
-        UPDATE taskcomments
-        SET comment_read = 1
-        WHERE idtaskresult = ?
+        UPDATE taskcomments tc
+        INNER JOIN taskresults tr
+            ON tr.idtaskresult = tc.idtaskresult
+        SET tc.comment_read = 1
+        WHERE tc.idtaskresult = ?
+          AND tc.idcommentor = tr.iduser
         `,
         [taskResultId]
     );
 
     return result;
 };
+
 
 
 const selectUnreadTeacherQuestions = async (teacherId) => {
@@ -223,14 +220,17 @@ const selectUnreadTeacherQuestions = async (teacherId) => {
         FROM taskcomments tc
 
         INNER JOIN taskresults tr ON tr.idtaskresult = tc.idtaskresult
-        INNER JOIN task  ON t.idtask = tr.idtask
+        INNER JOIN task t ON t.idtask = tr.idtask
         INNER JOIN exercises e ON e.idexercise = t.idexercise
         INNER JOIN weeks w ON w.idweek = e.idweek
         INNER JOIN courses c ON c.idcourse = w.idcourse
         INNER JOIN coursemembers cm ON cm.idcourse = c.idcourse AND cm.iduser = ?
-        WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher' AND tc.comment_read = 0
+        INNER JOIN users commenter ON commenter.iduser = tc.idcommentor
+        WHERE LOWER(COALESCE(cm.userrole, '')) = 'teacher'
+          AND tc.comment_read = 0
+          AND commenter.iduser <> ?
         `,
-        [teacherId]
+        [teacherId, teacherId]
     );
 
     return Number(rows[0]?.unreadCount || 0);

@@ -1,6 +1,5 @@
 import { selectExerciseForCourse, updateExercisePassword, insertExercise, deleteExercise, insertTask } from "../models/exercisesModel.js"
-import pool from '../helpers/database.js'
-import jwt from 'jsonwebtoken'
+
 
 const generateExamPassword = () => {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
