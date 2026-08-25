@@ -12,6 +12,7 @@ function SpecificQuestion() {
   const { user } = useUser();
 
   const questionFromState = location.state?.question;
+  const returnPath = location.state?.from || "/Questions";
 
   const [question, setQuestion] = useState(questionFromState || null);
 
@@ -29,50 +30,26 @@ function SpecificQuestion() {
         navigate("/Questions", { replace: true });
         return;
       }
-
-      const {
-        courseId,
-        idcourse,
-        exerciseId,
-        idexercise,
-        userId,
-        iduser,
-        student_id,
-        taskId,
-        idtask,
-      } = questionFromState;
-
-      const finalCourseId = courseId ?? idcourse;
-      const finalExerciseId = exerciseId ?? idexercise;
-      const finalUserId = userId ?? iduser ?? student_id;
-      const finalTaskId = taskId ?? idtask;
-
-      if (
-        !finalCourseId ||
-        !finalExerciseId ||
-        !finalUserId ||
-        !finalTaskId
-      ) {
-        console.error("SpecificQuestion: tarvittavat ID:t puuttuvat", {
-          finalCourseId,
-          finalExerciseId,
-          finalUserId,
-          finalTaskId,
-          questionFromState,
-        });
-
+      if (!user?.access_token) {
         setLoading(false);
         return;
       }
 
-      if (!user?.access_token) {
+      const taskResultId = questionFromState.idtaskresult;
+
+       if (!taskResultId) {
+        console.error(
+          "SpecificQuestion: idtaskresult puuttuu",
+          questionFromState
+        );
+
         setLoading(false);
         return;
       }
 
       try {
         const response = await axios.get(
-          `${url}/courses/${finalCourseId}/exercises/${finalExerciseId}/submissions/${finalUserId}/question/${finalTaskId}?_=${Date.now()}`,
+          `${url}/courses/teacher/questions/${taskResultId}?_=${Date.now()}`,
           {
             headers: {
               Authorization: `Bearer ${user.access_token}`,
@@ -91,20 +68,24 @@ function SpecificQuestion() {
           ...questionFromState,
           ...data,
 
-          courseId: finalCourseId,
-          exerciseId: finalExerciseId,
-          userId: finalUserId,
-          taskId: finalTaskId,
-
-          idcourse: finalCourseId,
-          idexercise: finalExerciseId,
-          iduser: finalUserId,
-          idtask: finalTaskId,
-
           idtaskresult: data.idtaskresult,
 
-          task_question: data.question || questionFromState.task_question,
-          tasktype: data.tasktype || questionFromState.tasktype,
+          courseId: data.idcourse ?? questionFromState.courseId,
+          exerciseId: data.idexercise ?? questionFromState.exerciseId,
+          userId: data.iduser ?? questionFromState.userId,
+
+          idcourse: data.idcourse,
+          idexercise: data.idexercise,
+          iduser: data.iduser,
+          idtask: data.idtask,
+
+          task_question:
+            data.question ||
+            questionFromState.task_question,
+
+          tasktype:
+            data.tasktype ||
+            questionFromState.tasktype,
 
           comments: data.comments || [],
 
@@ -173,7 +154,7 @@ function SpecificQuestion() {
       }
     }
 
-    navigate(-1);
+    navigate(returnPath, { replace: true });
   };
 
   //Uusi opettajan viesti
@@ -189,14 +170,9 @@ function SpecificQuestion() {
     }
 
     if (!question.idtaskresult) {
-      console.error(
-        "idtaskresult puuttuu:",
-        question
-      );
+      console.error("idtaskresult puuttuu:", question);
 
-      alert(
-        "Kysymyksen keskustelun tunnistetiedot puuttuvat."
-      );
+      alert("Kysymyksen keskustelun tunnistetiedot puuttuvat.");
 
       return;
     }
@@ -204,7 +180,7 @@ function SpecificQuestion() {
     setSending(true);
 
     try {
-      const response = await axios.post(
+      await axios.post(
         `${url}/courses/taskComments/teacher`,
         {
           idtaskresult: question.idtaskresult,
@@ -218,57 +194,26 @@ function SpecificQuestion() {
         }
       );
 
-      console.log("Opettajan vastaus tallennettu:", response.data);
+      // Haetaan keskustelu uudelleen
+      const refreshResponse = await axios.get(
+        `${url}/courses/teacher/questions/${question.idtaskresult}?_=${Date.now()}`,
+        {
+          headers: {
+            Authorization: `Bearer ${user.access_token}`,
+            "Cache-Control": "no-cache",
+            Pragma: "no-cache",
+          },
+        }
+      );
 
-
-
-      //Backend palauttaa uuden kommentin
-      //Lisätään se keskusteluun jos objekti
-      if (response.data.comment){
-        setQuestion((previous) => ({
-          ...previous,
-          comments: [
-            ...(previous.comments || []),
-            response.data.comment,
-          ],
-        }))
-      }else {
-        //Jos palautus vain onnistumisviesti, haetaan keskustelu uudelleen
-        const courseId =
-          question.courseId ?? question.idcourse;
-
-        const exerciseId =
-          question.exerciseId ?? question.idexercise;
-
-        const userId =
-          question.userId ??
-          question.iduser ??
-          question.student_id;
-
-        const taskId =
-          question.taskId ?? question.idtask;
-
-        const refreshResponse = await axios.get(
-          `${url}/courses/${courseId}/exercises/${exerciseId}/submissions/${userId}/question/${taskId}?_=${Date.now()}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.access_token}`,
-              "Cache-Control": "no-cache",
-              Pragma: "no-cache",
-            },
-          }
-        );
-
-        setQuestion((previous) => ({
-          ...previous,
-          ...refreshResponse.data,
-          comments:
-            refreshResponse.data.comments || [],
-        }));
-
-      }
+      setQuestion((previous) => ({
+        ...previous,
+        ...refreshResponse.data,
+        comments: refreshResponse.data.comments || [],
+      }));
 
       setAnswer("");
+
     } catch (error) {
       console.error(
         "Vastauksen lähettäminen epäonnistui:",
@@ -475,9 +420,11 @@ function SpecificQuestion() {
                       >
                         <p className="comment-author">
                           {isStudent
-                            ? `${question.student_firstname || ""} ${
-                                question.student_lastname || ""
-                              }`.trim() || "Opiskelija"
+                            ? comment.anonymous
+                              ? "Anonyymi opiskelija"
+                              : `${question.student_firstname || ""} ${
+                                  question.student_lastname || ""
+                                }`.trim() || "Opiskelija"
                             : "Opettaja"}
                         </p>
 

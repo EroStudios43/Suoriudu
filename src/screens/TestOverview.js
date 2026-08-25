@@ -86,6 +86,20 @@ function TestOverview() {
     });
   };
 
+  const handleBack = () => {
+    if (location.state?.week && courseId) {
+      navigate("/WeekOverview", {
+        replace: true,
+        state: {
+          courseId,
+          week: location.state.week,
+        },
+      });
+    } else {
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="coursepage task-overview-page">
       <div className="topbar task-overview-topbar">
@@ -93,20 +107,7 @@ function TestOverview() {
           <div className="course-title">
             <i
               className="fa-regular fa-circle-left back-icon"
-              onClick={() => {
-                if (location.state?.week) {
-                  navigate('/WeekOverview', {
-                    replace: true,
-                    state: {
-                      courseId,
-                      week: location.state.week,
-                    }
-                  });
-                  return;
-                }
-
-                navigate(-1);
-              }}
+              onClick={handleBack}
             ></i>
             <div>
               <h2 className="course-name task-overview-title">{taskName}</h2>

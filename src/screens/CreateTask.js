@@ -102,6 +102,8 @@ function CreateTask() {
 
   useEffect(() => {
     if (editExercise) {
+     
+
       setTaskName(editExercise.exercise_name || "");
       setTaskDescription(editExercise.exercise_description || "");
       setStartTime(toDateTimeLocal(editExercise.start_time) || "");
@@ -122,6 +124,7 @@ function CreateTask() {
       tasks: (editExercise?.tasks || []).map((task) => normalizeTaskFromBackend(task)),
     };
   }, [editExercise]);
+  
 
   const isDirty = JSON.stringify(buildFormState()) !== JSON.stringify(initialFormRef.current || buildFormState());
 
@@ -332,7 +335,7 @@ function CreateTask() {
           start_time: startTime,
           end_time: endTime,
           allow_late_submissions: allowLateSubmissions ? 1 : 0,
-          tasks: tasks.map((task) => normalizeTasksForBackend(task))
+          tasks: normalizeTasksForBackend()
         };
 
         const currentWeek = location.state?.week || {};
@@ -637,15 +640,15 @@ function CreateTask() {
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
+            <div className="pointsBox">
               <label className="task-time-label" style={{ margin: 0 }}>Maksimipistemäärä</label>
               <input
                 type="number"
                 min="0"
                 value={ task.points ?? 1}
                 onChange={(e) => updateTask(taskIndex, { ...task, points: Number(e.target.value) })}
-                style={{ width: 120, padding: 8, borderRadius: 8, border: '1px solid #ccc' }}
-              />
+                className="points-input"              
+                />
             </div>
 
             {task.type === "essay" && (

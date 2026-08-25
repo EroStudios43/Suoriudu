@@ -37,6 +37,8 @@ function CoursePage() {
   const [lateStudents, setLateStudents] = useState([]);
   const [overallProgress, setOverallProgress] = useState(0)
   const [courseNameLoaded, setCourseNameLoaded] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
 
   const refreshCourseData = async () => {
     if (!user || !user.access_token || !courseId) {
@@ -78,9 +80,54 @@ function CoursePage() {
     }
   };
 
+  useEffect(() => {refreshCourseData();}, [courseId]);
+
+
   useEffect(() => {
-    refreshCourseData();
-  }, [courseId]);
+    if (
+      user?.role !== "teacher" ||
+      !user?.access_token ||
+      !courseId
+    ) {
+      setQuestions([]);
+      return;
+    }
+
+    const fetchQuestions = async () => {
+      setQuestionsLoading(true);
+
+      try {
+        const response = await axios.get(
+          `${url}/courses/teacher/questions`,
+          {
+            headers: {
+              Authorization: `Bearer ${user.access_token}`,
+            },
+          }
+        );
+
+        const courseQuestions = (response.data || []).filter(
+          (question) =>
+            Number(question.idcourse) === Number(courseId)
+        );
+
+        setQuestions(courseQuestions);
+      } catch (error) {
+        console.error(
+          "Kurssin kysymysten hakeminen epäonnistui:",
+          error.response?.data || error.message
+        );
+
+        setQuestions([]);
+      } finally {
+        setQuestionsLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [user?.role, user?.access_token, courseId]);
+
+
 
   useEffect(() => {
     if (!user || !user.access_token) {
@@ -347,11 +394,6 @@ function CoursePage() {
     });
   };
 
-  const questions = [
-    { task: "Tehtävä 1", author: "Anonyymi" },
-    { task: "Tehtävä 3", author: "Pertti Porkkana" },
-    { task: "Tehtävä 5", author: "Anonyymi" },
-  ];
 
   useEffect(() => {
     if (user?.role !== "teacher" || !user?.access_token || !courseId || courseMembers.length === 0 || weeks.length === 0) {
@@ -588,17 +630,50 @@ function CoursePage() {
 
         <div className="questions-section">
           <h3 className="section-title">Kysymyksiä kurssitehtävistä</h3>
+
           <div className="question-list">
-            {questions.length === 0 ? (
+            {questionsLoading ? (
+              <p className="empty-message">Ladataan kysymyksiä...</p>
+            ) : questions.length === 0 ? (
               <p className="empty-message">Ei kysymyksiä</p>
             ) : (
-              questions.map((question, index) => (
-                <div key={index} className="question-item">
-                  <span className="question-task">{question.task}</span>
-                  <span className="question-author">{question.author}</span>
-                  <i className="fa-solid fa-caret-right question-arrow" onClick={() => navigate("/TaskQuestions")}></i>
-                </div>
-              ))
+              questions.map((question) => {
+                const authorName = question.anonymous
+                  ? "Anonyymi"
+                  : `${question.student_firstname || ""} ${
+                      question.student_lastname || ""
+                    }`.trim() || "Tuntematon";
+
+                return (
+                  <div
+                    key={question.idtaskresult}
+                    className="question-item"
+                    onClick={() =>
+                      navigate("/SpecificQuestion", {
+                        state: {
+                          question: {
+                            ...question,
+                            courseId: question.idcourse,
+                            exerciseId: question.idexercise,
+                            userId: question.student_id,
+                          },
+                          from: `/CoursePage/${courseId}`,
+                        },
+                      })
+                    }
+                  >
+                    <span className="question-task">
+                      {question.exercise_name || "Tehtävä"}
+                    </span>
+
+                    <span className="question-author">
+                      {authorName}
+                    </span>
+
+                    <i className="fa-solid fa-caret-right question-arrow"></i>
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

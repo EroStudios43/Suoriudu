@@ -58,6 +58,8 @@ export default function Home() {
 
     const [courseLateStatus, setCourseLateStatus] = useState({});
 
+    const [unreadQuestions, setUnreadQuestions] = useState(0);
+
     const handleMarathonStart = async () => {
         if (!user || !user.access_token) return;
 
@@ -70,7 +72,7 @@ export default function Home() {
                 { headers: { Authorization: "Bearer " + user.access_token } }
             );
 
-            const myCourses = myCoursesResponse.data || [];
+            const myCourses = myCoursesResponse.data?.courses || [];
             const marathonCandidates = [];
 
             for (const course of myCourses) {
@@ -93,7 +95,17 @@ export default function Home() {
                                 { headers: { Authorization: `Bearer ${user.access_token}` } }
                             );
 
+
+                            console.log(
+                                "SUBMISSIONS",
+                                course.coursename,
+                                exercise.exercise_name,
+                                submissionsResponse.data
+                            );
+
                             const unreviewed = submissionsResponse.data?.unreviewed || [];
+
+                            console.log("UNREVIEWED:", unreviewed);
                             if (unreviewed.length > 0) {
                                 marathonCandidates.push(...unreviewed.map((submission) => ({
                                     ...submission,
@@ -107,7 +119,7 @@ export default function Home() {
                     console.warn("Failed to inspect course for marathon", course.idcourse, courseError);
                 }
             }
-
+                console.log("MARATHON CANDIDATES:", marathonCandidates);
             const nextSubmission = pickRandomUnreviewedSubmission(marathonCandidates);
             if (nextSubmission) {
                 navigate('/TaskEvaluation', {
@@ -405,6 +417,37 @@ export default function Home() {
         getCourses();
     }, [user?.access_token, refresh]);
 
+    useEffect(() => {
+        if (!user?.access_token || user.role !== "teacher") {
+            return;
+        }
+
+        const fetchUnreadQuestions = async () => {
+            try {
+                const response = await axios.get(
+                    `${url}/courses/teacher/questions/unread`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${user.access_token}`,
+                        },
+                    }
+                );
+
+                setUnreadQuestions(response.data?.unreadCount || 0);
+
+            } catch (error) {
+                console.error(
+                    "Lukemattomien kysymysten hakeminen epäonnistui:",
+                    error.response?.data || error.message
+                );
+
+                setUnreadQuestions(0);
+            }
+        };
+
+        fetchUnreadQuestions();
+    }, [user?.access_token, user?.role]);
+
     const CourseProgress = ({course}) => {
         const courseExercises = []
         const courseExerciseResults = new Map
@@ -452,8 +495,17 @@ export default function Home() {
                 </h1>       
 
                 <div className="topbar-right-icons">
-                    <button className="icon-button" onClick={e => navigate("/Questions")}>
+                    <button
+                        className="icon-button notification-icon"
+                        onClick={() => navigate("/Questions")}
+                    >
                         <i className="fa-solid fa-envelope"></i>
+
+                        {unreadQuestions > 0 && (
+                            <span className="unread-badge">
+                                {unreadQuestions}
+                            </span>
+                        )}
                     </button>
 
                     <button className="icon-button" onClick={e => navigate("/Profile")}>

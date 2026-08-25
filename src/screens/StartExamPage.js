@@ -26,6 +26,8 @@ function TeacherExamPage() {
   const [progress, setProgress] = useState(100);
   const [remaining, setRemaining] = useState("");
   const [confettiShown, setConfettiShown] = useState(false);
+
+  const [showReturnsPopup, setShowReturnsPopup] = useState(false);
    
 
   useEffect(() => {
@@ -349,11 +351,7 @@ function TeacherExamPage() {
           <button
             className="save-btn exam-follow-button"
             type="button"
-            onClick={() =>
-              navigate("/TestOverview", {
-                state: { courseId, exercise: ex },
-              })
-            }
+            onClick={() => setShowReturnsPopup(true)}
           >
             Tarkastele kokeen kulkua
           </button>
@@ -392,6 +390,54 @@ function TeacherExamPage() {
           </div>
         </div>
       )}
+
+      
+      {showReturnsPopup && (
+        <div
+          className="exam-confirm-overlay"
+          onClick={() => setShowReturnsPopup(false)}
+        >
+          <div
+            className="exam-confirm-popup"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2>Olethan varma sivuvaihdoksesta?</h2>
+
+            <p>
+              Sivulla on tietoa, jonka ei pitäisi näkyä kaikille opiskelijoille.
+              Olethan varma, ettei näyttöä heijasteta luokan eteen?
+            </p>
+
+            <div className="exam-confirm-actions">
+              <button
+                type="button"
+                className="exam-confirm-back-btn"
+                onClick={() => setShowReturnsPopup(false)}
+              >
+                En, siirry takaisin
+              </button>
+
+              <button
+                type="button"
+                className="exam-confirm-continue-btn"
+                onClick={() => {
+                  setShowReturnsPopup(false);
+
+                  navigate("/TestOverview", {
+                    state: {
+                      courseId,
+                      exercise: ex,
+                    },
+                  });
+                }}
+              >
+                Kyllä, siirry kokeen tarkasteluun
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

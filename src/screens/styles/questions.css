@@ -130,3 +130,27 @@
     font-size: 45px;
     margin-bottom: 15px;
 }
+
+
+.question-student-name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.unread-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #d93025;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #d93025;
+  border-radius: 50%;
+  display: inline-block;
+}

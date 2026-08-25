@@ -8,6 +8,8 @@ import ProgressBarTimer from "../components/progressbartimer.js";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 
+import GazeTracker from "../components/GazeTracker.js";
+
 const url = process.env.REACT_APP_API_URL;
 
 
@@ -540,7 +542,7 @@ function TestQuestions() {
       <div id="starProgression" className="d-none d-md-inline-block">
         <ul className="nav flex-wrap">
         {tasks.map((task, index) => (
-          <NavLink task={task} index={index}/>
+          <NavLink key={task.idtask || index} task={task} index={index}/>
         ))}
     </ul>
       </div>
@@ -550,6 +552,10 @@ function TestQuestions() {
   if (user.role === "student" || user.role === "teacher") {
     return (
       <div className="container-fluid min-vh-100 exercises-container">
+
+          {/* Välitetään kokeen ID GazeTrackerille: */}
+          <GazeTracker idexercise={exercisedata?.idexercise} />
+          
           <div className="row">
             <div className="col-md-1" />
             { /* White box for page content */}
@@ -680,7 +686,7 @@ function TestQuestions() {
               )}
             </div>
             <div className="col-md-1" />
-          </div>
+          </div>          
       </div>
     );
   }

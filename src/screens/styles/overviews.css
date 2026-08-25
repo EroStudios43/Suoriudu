@@ -1,0 +1,314 @@
+.single-task-section {
+  width: 100%;
+}
+
+.example-answer-card {
+  margin-bottom: 12px;
+}
+
+.student-answer-wrapper {
+  margin-top: 18px;
+}
+
+.student-answer-label {
+  margin-bottom: 8px;
+}
+
+.choice-options {
+  display: grid;
+  gap: 8px;
+}
+
+.choice-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f7f7f7;
+  border: 1.5px solid #ddd;
+  color: #1d283a;
+}
+
+.choice-option-selected {
+  background: #eef9f1;
+}
+
+.choice-option-correct {
+  border-color: #67c58b;
+  color: #1a6138;
+}
+
+.choice-option-wrong {
+  border-color: #f1b24a;
+}
+
+.choice-input {
+  accent-color: #5b6b7d;
+}
+
+.choice-input-correct {
+  accent-color: #2c9b5f;
+}
+
+.choice-status {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+.choice-status-correct {
+  color: #1c7b4c;
+}
+
+.choice-status-selected {
+  color: #9a6b00;
+}
+
+.issue-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
+  gap: 12px;
+}
+
+.issue-label {
+  margin: 0;
+}
+
+.comment-button {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 8px;
+  border-radius: 8px;
+}
+
+.comment-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  display: inline-block;
+}
+
+.comment-status-dot-unread {
+  background: #f28c28;
+  box-shadow: 0 0 0 4px rgba(242, 140, 40, 0.15);
+}
+
+.comment-icon {
+  font-size: 21px;
+  color: #1d283a;
+}
+
+.evaluation-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 18px;
+  margin-bottom: 12px;
+}
+
+.evaluation-label {
+  margin: 0;
+}
+
+.points-input {
+  width: 110px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.points-total {
+  font-weight: 700;
+}
+
+.feedback-wrapper {
+  margin-top: 12px;
+}
+
+.feedback-input {
+  min-height: 120px;
+}
+
+.task-save-actions {
+  justify-content: flex-start;
+  margin-top: 20px;
+}
+
+.task-divider {
+  margin-top: 30px;
+}
+
+.save-all-actions {
+  margin-top: 24px;
+}
+
+
+.comment-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.comment-modal {
+  width: 100%;
+  max-width: 700px;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.comment-modal-header {
+  padding: 18px 22px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comment-modal-title {
+  margin: 0;
+}
+
+.comment-modal-task-title {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.comment-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 28px;
+  cursor: pointer;
+  color: #555;
+}
+
+.comment-messages {
+  padding: 20px;
+  overflow-y: auto;
+  min-height: 250px;
+  max-height: 500px;
+  background: #f8f9fb;
+}
+
+.comment-loading {
+  text-align: center;
+  color: #777;
+}
+
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comment-row {
+  display: flex;
+}
+
+.comment-row-teacher {
+  justify-content: flex-end;
+}
+
+.comment-row-student {
+  justify-content: flex-start;
+}
+
+.comment-bubble {
+  max-width: 80%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #e1e5ea;
+}
+
+.comment-bubble-teacher {
+  background: #eaf3ff;
+}
+
+.comment-author {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+  color: #344054;
+}
+
+.comment-content {
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.comment-timestamp {
+  margin-top: 7px;
+  font-size: 11px;
+  color: #8a8f98;
+}
+
+.no-comments {
+  text-align: center;
+  color: #888;
+  padding: 50px 20px;
+}
+
+.comment-compose {
+  padding: 18px;
+  border-top: 1px solid #e5e5e5;
+  background: #fff;
+}
+
+.comment-input {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.comment-send-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.ai-marking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d9d9d9;
+  display: inline-block;
+}
+
+.ai-status-dot-active {
+  background: #f4c542;
+  box-shadow: 0 0 0 3px rgba(244, 197, 66, 0.15);
+}
+
+.ai-comment-icon {
+  font-size: 20px;
+  color: #1d283a;
+}

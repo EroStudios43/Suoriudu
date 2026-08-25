@@ -225,3 +225,37 @@
   color: red;
   cursor: pointer;
 }
+
+.pointsBox {
+  display: 'flex';
+  align-Items: 'center';
+  gap: 12;
+  margin-top: 12 ;
+}
+.points-input {
+  width: 120;
+  padding: 8;
+  border-radius: 8;
+  border: '1px solid #ccc';
+}
+
+.comment-message-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  background-color: #f8f9fa;
+  border-left: 4px solid #e74c3c;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comment-message-text {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.95rem;
+}
+
+.comment-message-time {
+  font-size: 0.8rem;
+  color: #7f8c8d;
+}

@@ -432,6 +432,11 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
   // If there are no entries, return empty
   if (!entries.length) return
 
+  console.log("=== INSERT TASK RESULTS ===");
+  console.log("entries:", entries);
+  console.log("idexerciseresult:", idexerciseresult);
+  console.log("iduser:", iduser);
+
   const values = entries.map(([idtask, answer]) => {
     const normalizedAnswer = typeof answer === 'string'
       ? answer
@@ -539,4 +544,135 @@ const checkExerciseResultOwnership = async (iduser, idexerciseresult) => {
   )
   return rows
 }
-export { deleteExercise, selectExerciseDetailsForEdit, selectExerciseForCourse, updateExercisePassword, insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, selectUserExerciseAndTaskResultsByExerciseId, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectWeekExerciseResults, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership };
+
+const selectTaskResultForReview = async (userId, exerciseId, taskId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT tr.idtaskresult, tr.idexerciseresult
+         FROM taskresults tr
+         INNER JOIN task t ON t.idtask = tr.idtask
+         WHERE tr.iduser = ?
+           AND t.idexercise = ?
+           AND tr.idtask = ?
+         LIMIT 1`,
+        [userId, exerciseId, taskId]
+    );
+
+    return rows;
+};
+
+const selectLatestExerciseResult = async (userId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT idexerciseresult
+         FROM exerciseresults
+         WHERE iduser = ?
+           AND idexercise = ?
+         ORDER BY idexerciseresult DESC
+         LIMIT 1`,
+        [userId, exerciseId]
+    );
+
+    return rows;
+};
+
+const createTaskResultForReview = async (taskId, userId, exerciseResultId, points, teacherComment) => {
+    const [result] = await pool.promise().query(
+        `INSERT INTO taskresults (idtask, iduser, idexerciseresult, answer, points, teacher_comment) VALUES (?, ?, ?, ?, ?, ?)`,
+        [
+            taskId,
+            userId,
+            exerciseResultId,
+            "",
+            points,
+            teacherComment
+        ]
+    );
+
+    return result;
+  };
+
+const selectStudentExerciseReviewExercise = async (exerciseId, courseId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT e.*
+         FROM exercises e
+         INNER JOIN weeks w ON w.idweek = e.idweek
+         WHERE e.idexercise = ?
+         AND w.idcourse = ?`,
+        [exerciseId, courseId]
+    );
+
+    return rows;
+  };
+
+  const selectStudentForExerciseReview = async (userId) => {
+    const [rows] = await pool.promise().query(
+        `SELECT iduser, firstname, lastname
+         FROM users
+         WHERE iduser = ?`,
+        [userId]
+    );
+
+    return rows;
+};
+
+const selectStudentExerciseReviewTasks = async (userId, exerciseId) => {
+    const [rows] = await pool.promise().query(
+          `SELECT
+            t.idtask,
+            t.tasktype,
+            t.question,
+            t.answer AS task_answer,
+            t.points,
+            tr.teacher_comment,
+            tr.idtaskresult,
+            tr.answer AS student_answer,
+            tr.points AS teacher_points,
+            er.ai_notes
+          FROM task t
+          LEFT JOIN taskresults tr
+            ON tr.idtask = t.idtask AND tr.iduser = ?
+          LEFT JOIN exerciseresults er 
+            ON er.idexercise = t.idexercise AND er.iduser = tr.iduser
+          WHERE t.idexercise = ?
+          ORDER BY t.idtask ASC`,
+        [userId, exerciseId]
+    );
+
+    return rows;
+};
+
+
+export { deleteExercise, 
+  selectExerciseDetailsForEdit, 
+  selectExerciseForCourse, 
+  updateExercisePassword, 
+  insertExercise, 
+  insertTask, 
+  selectWeekExercises, 
+  selectAllExerciseTasks, 
+  selectUsersExerciseTaskResults, 
+  selectUsersTasksAndResultsForWeek, 
+  selectUsersUncompletedExerciseTasksAndResults, 
+  selectUserExerciseAndTaskResultsByExerciseId,
+  insertTaskResult, 
+  insertExerciseResult, 
+  updateExercise, 
+  replaceExerciseTasks, 
+  updateExerciseResult, 
+  updateTaskResult, 
+  selectTaskResult, 
+  selectExerciseResult, 
+  selectUnfinishedExerciseResult, 
+  insertOrUpdateTaskResult, 
+  selectWeekExerciseResults, 
+  selectUserExerciseData, 
+  selectExamPasswordForValidation, 
+  selectExerciseById, 
+  selectExistingTaskResultId, 
+  checkExerciseResultOwnership, 
+  selectTaskResultForReview, 
+  selectLatestExerciseResult, 
+  createTaskResultForReview ,
+  selectStudentExerciseReviewExercise,
+  selectStudentForExerciseReview,
+  selectStudentExerciseReviewTasks,
+  };

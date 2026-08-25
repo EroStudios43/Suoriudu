@@ -35,7 +35,7 @@ export default function Profile() {
     }
   };
 
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
 
   const [editMode, setEditMode] = useState(null);
 
@@ -94,7 +94,7 @@ export default function Profile() {
 
 
   return (
-    <div className="profile-container">
+    <div className={`profile-container ${darkMode ? "dark" : "light"}`}>
       <div className="profile-header">
         
 
@@ -110,7 +110,7 @@ export default function Profile() {
 
         <div className="settings-right">
           <p>Vaihda teema</p>
-          <div className={`sky ${darkMode ? "night" : "light"}`} onClick={() => setDarkMode(!darkMode)}>
+          <div className={`sky ${darkMode ? "night" : "light"}`} onClick={toggleTheme}>
             <div className="sun">
               <div className="rays" />
             </div>

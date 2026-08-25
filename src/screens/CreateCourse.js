@@ -569,7 +569,7 @@ function CreateCourse() {
                         ?.filter(e => e.exercise_type === "task")
                         .map((exercise, i) => (
                           <div key={exercise.id} className="exercise-item task">
-                            <span>{exercise.exercise_name}</span>
+                            <span style={{ paddingRight: "10px" }}>{exercise.exercise_name}</span>
                             <div className="exercise-actions">
                               <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createTask", {state: {weekIndex: index, editMode: true, exercise}})}/>
                               <i className="fa-solid fa-trash delete-icon" onClick={() => handleDeleteExercise(index, exercise.id)} />
@@ -586,7 +586,7 @@ function CreateCourse() {
                         ?.filter(e => e.exercise_type === "exam")
                         .map((exercise, i) => (
                           <div key={exercise.id} className="exercise-item exam">
-                            <span>{exercise.exercise_name}</span>
+                            <span style={{ paddingRight: "10px" }}>{exercise.exercise_name}</span>
                             <div className="exercise-actions">
                               <i className="fa-solid fa-pen-to-square edit-icon" onClick={() => navigate("/createExam", {state: {weekIndex: index, editMode: true, exercise}})}/>
                               <i className="fa-solid fa-trash delete-icon"onClick={() => handleDeleteExercise(index, exercise.id)}/>
