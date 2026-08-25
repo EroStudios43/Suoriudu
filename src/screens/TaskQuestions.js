@@ -4,12 +4,39 @@ import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL;
 
+// Function for rendering coding exercise test results
+const TestResults = ({ results }) => {
+  const passedCount = results.filter((r) => r.passed).length;
+
+  return (
+    <div>
+      <p>{passedCount} / {results.length} tests passed</p>
+      <ul>
+        {results.map((r, i) => (
+          <li key={i} style={{ color: r.passed ? 'green' : 'red' }}>
+            {r.passed ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-xmark"></i>} {r.name}
+            {!r.passed && (
+              <span>
+                {r.error
+                  ? ` — Error: ${r.error}`
+                  : ` — expected ${JSON.stringify(r.expected)}, got ${JSON.stringify(r.actual)}`}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers, setShowCommentBox, setChosenTask})  => {
-  if (task.tasktype === "essay" || task.tasktype === "coding" || task.tasktype === "drawing") {
+const RenderTask = React.memo(({task, index, answers, setAnswers, setShowCommentBox, setChosenTask, previousComments, uid, handleCodeRun, codeRunResult})  => {
+  if (task.tasktype === "essay" || task.tasktype === "drawing") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -27,7 +54,88 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, setShowComment
           <span className="text-muted text-end d-block"><small>{answers[task.idtask]?.length || 0}/{10000} merkkiä</small></span>
         </div>
         <br />
-        <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
+        <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+          {(() => {
+            if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#f4c542",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            } else {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#d9d9d9",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            }
+          })()}
+        </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "coding") {
+    const starter_code = JSON.parse(task.answer).starterCode
+    const test_cases = JSON.parse(task.answer).testCases
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <CodeMirror 
+            value={answers[task.idtask] || starter_code || ""} 
+            extensions={[javascript()]} 
+            onChange={(value) =>
+              setAnswers(prev => ({
+                ...prev,
+                [task.idtask]: value
+              }))
+            }
+          />
+          <br />
+          <div>
+            {codeRunResult[task.idtask] && <TestResults results={codeRunResult[task.idtask]} />}
+          </div>
+          <div className="btn btn-submit float-end" onClick={() => handleCodeRun(task)}>Suorita koodi</div>
+        </div>
+        <br />
+        <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+          {(() => {
+            if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#f4c542",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            } else {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#d9d9d9",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            }
+          })()}
+        </div>
         <hr />
       </>
     )
@@ -76,7 +184,33 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, setShowComment
             )
           })}
           <br />
-          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
+          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+            {(() => {
+              if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#f4c542",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              } else {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#d9d9d9",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              }
+            })()}
+          </div>
         </div>
         <hr />
       </>
@@ -107,7 +241,33 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, setShowComment
             )
           })}
           <br />
-          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i></div>
+          <div className="chat-text" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+            {(() => {
+              if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#f4c542",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              } else {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#d9d9d9",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              }
+            })()}
+          </div>
         </div>
         <hr />
       </>
@@ -146,6 +306,9 @@ function TaskQuestions() {
   const [ newCommentErrors, setNewCommentErrors ] = useState([])
   const [ chosenTask, setChosenTask ] = useState("")
   const commentContainerRef = useRef(null)
+
+  // Variables for coding exercises
+  const [ codeRunResult, setCodeRunResult ] = useState({})
 
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -363,9 +526,62 @@ function TaskQuestions() {
     }
   }
 
+  const handleCommentSetRead = async (idtaskcomments) => {
+    try {
+      // Check that user has access token
+      if (!user || !user.access_token) {
+        console.log("No user or token yet");
+        return
+      }
+
+      if (!idtaskcomments) {
+        console.log("No task comment id provided.")
+        return
+      }
+
+      if (!idcourse) {
+        console.log("Idcourse not set")
+        return
+      }
+
+      const res = await axios.put(url + "/courses/updateCommentAsRead", {idtaskcomments: idtaskcomments, idcourse: idcourse}, {headers: {Authorization: "Bearer " + user.access_token}})
+      
+      // Update the read-value of the variable in frontend.
+      setPreviousComments(prev => prev.map(comment => comment.idtaskcomments === idtaskcomments ? {...comment, comment_read: 1} : comment))
+
+    } catch (error) {
+      console.log("Error updating comment read status:", error.response?.data || error.message)
+    }
+  }
+
   const handleNewQuestionClick = () => {
     setShowCommentBox(false)
     setShowNewQuestionBox(true)
+  }
+
+  const runAndCheckCode = (code, testCases) => {
+    const worker = new Worker(new URL('../workers/codeworker.js', import.meta.url));
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        worker.terminate();
+        resolve([{ name: 'Timeout', passed: false, error: 'Execution took too long' }]);
+      }, 3000);
+
+      worker.onmessage = (e) => {
+        clearTimeout(timer);
+        worker.terminate();
+        resolve(e.data);
+      };
+      worker.postMessage({ code, testCases });
+    });
+  }
+
+  const handleCodeRun = async (task) => {
+    const task_code_data = JSON.parse(task.answer)
+    const student_code = answers[task.idtask] || task_code_data.starterCode
+    const test_cases = task_code_data.testCases
+    const results = await runAndCheckCode(student_code, test_cases)
+    setCodeRunResult((prev) => ({ ...prev, [task.idtask]: results }));
   }
 
   // The star progress bar with a clickable scrollspy.
@@ -428,7 +644,19 @@ function TaskQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} setShowCommentBox={setShowCommentBox} setChosenTask={setChosenTask} />
+                      <RenderTask 
+                        task={task} 
+                        index={index} 
+                        key={task.idtask} 
+                        answers={answers} 
+                        setAnswers={setAnswers} 
+                        setShowCommentBox={setShowCommentBox} 
+                        setChosenTask={setChosenTask} 
+                        previousComments={previousComments} 
+                        uid={user.id} 
+                        handleCodeRun={handleCodeRun}
+                        codeRunResult={codeRunResult}
+                      />
                     )
                   })}
                   <div className="text-center">
@@ -504,9 +732,15 @@ function TaskQuestions() {
 
                             {comment.idcommentor !== user.id && (
                               <>
+                              {/* Set latest comment's read status to 1 if it hasn't been read already */}
+                              {(() => {
+                                if (comment.comment_read === 0) {
+                                  handleCommentSetRead(comment.idtaskcomments)
+                                }
+                              })()}
                                 <div className="col-md-6">
                                   <div className={`student-comment-box p-3 mb-2 mt-2 float-start other-comment`}>
-                                    <p className="m-0 p-0">Opettaja</p>
+                                    <p className="m-0 p-0">{comment.firstname} {comment.lastname}</p>
                                     <hr className="mt-1" />
                                     <p className="m-0 p-0">{comment.comment}</p>
                                   </div>

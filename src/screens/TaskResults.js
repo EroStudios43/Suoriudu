@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/exercises.css";
 import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL
 
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, correct_answer, student_answer})  => {
-  if (task.tasktype === "essay") {
+const RenderTask = React.memo(({task, index, correct_answer, student_answer, setShowCommentBox, setChosenTask, previousComments, uid})  => {
+  if (task.tasktype === "essay" || task.tasktype === "drawing") {
     const studentAnswer = student_answer
     return (
       <>
@@ -22,7 +24,80 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
             value={studentAnswer || ""} 
             readOnly={true}
             />
+          <br />
+          <div className="chat-text d-inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+            {(() => {
+              if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#f4c542",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              } else {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#d9d9d9",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              }
+            })()}
+          </div>
+          <p className="float-end ms-3">{task.student_points || "Ei arvioitu"} / {task.full_points}p</p>
           <span className="text-muted text-end d-block"><small>{student_answer?.length || 0} merkkiä</small></span>
+        </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "coding") {
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <CodeMirror 
+            value={student_answer} 
+            extensions={[javascript()]} 
+            readOnly={true}
+          />
+          <br />
+        </div>
+        <br />
+        <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+          {(() => {
+            if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#f4c542",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            } else {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#d9d9d9",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            }
+          })()}
         </div>
         <hr />
       </>
@@ -31,6 +106,7 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
     const studentAnswer = JSON.parse(student_answer).sort()
     const correctAnswer = JSON.parse(correct_answer).correctAnswers.sort()
     const taskOptions = JSON.parse(correct_answer).options.sort()
+    let automaticPoints = 0
     return (
       <>
         <div id={`scrollspy-section${task.idtask}`} className="col single-task">
@@ -38,14 +114,19 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
           <p>{task.question}</p>
           {taskOptions.map((option, index2) => {
             let correctStyle = ""
+            
             if (student_answer?.includes(index2) && correct_answer?.includes(index2)) {
               correctStyle = "bg-success-subtle correct"
+              automaticPoints += (1 / correctAnswer.length) * task.full_points
             } 
             else if (!student_answer?.includes(index2) && correct_answer?.includes(index2)) {
               correctStyle = "bg-warning-subtle partiallycorrect"
             }
-           else if (student_answer?.includes(index2) && !correct_answer?.includes(index2)) {
+            else if (student_answer?.includes(index2) && !correct_answer?.includes(index2)) {
               correctStyle = "bg-danger-subtle incorrect"
+              if (automaticPoints > 0) {
+                automaticPoints -= ((1 / correctAnswer.length) * task.full_points / 2)
+              }
             }
 
             return(
@@ -63,15 +144,45 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
               </div>
             )
           })}
-          
+          <br />
+          <div className="chat-text d-inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+            {(() => {
+              if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#f4c542",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              } else {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#d9d9d9",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              }
+            })()}
+          </div>
+          <p className="float-end">{task.student_points || automaticPoints } / {task.full_points}p</p>
         </div>
         <hr />
       </>
     )
   } else if (task.tasktype === "single_choice") {
     const studentAnswer = JSON.parse(student_answer)
-    const correctAnswer = JSON.parse(correct_answer).correctAnswers.sort()
+    const correctAnswer = JSON.parse(correct_answer).correctAnswers.sort()[0]
     const taskOptions = JSON.parse(correct_answer).options.sort()
+    let automaticPoints = 0
+    
     return (
       <>
         <div id={`scrollspy-section${task.idtask}`} className="col single-task">
@@ -79,9 +190,10 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
           <p>{task.question}</p>
           {taskOptions.map((option, index2) => {
             let correctStyle = ""
-            if (student_answer?.includes(index2) && correct_answer?.includes(index2)) {
+            if (studentAnswer === index2 && correctAnswer === index2) {
               correctStyle = "bg-success-subtle correct"
-            } else if (student_answer?.includes(index2) && !correct_answer?.includes(index2)) {
+              automaticPoints += Number(task.full_points)
+            } else if (studentAnswer === index2 && correctAnswer !== index2) {
               correctStyle = "bg-danger-subtle incorrect"
             }
             return(
@@ -100,7 +212,35 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
               </div>
             )
           })}
-          
+          <br />
+          <div className="chat-text d-inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+            {(() => {
+              if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#f4c542",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              } else {
+                return (<span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: "#d9d9d9",
+                              display: "inline-block",
+                              boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                            }}
+                          ></span>)
+              }
+            })()}
+          </div>
+          <p className="float-end">{task.student_points || automaticPoints } / {task.full_points}p</p>
         </div>
         <hr />
       </>
@@ -125,6 +265,16 @@ function TaskResults() {
   
   // Variable for currently chosen attempt
   const [chosenAttemptId, setChosenAttemptId ] = useState(null)
+
+  // Variable for the help / comment box
+  const [ showCommentBox, setShowCommentBox ] = useState(false)
+  const [ showNewQuestionBox, setShowNewQuestionBox ] = useState(false)
+  const [ visibleTooltip, setVisibleTooltip ] = useState("")
+  const [ previousComments, setPreviousComments ] = useState([])
+  const [ newStudentComment, setNewStudentComment ] = useState({question: "", public_question: false, anonymous_question: false})
+  const [ newCommentErrors, setNewCommentErrors ] = useState([])
+  const [ chosenTask, setChosenTask ] = useState("")
+  const commentContainerRef = useRef(null)
 
   // Function for fetching all the user's previous attempts
   const fetchCompletedExerciseAndTaskData = useCallback(async (signal) => {
@@ -167,6 +317,172 @@ function TaskResults() {
 
   const {data, loading, error } = useFetchData(fetchCompletedExerciseAndTaskData)
 
+  // Function for fetching comment data
+  const fetchCommentData  = useCallback(async (signal) => {
+    // Check that user has access token
+    if (!user || !user.access_token) {
+      console.log("User data or token missing")
+      return null
+    }
+
+    // Check that the other variables are defined
+    if (!idcourse || !idexercise) {
+      console.log("Variables not set yet")
+      return null
+    }
+
+    // Create the request to the backend
+    try {
+      const response = await axios.get(
+        url + "/courses/getUserExerciseComments",
+        {
+          params: {idexercise: idexercise, idcourse: idcourse},
+          headers: {Authorization: "Bearer " + user.access_token},
+          signal
+        }
+      )
+
+      console.log(response.data)
+      setPreviousComments(response.data.comments)
+    } catch (error) {
+      console.log("Error fetching comments: ", error.response?.data, error.message)
+    }
+  }, [user?.access_token, idexercise])
+
+  const {data2, loading2, error2 } = useFetchData(fetchCommentData)
+
+  // UseEffect to automatically scroll the comment box to the bottom
+  useEffect(() => {
+    if (commentContainerRef.current) {
+        commentContainerRef.current.scrollTo({
+          top: commentContainerRef.current.scrollHeight,
+          behavior: "smooth"
+        })
+      }
+  }, [previousComments, showCommentBox])
+
+  const handleCommentSumbit = async () => {
+    try {
+      console.log("Submitting comment")
+      console.log(newStudentComment)
+      console.log(chosenAttemptId)
+
+      setNewCommentErrors([])
+      const tempComment = {}
+      const tempErrors = []
+
+      // Check that user has access token
+      if (!user || !user.access_token) {
+        console.log("No user or token yet");
+        return;
+      } else {
+        tempComment.idcommentor = user.id
+      }
+
+      // Check that idexercise and idcourse are valid
+      // Check that the other variables are defined
+      if (!idcourse || !idexercise) {
+        console.log("Idexercise or idcourse aren't valid")
+        return 
+      } else {
+        tempComment.idcourse = idcourse
+        tempComment.idexercise = idexercise
+      }
+
+      // Check that idexerciseresult is not null
+      if (!chosenAttemptId) {
+        console.log("Chosen attempt id can't be null")
+        return
+      } else {
+        tempComment.idexerciseresult = chosenAttemptId
+      }
+
+      // Check that chosen task id is not null
+      if (!chosenTask) {
+        console.log("No chosen task")
+        return
+      } else {
+        tempComment.idtask = chosenTask
+      }
+
+      // Check that user has filled the question itself
+      if (newStudentComment.question.length <= 0) {
+        console.log("Question cannot be empty.")
+        tempErrors.push("Kysymys ei voi olla tyhjä.")
+        setNewCommentErrors(prev => [...prev, "Kysymys ei voi olla tyhjä."])
+      }
+
+      // Check that the answer is over 15 characters
+      if (newStudentComment.question.length < 15 && newStudentComment.question.length !== 0) {
+        console.log("Question must be 15 characters or more")
+        tempErrors.push("Kysymyksen tulee olla vähintään 15 merkkiä pitkä.")
+        setNewCommentErrors(prev => [...prev, "Kysymyksen tulee olla vähintään 15 merkkiä pitkä."])
+      }
+      
+
+      console.log(newCommentErrors)
+
+      if (tempErrors.length !== 0) {
+        return
+      }
+
+      // If no errors, form the rest of the object and submit the comment
+      tempComment.question = newStudentComment.question
+      tempComment.public_question = newStudentComment.public_question
+      tempComment.anonymous_question = newStudentComment.anonymous_question
+
+      console.log(tempComment)
+
+      const res = await axios.post(url + "/courses/insertTaskComment/student", tempComment, {headers: {Authorization: "Bearer " + user.access_token}})
+      console.log("Comment submitted", res.data)
+      setNewCommentErrors([])
+      setNewStudentComment({})
+
+      // Bring the user back to comment page
+      setShowCommentBox(true)
+      setShowNewQuestionBox(false)
+      
+      // Set tempcomment question -> tempcomment comment
+      tempComment.comment = tempComment.question
+      setPreviousComments(prev => [...prev, tempComment])
+    } catch (error) {
+      console.log("Error submitting comment:", error.response?.data || error.message)
+    }
+  }
+
+  const handleCommentSetRead = async (idtaskcomments) => {
+    try {
+      // Check that user has access token
+      if (!user || !user.access_token) {
+        console.log("No user or token yet");
+        return
+      }
+
+      if (!idtaskcomments) {
+        console.log("No task comment id provided.")
+        return
+      }
+
+      if (!idcourse) {
+        console.log("Idcourse not set")
+        return
+      }
+
+      const res = await axios.put(url + "/courses/updateCommentAsRead", {idtaskcomments: idtaskcomments, idcourse: idcourse}, {headers: {Authorization: "Bearer " + user.access_token}})
+      
+      // Update the read-value of the variable in frontend.
+      setPreviousComments(prev => prev.map(comment => comment.idtaskcomments === idtaskcomments ? {...comment, comment_read: 1} : comment))
+
+    } catch (error) {
+      console.log("Error updating comment read status:", error.response?.data || error.message)
+    }
+  }
+
+  const handleNewQuestionClick = () => {
+    setShowCommentBox(false)
+    setShowNewQuestionBox(true)
+  }
+
   // The star progress bar with a clickable scrollspy.
   const RenderProgressBar = () => {
     const NavLink = ({task, index}) => {
@@ -191,7 +507,6 @@ function TaskResults() {
             : [Number(student)]
 
           const correctNormalized = [...correct].map(Number).sort((a, b) => a - b)
-          console.log(studentNormalized, correctNormalized)
 
           return JSON.stringify(studentNormalized) === JSON.stringify(correctNormalized)
         } catch (error) {
@@ -304,11 +619,143 @@ function TaskResults() {
                       key={task.idtask}
                       correct_answer={task.correct_answer}
                       student_answer={task.student_answer}
+                      setShowCommentBox={setShowCommentBox} 
+                      setChosenTask={setChosenTask} 
+                      previousComments={previousComments} 
+                      uid={user.id}
                     />
                   ))
                 }
               </div>
             </div>
+
+            { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+              {showCommentBox && (
+                <div className="modal-overlay modal-overlay-light">
+                  <div className="modal-dialog modal-white">
+                    <div className="modal-header modal-header-light">
+                        <h3>
+                          Tehtävän kommentit
+                        </h3>
+                      <button type="button" className="modal-close modal-close-light" onClick={() => setShowCommentBox(false)}>
+                          <i className="fa-solid fa-xmark"></i>
+                      </button>
+                    </div>
+                    <div className="modal-body">
+                      <div ref={commentContainerRef} className="row student-comment-container rounded-5 p-3">
+                        {previousComments.map((comment, index) => (
+                          <>
+                            {comment.idcommentor === user.id && (
+                              <>
+                                <div className="col-md-6"></div>
+                                <div className="col-md-6">
+                                  <div className={`student-comment-box p-3 mb-2 mt-2 float-end student-own-comment`}>
+                                    <p className="m-0 p-0">{user.firstname} {user.lastname}</p>
+                                    <hr className="mt-1" />
+                                    <p className="m-0 p-0">{comment.comment}</p>
+                                  </div>
+                                </div>
+                              </>
+                            )}
+
+                            {comment.idcommentor !== user.id && (
+                              <>
+                              {/* Set latest comment's read status to 1 if it hasn't been read already */}
+                              {(() => {
+                                if (comment.comment_read === 0) {
+                                  handleCommentSetRead(comment.idtaskcomments)
+                                }
+                              })()}
+                                <div className="col-md-6">
+                                  <div className={`student-comment-box p-3 mb-2 mt-2 float-start other-comment`}>
+                                    <p className="m-0 p-0">{comment.firstname} {comment.lastname}</p>
+                                    <hr className="mt-1" />
+                                    <p className="m-0 p-0">{comment.comment}</p>
+                                  </div>
+                                </div>
+                                <div className="col-md-6"></div>
+                              </>
+                            )}
+                          </>
+                        ))}
+                      </div>
+                      <br />
+                      <br />
+                      </div>
+                      <div className="row p-3">
+                        <div className="col text-start">
+                          <button className="btn new-question btn-cancel" onClick={() => handleNewQuestionClick()}>Uusi kysymys<i className="fa-solid fa-plus chat-icon"></i></button>
+                        </div>
+                      </div>
+                  </div>
+              </div>
+            )}
+
+            { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
+            {showNewQuestionBox && (
+              <div className="modal-overlay modal-overlay-light">
+                  <div className="modal-dialog modal-white">
+                      <div className="modal-header modal-header-light">
+                          <h3>
+                            Uusi kysymys
+                          </h3>
+                        <button type="button" className="modal-close modal-close-light" onClick={() => setShowNewQuestionBox(false)}>
+                            <i className="fa-solid fa-xmark"></i>
+                        </button>
+                      </div>
+                      <div className="modal-body">
+                        <form noValidate>
+                          <label htmlFor="student-question">Kysymys:</label>
+                          <textarea id="student-question" className={`form-control essay mt-1 ${newCommentErrors.length > 0 ? "is-invalid" : ""}`} value={newStudentComment.question || ""} maxLength={1000} onChange={(e) => {setNewStudentComment((prev) => ({...prev, question: e.target.value})); setNewCommentErrors([])}}/>
+                          {newCommentErrors.length > 0 && (
+                            <p className="text-danger">{newCommentErrors[0]}</p>
+                          )}
+                          <br />
+                          <label htmlFor="anonymous-question" style={{position: "relative"}}>
+                            Anonyymi kysymys
+                            <i className="fa-solid fa-circle-info" onMouseEnter={() => setVisibleTooltip("anonymous")} onMouseLeave={() => setVisibleTooltip("")}></i>
+                            {visibleTooltip === "anonymous" && (
+                              <div className="student-tooltip">
+                                Lähetä kysymys nimettömänä <br />
+                                klikkaamalla ruutua
+                              </div>
+                            )}
+                          </label>
+                          <input type="checkbox" className="form-check-input ms-2" checked={newStudentComment.anonymous_question || ""} onChange={(e) => setNewStudentComment((prev) => ({...prev, anonymous_question: e.target.checked}))}/>
+                          <br />
+                          <br />
+                          <label htmlFor="public-question" style={{position: "relative"}}>
+                            Julkinen kysymys
+                            <i className={`fa-solid fa-circle-info`} onMouseEnter={() => setVisibleTooltip("public")} onMouseLeave={() => setVisibleTooltip("")}></i>
+                            {visibleTooltip === "public" && (
+                              <div className="student-tooltip">
+                                Julkisia kysymyksiä voidaan <br/>
+                                käyttää myöhemmin muiden  <br />
+                                opiskelijoiden apuna. <br />
+                                Jätä kohta tyhjäksi mikäli <br />
+                                haluat pitää kysymyksesi <br />
+                                yksityisenä.
+                              </div>
+                            )}
+                          </label>
+                          <input type="checkbox" className="form-check-input ms-2" checked={newStudentComment.public_question || ""} onChange={(e) => setNewStudentComment((prev) => ({...prev, public_question: e.target.checked}))}/>
+                        </form>
+                        <br />
+                        <br />
+                        <br />
+                        
+                        <div class="row">
+                          <div className="col text-start">
+                            <button type="button" className="btn btn-cancel rounded-5" onClick={() => {setShowNewQuestionBox(false); setShowCommentBox(true)}}>Peruuta</button>
+                          </div>
+                          <div className="col text-end">
+                            <button type="button" className="btn btn-submit rounded-5" onClick={() => handleCommentSumbit()}>Lähetä kysymys</button>
+                          </div>
+                        </div>
+                      </div>
+                  </div>
+              </div>
+            )}
             <div className="col-md-1" />
           </div>
       </div>

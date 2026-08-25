@@ -471,7 +471,7 @@ export default function Home() {
             }
         })
 
-        const percentage = (Array.from(courseExerciseResults.values()).length / (courseExercises.length || 1)) * 100
+        const percentage = Math.floor((Array.from(courseExerciseResults.values()).length / (courseExercises.length || 1)) * 100)
         //console.log(course.coursename, percentage, "\n", courseExercises, "\n", Array.from(courseExerciseResults.values()), "\n", Array.from(lateExercises))
         
         return (
