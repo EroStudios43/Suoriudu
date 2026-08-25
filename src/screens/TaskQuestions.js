@@ -314,12 +314,14 @@ function TaskQuestions() {
     // Check that user has access token
     if (!user || !user.access_token) {
       console.log("No user or token yet");
+      navigate("/home")
       return null
     }
 
     // Check that the other variables are defined
     if (!idcourse || !idexercise) {
       console.log("Variables not set yet")
+      navigate("/home")
       return null
     }
 
@@ -531,16 +533,19 @@ function TaskQuestions() {
       // Check that user has access token
       if (!user || !user.access_token) {
         console.log("No user or token yet");
+        navigate("/home")
         return
       }
 
       if (!idtaskcomments) {
         console.log("No task comment id provided.")
+        navigate("/home")
         return
       }
 
       if (!idcourse) {
         console.log("Idcourse not set")
+        navigate("/home")
         return
       }
 

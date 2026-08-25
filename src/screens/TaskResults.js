@@ -281,12 +281,14 @@ function TaskResults() {
     // Check that user has access token
     if (!user || !user.access_token) {
       console.log("User data or token missing")
+      navigate("/home")
       return null
     }
 
     // Check that the other needed variables are defined
     if (!idexercise) {
       console.log("Needed variables missing from request")
+      navigate("/home")
       return null
     }
 
@@ -311,6 +313,7 @@ function TaskResults() {
       console.log("Error fetching exercise results: ", error.response?.data || error.message)
       if (error.status === 404) {
         console.log("Course not found. Navigating to home page.")
+        navigate("/home")
       }
     } 
   }, [user?.access_token, idexercise])
