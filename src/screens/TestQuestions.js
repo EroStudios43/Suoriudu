@@ -218,6 +218,7 @@ function TestQuestions() {
     // Check that user has access token
     if (!user || !user.access_token) {
       console.log("No user or token yet");
+      navigate("/home")
       return null
     }
 
@@ -225,11 +226,13 @@ function TestQuestions() {
     if (!examCodeMatch) {
       console.log("Exam password incorrect")
       navigate("/home")
+      return
     }
 
     // Check that the other variables are defined
     if (!idcourse || !idexercise) {
       console.log("Variables not set yet")
+      navigate("/home")
       return null
     }
 
@@ -266,6 +269,7 @@ function TestQuestions() {
       console.log("Error fetching exercise data:", error.response?.data || error.message)
       if (error.status === 404) {
         console.log("Course not found. Navigating to home page.")
+        navigate("/home")
       }
     }
   }, [user?.id, user?.access_token, idexercise])
