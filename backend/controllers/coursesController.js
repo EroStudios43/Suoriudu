@@ -1,6 +1,6 @@
-import { selectTeacherQuestions, selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, selectTeacherQuestion, updateTeacherQuestionAnswer } from '../models/coursesModel.js'
+import { selectUsersCourses, insertCourse, insertCourseMember, selectCourseById, selectUnattendedCoursesByName, selectCourseByName, insertWeek, selectCourseWeeks, selectUserCourseById, selectCourseMembers, selectAllExercisesFromCourse, selectUsersExerciseResultsFromCourse, deleteCourseById, updateCourseById, removeCourseMember as removeCourseMemberFromDb, } from '../models/coursesModel.js'
 import { insertExercise, insertTask, selectWeekExercises, selectAllExerciseTasks, selectUsersExerciseTaskResults, selectUsersTasksAndResultsForWeek, selectUsersUncompletedExerciseTasksAndResults, insertTaskResult, insertExerciseResult, updateExercise, replaceExerciseTasks, updateExerciseResult, updateTaskResult, selectTaskResult, selectExerciseResult, selectUnfinishedExerciseResult, insertOrUpdateTaskResult, selectExerciseDetailsForEdit, selectWeekExerciseResults, selectUserExerciseAndTaskResultsByExerciseId, selectUserExerciseData, selectExamPasswordForValidation, selectExerciseById, selectExistingTaskResultId, checkExerciseResultOwnership } from '../models/exercisesModel.js'
-import { selectUsersExerciseComments, insertTaskComment, updateCommentReadStatus } from '../models/commentModel.js'
+import { selectUsersExerciseComments, insertTaskComment, updateCommentReadStatus, selectTaskComments, selectTeacherQuestions, selectTeacherQuestion, checkTeacherTaskResult } from '../models/commentModel.js'
 import { emptyOrRows } from '../helpers/utils.js'
 import { isTeacherReviewed } from '../helpers/submissionStatus.js'
 import { selectUserByEmail } from '../models/userModel.js'
@@ -1665,75 +1665,26 @@ const getTeacherQuestion = async (req, res, next) => {
             });
         }
 
-        // Älä cacheta autentikoitua, muuttuvaa kysymysdataa
-        res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-        res.set("Pragma", "no-cache");
-        res.set("Expires", "0");
+        const question = rows[0];
 
-        return res.status(200).json(rows[0]);
+        let comments = [];
+
+        if (question.idtaskresult) {
+            comments = await selectTaskComments(
+                question.idtaskresult
+            );
+        }
+
+        return res.status(200).json({
+            ...question,
+            comments
+        });
 
     } catch (error) {
         console.error("getTeacherQuestion error:", error);
         return next(error);
     }
 }
-
-const saveTeacherQuestionAnswer = async (req, res, next) => {
-    try {
-        const {
-            courseId,
-            exerciseId,
-            userId,
-            taskId
-        } = req.params;
-
-        const {
-            teacher_comment
-        } = req.body;
-
-        if (teacher_comment === undefined) {
-            return res.status(400).json({
-                error: "teacher_comment is required"
-            });
-        }
-
-        // Haetaan ensin task + opiskelijan vastaus
-        // ja samalla varmistetaan että kaikki ID:t kuuluvat yhteen.
-        const rows = await selectTeacherQuestion(
-            courseId,
-            exerciseId,
-            userId,
-            taskId
-        );
-
-        if (!rows.length) {
-            return res.status(404).json({
-                error: "Question not found"
-            });
-        }
-
-        const question = rows[0];
-
-        if (!question.idtaskresult) {
-            return res.status(404).json({
-                error: "Student has not submitted an answer for this question"
-            });
-        }
-
-        await updateTeacherQuestionAnswer(
-            question.idtaskresult,
-            teacher_comment
-        );
-
-        return res.status(200).json({
-            message: "Teacher answer saved",
-            teacher_comment
-        });
-
-    } catch (error) {
-        next(error);
-    }
-};
 
 const getTeacherQuestions = async (req, res, next) => {
     try {
@@ -1944,4 +1895,58 @@ const updateTaskCommentReadStatus = async (req, res, next) => {
     }
 }
 
-export { getTeacherQuestions, getTeacherQuestion, saveTeacherQuestionAnswer, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment, updateTaskCommentReadStatus }
+const insertTeacherTaskComment = async (req, res, next) => {
+    try {
+        const teacherId = Number(req.user.iduser);
+        const idtaskresult = Number(req.body.idtaskresult);
+        const comment = req.body.comment;
+
+        if (!teacherId || Number.isNaN(teacherId)) {
+            return res.status(400).json({
+                error: "Teacher id is not valid"
+            });
+        }
+
+        if (!idtaskresult || Number.isNaN(idtaskresult)) {
+            return res.status(400).json({
+                error: "Task result id is not valid"
+            });
+        }
+
+        if (!comment || !comment.trim()) {
+            return res.status(400).json({
+                error: "Comment cannot be empty"
+            });
+        }
+        
+        const teacherTaskResult = await checkTeacherTaskResult(
+            teacherId,
+            idtaskresult
+        );
+
+        if (!teacherTaskResult.length) {
+            return res.status(403).json({
+                error: "You are not allowed to comment on this task."
+            });
+        }
+
+        const now = new Date();
+        const newComment = await insertTaskComment(
+            idtaskresult,
+            teacherId,
+            true,
+            false,
+            comment.trim(),
+            now
+        );
+        return res.status(201).json({
+            message: "Teacher comment successfully submitted.",
+            idtaskcomments: newComment.insertId
+        });
+
+    } catch (error) {
+        return next(error);
+    }
+};
+
+export { getTeacherQuestions, insertTeacherTaskComment, getTeacherQuestion, saveTeacherQuestionAnswer, getUsersCourses, createCourse, getCourseById, getCourseByName, insertUserIntoCourse, getUnattendedCoursesByName, getUsersExercises, getUsersExerciseAnswers, getUsersExercisesAndResults, getUserTasksAndAnswersForExercise, getUsersTasksAndAnswersForWeek, getUsersExerciseWithTasks, getWeeksExercises, updateExerciseAndTasks, getExerciseDetailsForEdit, getStudentExerciseReview, saveStudentExerciseReview, insertExerciseResult, insertTaskResult, insertUserExerciseAndTaskResults, getCourseMembers, addCourseMember, removeCourseMember, updateCourse, deleteCourse, getExerciseSubmissions, getStudentsCompletedExerciseAndTasks, getUserExerciseData, getExamPasswordForValidation, getUsersExerciseComments, insertUserTaskComment, updateTaskCommentReadStatus }

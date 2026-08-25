@@ -26,14 +26,14 @@ import { getUsersCourses,
     insertTaskResult, 
     insertUserExerciseAndTaskResults,
     getTeacherQuestion,
-    saveTeacherQuestionAnswer,
     getTeacherQuestions,
     getStudentsCompletedExerciseAndTasks, 
     getUserExerciseData, 
     getExamPasswordForValidation, 
     getUsersExerciseComments, 
     insertUserTaskComment,
-    updateTaskCommentReadStatus
+    updateTaskCommentReadStatus,
+    insertTeacherTaskComment
  } from "../controllers/coursesController.js"
 import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
 import { updateUserAiNotes } from "../controllers/aiNotesController.js"
@@ -73,6 +73,6 @@ router.get("/:courseId/exercises/:exerciseId/teacher-exam", auth, getTeacherExam
 router.post("/:courseId/exercises", auth, createExercise)
 router.delete("/:courseId/exercises/:exerciseId", auth, removeExercise)
 router.get("/:courseId/exercises/:exerciseId/submissions/:userId/question/:taskId",auth,getTeacherQuestion)
-router.put("/:courseId/exercises/:exerciseId/submissions/:userId/question/:taskId",auth,saveTeacherQuestionAnswer)
+router.post("/taskComments/teacher", auth, insertTeacherTaskComment)
 
 export default router

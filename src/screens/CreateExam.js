@@ -50,7 +50,7 @@ function CreateExam() {
       setExamDuration(editExercise.max_time || "");
 
       if (editExercise.tasks) {
-        setTasks(editExercise.tasks.map((task) => normalizeTaskFromBackend(task)));
+        setTasks(editExercise.tasks);
       }
     }
     initialFormRef.current = {
@@ -59,7 +59,7 @@ function CreateExam() {
       allowLateSubmissions: !!editExercise?.allow_late_submissions,
       startTime: toDateTimeLocal(editExercise?.start_time) || "",
       endTime: toDateTimeLocal(editExercise?.end_time) || "",
-      tasks: (editExercise?.tasks || []).map((task) => normalizeTaskFromBackend(task)),
+      tasks: editExercise?.tasks || [],
     };
   }, [editExercise]);
 
@@ -336,7 +336,7 @@ function CreateExam() {
             end_time: endTime,
             max_time: examDuration,
             allow_late_submissions: allowLateSubmissions ? 1 : 0,
-            tasks: tasks.map((task) => normalizeTasksForBackend(task))
+            tasks: normalizeTasksForBackend()
         };
 
         const currentWeek = location.state?.week || {};
