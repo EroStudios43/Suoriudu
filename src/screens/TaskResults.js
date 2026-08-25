@@ -4,12 +4,14 @@ import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL
 
 // The function to render all task boxes.
 const RenderTask = React.memo(({task, index, correct_answer, student_answer, setShowCommentBox, setChosenTask, previousComments, uid})  => {
-  if (task.tasktype === "essay" || task.tasktype === "drawing" || task.tasktype === "coding") {
+  if (task.tasktype === "essay" || task.tasktype === "drawing") {
     const studentAnswer = student_answer
     return (
       <>
@@ -52,6 +54,50 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
           </div>
           <p className="float-end ms-3">{task.student_points || "Ei arvioitu"} / {task.full_points}p</p>
           <span className="text-muted text-end d-block"><small>{student_answer?.length || 0} merkkiä</small></span>
+        </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "coding") {
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <CodeMirror 
+            value={student_answer} 
+            extensions={[javascript()]} 
+            readOnly={true}
+          />
+          <br />
+        </div>
+        <br />
+        <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
+          {(() => {
+            if (previousComments[previousComments.length - 1]?.idcommentor !== uid && previousComments[previousComments.length - 1]?.comment_read === 0) {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#f4c542",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            } else {
+              return (<span
+                          style={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: "50%",
+                            background: "#d9d9d9",
+                            display: "inline-block",
+                            boxShadow: task.hasQuestions ? "0 0 0 3px rgba(244,197,66,0.15)" : "none",
+                          }}
+                        ></span>)
+            }
+          })()}
         </div>
         <hr />
       </>

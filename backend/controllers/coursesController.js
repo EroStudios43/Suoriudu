@@ -1269,7 +1269,7 @@ const getUsersExerciseWithTasks = async (req, res, next) => {
                     idexercise: row.idexercise,
                     tasktype: row.tasktype,
                     question: row.question,
-                    answer: taskAnswer
+                    answer: row.tasktype === "coding" ? row.answer : taskAnswer
                 })
             }
 

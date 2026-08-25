@@ -5,12 +5,40 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 import ProgressBarTimer from "../components/progressbartimer.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL;
 
+
+// Function for rendering coding exercise test results
+const TestResults = ({ results }) => {
+  const passedCount = results.filter((r) => r.passed).length;
+
+  return (
+    <div>
+      <p>{passedCount} / {results.length} tests passed</p>
+      <ul>
+        {results.map((r, i) => (
+          <li key={i} style={{ color: r.passed ? 'green' : 'red' }}>
+            {r.passed ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-xmark"></i>} {r.name}
+            {!r.passed && (
+              <span>
+                {r.error
+                  ? ` — Error: ${r.error}`
+                  : ` — expected ${JSON.stringify(r.expected)}, got ${JSON.stringify(r.actual)}`}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
-  if (task.tasktype === "essay") {
+const RenderTask = React.memo(({task, index, answers, setAnswers, handleCodeRun, codeRunResult})  => {
+  if (task.tasktype === "essay" || task.tasktype === "drawing") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -27,6 +55,34 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
           }/>
           <span className="text-muted text-end d-block"><small>{answers[task.idtask]?.length || 0}/{10000} merkkiä</small></span>
         </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "coding") {
+    const starter_code = JSON.parse(task.answer).starterCode
+    const test_cases = JSON.parse(task.answer).testCases
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <CodeMirror 
+            value={answers[task.idtask] || starter_code || ""} 
+            extensions={[javascript()]} 
+            onChange={(value) =>
+              setAnswers(prev => ({
+                ...prev,
+                [task.idtask]: value
+              }))
+            }
+          />
+          <br />
+          <div>
+            {codeRunResult[task.idtask] && <TestResults results={codeRunResult[task.idtask]} />}
+          </div>
+          <div className="btn btn-submit float-end" onClick={() => handleCodeRun(task)}>Suorita koodi</div>
+        </div>
+        <br />
         <hr />
       </>
     )
@@ -129,6 +185,10 @@ function TestQuestions() {
   const [ tasks, setTasks ] = useState([])
   const [ taskResults, setTaskResults ] = useState([])
   const [ exercisedata, setExercisedata ] = useState({})
+
+  
+  // Variables for coding exercises
+  const [ codeRunResult, setCodeRunResult ] = useState({})
 
   // Variable for student's answers (both from the database and the current ones)
   const [ answers, setAnswers ] = useState({})
@@ -428,6 +488,31 @@ function TestQuestions() {
     setShowConfirm(false)
   }
 
+  const runAndCheckCode = (code, testCases) => {
+    const worker = new Worker(new URL('../workers/codeworker.js', import.meta.url));
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        worker.terminate();
+        resolve([{ name: 'Timeout', passed: false, error: 'Execution took too long' }]);
+      }, 3000);
+
+      worker.onmessage = (e) => {
+        clearTimeout(timer);
+        worker.terminate();
+        resolve(e.data);
+      };
+      worker.postMessage({ code, testCases });
+    });
+  }
+
+  const handleCodeRun = async (task) => {
+    const task_code_data = JSON.parse(task.answer)
+    const student_code = answers[task.idtask] || task_code_data.starterCode
+    const test_cases = task_code_data.testCases
+    const results = await runAndCheckCode(student_code, test_cases)
+    setCodeRunResult((prev) => ({ ...prev, [task.idtask]: results }));
+  }
+
   // The star progress bar with a clickable scrollspy.
   const RenderProgressBar = () => {
     const NavLink = ({task, index}) => {
@@ -484,7 +569,7 @@ function TestQuestions() {
                       <div className="d-inline-block align-middle">
                         <ProgressBarTimer 
                           studentExamStartTime={startingTime} 
-                          exerciseEndTime={exercisedata.end_time} 
+                          exerciseEndTime={exercisedata?.end_time} 
                           examDuration={exercisedata?.max_time}
                           fiveMinutesLeft={fiveMinutesLeft}
                           setFiveMinutesLeft={setFiveMinutesLeft}
@@ -500,7 +585,7 @@ function TestQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
+                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} handleCodeRun={handleCodeRun} codeRunResult={codeRunResult}/>
                     )
                   })}
                   <div className="text-center">
