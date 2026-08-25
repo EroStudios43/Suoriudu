@@ -158,11 +158,37 @@ function WeeksExercises() {
                                   // Get all tasks that are in this exercise
                                   const exerciseTasks = tasks?.filter(t => t.idexercise === exercise.idexercise) || []
 
-                                  // Count the amount of done tasks for this exercise
-                                  const amountOfDoneTasks = exerciseTasks?.filter(task => taskResultTaskIds?.has(task.idtask))?.length
+                                  // Get all task results for this exercise
+                                  const exerciseTaskResults = taskResults?.filter(tr => exerciseTasks.some(t => t.idtask === tr.idtask)) || []
 
-                                  // Return the correct number
-                                  return (amountOfDoneTasks + "/" + exerciseTasks?.length)
+                                  // Get the done tasks for this exercise
+                                  const doneTasks = exerciseTasks?.filter(task =>exerciseTaskResults.some(tr => tr.idtask === task.idtask && tr.answer !== null)) || []
+
+                                  // Get the possible exerciseresult for this exercise
+                                  const exerciseResult = studentExerciseResults?.find(ex => ex.idexercise === exercise.idexercise)
+
+                                  if (exerciseResult?.complete_time === null || !exerciseResult || typeof exerciseResult === "undefined") {
+                                    // Return the correct number of tasks done
+                                    return (doneTasks?.length + "/" + exerciseTasks?.length + " tehtävää suoritettu")
+                                  } else {
+                                    // Get the full points for this exercise
+                                    const fullPoints = exerciseTasks?.reduce((sum, task) => sum + Number(task.full_points || 0), 0)
+
+                                    // Check if all tasks are unrated
+                                    const allUnrated = exerciseTaskResults?.every(
+                                      taskResult => taskResult.points == null
+                                    )
+
+                                    if (allUnrated) {
+                                      return ("Ei arvioitu / " + fullPoints + " pistettä")
+                                    }
+
+                                    // Get the points earned for this exercise
+                                    const earnedPoints = exerciseTaskResults?.reduce((sum, taskResult) => sum + Number(taskResult.points || 0), 0)
+                                    
+                                    // Return the correct number of points
+                                    return (earnedPoints + "/" + fullPoints + " pistettä")
+                                  } 
                                 })()}
                                 {
                                   studentExerciseResults?.some(ex =>
@@ -277,11 +303,38 @@ function WeeksExercises() {
                                   // Get all tasks that are in this exercise
                                   const exerciseTasks = tasks?.filter(t => t.idexercise === exercise.idexercise) || []
 
-                                  // Count the amount of done tasks for this exercise
-                                  const amountOfDoneTasks = exerciseTasks?.filter(task => taskResultTaskIds?.has(task.idtask))?.length
+                                  // Get all task results for this exercise
+                                  const exerciseTaskResults = taskResults?.filter(tr => exerciseTasks.some(t => t.idtask === tr.idtask)) || []
 
-                                  // Return the correct number
-                                  return (amountOfDoneTasks + "/" + exerciseTasks?.length)
+                                  // Get the done tasks for this exercise
+                                  const doneTasks = exerciseTasks?.filter(task =>exerciseTaskResults.some(tr => tr.idtask === task.idtask && tr.answer !== null)) || []
+
+                                  // Get the possible exerciseresult for this exercise
+                                  const exerciseResult = studentExerciseResults?.find(ex => ex.idexercise === exercise.idexercise)
+
+                                  if (exerciseResult?.complete_time === null || !exerciseResult || typeof exerciseResult === "undefined") {
+                                    // Return the correct number of tasks done
+                                    return (doneTasks?.length + "/" + exerciseTasks?.length + " tehtävää suoritettu")
+                                  } else {
+                                    // Get the full points for this exercise
+                                    const fullPoints = exerciseTasks?.reduce((sum, task) => sum + Number(task.full_points || 0), 0)
+
+                                    // Check if all tasks are unrated
+                                    const allUnrated = exerciseTaskResults?.every(
+                                      taskResult => taskResult.points == null
+                                    )
+
+                                    if (allUnrated) {
+                                      return ("Ei arvioitu / " + fullPoints + " pistettä")
+                                    }
+
+                                    // Get the points earned for this exercise
+                                    const earnedPoints = exerciseTaskResults?.reduce((sum, taskResult) => sum + Number(taskResult.points || 0), 0)
+                                    
+                                    // Return the correct number of points
+                                    return (earnedPoints + "/" + fullPoints + " pistettä")
+                                  }
+                                  
                                 })()}
                                 {
                                   studentExerciseResults?.some(ex =>

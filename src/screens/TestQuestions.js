@@ -5,12 +5,40 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 import ProgressBarTimer from "../components/progressbartimer.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL;
 
+
+// Function for rendering coding exercise test results
+const TestResults = ({ results }) => {
+  const passedCount = results.filter((r) => r.passed).length;
+
+  return (
+    <div>
+      <p>{passedCount} / {results.length} tests passed</p>
+      <ul>
+        {results.map((r, i) => (
+          <li key={i} style={{ color: r.passed ? 'green' : 'red' }}>
+            {r.passed ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-xmark"></i>} {r.name}
+            {!r.passed && (
+              <span>
+                {r.error
+                  ? ` — Error: ${r.error}`
+                  : ` — expected ${JSON.stringify(r.expected)}, got ${JSON.stringify(r.actual)}`}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
-  if (task.tasktype === "essay") {
+const RenderTask = React.memo(({task, index, answers, setAnswers, handleCodeRun, codeRunResult})  => {
+  if (task.tasktype === "essay" || task.tasktype === "drawing") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -27,6 +55,34 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
           }/>
           <span className="text-muted text-end d-block"><small>{answers[task.idtask]?.length || 0}/{10000} merkkiä</small></span>
         </div>
+        <hr />
+      </>
+    )
+  } else if (task.tasktype === "coding") {
+    const starter_code = JSON.parse(task.answer).starterCode
+    const test_cases = JSON.parse(task.answer).testCases
+    return (
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+          <p>{task.question}</p>
+          <CodeMirror 
+            value={answers[task.idtask] || starter_code || ""} 
+            extensions={[javascript()]} 
+            onChange={(value) =>
+              setAnswers(prev => ({
+                ...prev,
+                [task.idtask]: value
+              }))
+            }
+          />
+          <br />
+          <div>
+            {codeRunResult[task.idtask] && <TestResults results={codeRunResult[task.idtask]} />}
+          </div>
+          <div className="btn btn-submit float-end" onClick={() => handleCodeRun(task)}>Suorita koodi</div>
+        </div>
+        <br />
         <hr />
       </>
     )
@@ -130,6 +186,10 @@ function TestQuestions() {
   const [ taskResults, setTaskResults ] = useState([])
   const [ exercisedata, setExercisedata ] = useState({})
 
+  
+  // Variables for coding exercises
+  const [ codeRunResult, setCodeRunResult ] = useState({})
+
   // Variable for student's answers (both from the database and the current ones)
   const [ answers, setAnswers ] = useState({})
 
@@ -146,6 +206,10 @@ function TestQuestions() {
   const [ fiveMinutesLeft, setFiveMinutesLeft ] = useState(false) // Used to determine when the warning should be shown.
   const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
   const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
+
+  // Variables for detecting page focus and visibility
+  const [ isPageFocused, setIsPageFocused ] = useState(true)
+  const [ isPageVisible, setIsPageVisible ] = useState(true)
 
   // Fetch data when landing on the page
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
@@ -256,6 +320,128 @@ function TestQuestions() {
     }
   }, [canGoBack])
 
+  // A function for sending visibility data and page leaving data to the backend
+  const sendExamNoteData = (cause) => {
+    console.log("Sending visibility change to backend")
+    if (!user || !user.access_token) {
+      console.log("No user or token yet")
+      return
+    }
+
+    if (!idcourse) {
+      console.log("Idcourse not set")
+      return
+    }
+
+    if (!idexercise) {
+      console.log("Idexercise not set")
+      return
+    }
+
+    // Have to use fetch (previously with keepalive) to make sure the request doesn't break when page isn't visible
+    fetch(url + "/courses/updateAiNotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + user.access_token
+      },
+      body: JSON.stringify({
+        ai_notes: cause,
+        idcourse,
+        idexercise
+      }),
+      keepalive: true
+    })
+      .then(response => {
+        console.log("Visibility request:", response.status)
+      })
+      .catch(error => {
+        console.error("Visibility request failed:", error)
+      })
+  }
+
+  // Check for the case of page being not visible or out of focus
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      setIsPageVisible(document.visibilityState === 'visible')
+      if (document.visibilityState === 'hidden') {
+        console.log("Page not visible")
+        sendExamNoteData("Page not visible")
+      }
+    }
+
+    const handleWindowFocus = () => {
+      setIsPageFocused(true)
+    }
+
+    const handleWindowBlur = () => {
+      setIsPageFocused(false)
+    }
+
+    const handlePageHide = () => {
+      sendExamNoteData("Student left the exam page")
+    }
+
+    // Tab switches, minimization
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    // Window focus
+    window.addEventListener('focus',handleWindowFocus )
+    window.addEventListener('blur', handleWindowBlur)
+
+    // Leaving the page completely
+    window.addEventListener('pagehide', handlePageHide)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      document.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('blur', handleWindowBlur)
+      document.removeEventListener('pagehide', handlePageHide)
+    }
+  }, [])
+
+  // Checks for page visibility and focus variables
+  useEffect(() => {
+    if (isPageFocused === false && isPageVisible === true) {
+      console.log("Page not in focus")
+
+      // Send info to db
+      const updatePageFocusInfo = async () => {
+        try {
+          // Check that user has access token
+          if (!user || !user.access_token) {
+            console.log("No user or token yet");
+            return
+          }
+
+          if (!idcourse) {
+            console.log("Idcourse not set")
+            return
+          }
+
+          if (!idexercise) {
+            console.log("Idexercise not set")
+            return
+          }
+
+          const ai_note_object = {
+            idexercise: idexercise,
+            ai_notes: "Page not in focus",
+            idcourse: idcourse
+          }
+
+          const res = await axios.post(url + "/courses/updateAiNotes", ai_note_object, {headers: {Authorization: "Bearer " + user.access_token}})
+          console.log("Notes successfully updated")
+
+        } catch (error) {
+          console.log("Error updating ai-notes:", error.response?.data || error.message)
+        }
+      }
+
+      updatePageFocusInfo()
+    }
+  }, [isPageFocused, isPageVisible])
+
   // Check if the exam has 5 minutes remaining
   //     -> The time is checked and variable is updated in the progressbartimer component
   //     -> If the exam has five minutes remaining, show the modal that warns the user that there's not a lot of time remaining
@@ -300,6 +486,31 @@ function TestQuestions() {
   // Function for closing the confirmation screen
   const handleClosingConfirm = () => {
     setShowConfirm(false)
+  }
+
+  const runAndCheckCode = (code, testCases) => {
+    const worker = new Worker(new URL('../workers/codeworker.js', import.meta.url));
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        worker.terminate();
+        resolve([{ name: 'Timeout', passed: false, error: 'Execution took too long' }]);
+      }, 3000);
+
+      worker.onmessage = (e) => {
+        clearTimeout(timer);
+        worker.terminate();
+        resolve(e.data);
+      };
+      worker.postMessage({ code, testCases });
+    });
+  }
+
+  const handleCodeRun = async (task) => {
+    const task_code_data = JSON.parse(task.answer)
+    const student_code = answers[task.idtask] || task_code_data.starterCode
+    const test_cases = task_code_data.testCases
+    const results = await runAndCheckCode(student_code, test_cases)
+    setCodeRunResult((prev) => ({ ...prev, [task.idtask]: results }));
   }
 
   // The star progress bar with a clickable scrollspy.
@@ -358,7 +569,7 @@ function TestQuestions() {
                       <div className="d-inline-block align-middle">
                         <ProgressBarTimer 
                           studentExamStartTime={startingTime} 
-                          exerciseEndTime={exercisedata.end_time} 
+                          exerciseEndTime={exercisedata?.end_time} 
                           examDuration={exercisedata?.max_time}
                           fiveMinutesLeft={fiveMinutesLeft}
                           setFiveMinutesLeft={setFiveMinutesLeft}
@@ -374,7 +585,7 @@ function TestQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
+                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} handleCodeRun={handleCodeRun} codeRunResult={codeRunResult}/>
                     )
                   })}
                   <div className="text-center">
