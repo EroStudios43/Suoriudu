@@ -7,6 +7,7 @@ import { useUser } from "../context/useUser.js";
 import { useTheme } from "../context/ThemeContext.js";
 import DrawingBoard from "../components/DrawingBoard.js";
 import DrawingReview from "../components/DrawingReview.js";
+import AiChat from "../components/AiChat.js";
 
 
 
@@ -145,6 +146,12 @@ function CreateExam() {
     const updated = [...tasks];
     updated[index] = newTask;
     setTasks(updated);
+  };
+
+  const applyAiTasks = ({ name, description, tasks: generatedTasks }) => {
+    if (name) setExamName(name);
+    if (description) setExamDescription(description);
+    setTasks(generatedTasks);
   };
 
 
@@ -795,6 +802,7 @@ function CreateExam() {
       </div>
 
       </div>
+      <AiChat onTasksGenerated={applyAiTasks} />
     </div>
   );
 }

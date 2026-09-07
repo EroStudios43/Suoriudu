@@ -25,6 +25,7 @@ function TestEvaluation() {
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [evaluatingAll, setEvaluatingAll] = useState(false);
 
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -193,6 +194,46 @@ function TestEvaluation() {
   return "";
 };
 
+  const handleAiEvaluateAll = async () => {
+    const essayTasks = tasks
+      .map((task, index) => ({ task, index, studentAnswer: formatStudentAnswer(task) }))
+      .filter(({ task, studentAnswer }) =>
+        task.type === "essay" && studentAnswer && studentAnswer !== "Ei vastausta"
+      );
+
+    if (essayTasks.length === 0) {
+      alert("Kokeessa ei ole arvioitavia esseetehtäviä.");
+      return;
+    }
+
+    try {
+      setEvaluatingAll(true);
+      const results = await Promise.all(essayTasks.map(async ({ task, index, studentAnswer }) => {
+        const response = await axios.post(`${url}/ai/evaluate`, {
+          type: task.type,
+          question: task.instruction,
+          studentAnswer,
+          exampleAnswer: task.exampleAnswer,
+          maxPoints: getMaxPoints(task),
+        }, { headers: { Authorization: `Bearer ${user.access_token}` } });
+
+        return { index, points: response.data.points, comment: response.data.comment };
+      }));
+
+      setTasks((previous) => previous.map((task, index) => {
+        const result = results.find((item) => item.index === index);
+        return result
+          ? { ...task, teacherPoints: result.points, teacherComment: result.comment }
+          : task;
+      }));
+    } catch (error) {
+      console.error("AI essay evaluation failed", error);
+      alert(error.response?.data?.error || "AI-arviointi epäonnistui.");
+    } finally {
+      setEvaluatingAll(false);
+    }
+  };
+
 
   const handleSaveTask = async (taskIndex) => {
     const task = tasks[taskIndex];
@@ -301,6 +342,11 @@ function TestEvaluation() {
             onClick={handleBack}          
           ></i>
           <h1>{exercise?.exercise_name || "Kokeen arviointi"}</h1>
+          <div className="evaluation-header-actions">
+            <button className="save-btn" type="button" onClick={handleAiEvaluateAll} disabled={evaluatingAll || saving || loading}>
+              {evaluatingAll ? "AI arvioi koetta..." : "Arvioi koko koe tekoälyllä"}
+            </button>
+          </div>
         </div>
 
         {loading ? (

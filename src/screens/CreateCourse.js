@@ -7,6 +7,7 @@ import TimePicker from "../components/timepicker.js";
 import axios from "axios";
 import { useUser } from "../context/useUser.js";
 import { useTheme } from "../context/ThemeContext.js";
+import AiChat from "../components/AiChat.js";
 
 
 const url = process.env.REACT_APP_API_URL;
@@ -144,6 +145,12 @@ function CreateCourse() {
         idx === index ? { ...week, content: value } : week
       )
     );
+  };
+
+  const applyAiCourse = ({ name, description, weeks: generatedWeeks }) => {
+    if (name) setCourseName(name);
+    if (description) setCourseDescription(description);
+    setWeeks(generatedWeeks);
   };
 
   const handleAddTask = (weekIndex) => {
@@ -615,6 +622,7 @@ function CreateCourse() {
             {isCreating ? "Luodaan..." : "Luo kurssi"}
           </button>
         </div>
+        <AiChat mode="course" onCourseGenerated={applyAiCourse} />
     </div>
   );
 }

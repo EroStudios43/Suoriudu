@@ -30,6 +30,7 @@ function TaskEvaluation({ isExamMode = false }) {
   const [attempts, setAttempts] = useState([]);
   const [chosenAttemptId, setChosenAttemptId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [evaluatingAll, setEvaluatingAll] = useState(false);
   const commentMessagesRef = useRef(null);
 
   const { isDarkMode, toggleTheme } = useTheme();
@@ -355,6 +356,46 @@ function TaskEvaluation({ isExamMode = false }) {
     return "";
   };
 
+  const handleAiEvaluateAll = async () => {
+    const essayTasks = tasks
+      .map((task, index) => ({ task, index, studentAnswer: formatStudentAnswer(task) }))
+      .filter(({ task, studentAnswer }) =>
+        task.type === "essay" && studentAnswer && studentAnswer !== "Ei vastausta"
+      );
+
+    if (essayTasks.length === 0) {
+      alert("Tehtävässä ei ole arvioitavia esseetehtäviä.");
+      return;
+    }
+
+    try {
+      setEvaluatingAll(true);
+      const results = await Promise.all(essayTasks.map(async ({ task, index, studentAnswer }) => {
+        const response = await axios.post(`${url}/ai/evaluate`, {
+          type: task.type,
+          question: task.instruction,
+          studentAnswer,
+          exampleAnswer: task.exampleAnswer,
+          maxPoints: getMaxPoints(task),
+        }, { headers: { Authorization: `Bearer ${user.access_token}` } });
+
+        return { index, points: response.data.points, comment: response.data.comment };
+      }));
+
+      setTasks((previous) => previous.map((task, index) => {
+        const result = results.find((item) => item.index === index);
+        return result
+          ? { ...task, teacherPoints: result.points, teacherComment: result.comment }
+          : task;
+      }));
+    } catch (error) {
+      console.error("AI essay evaluation failed", error);
+      alert(error.response?.data?.error || "AI-arviointi epäonnistui.");
+    } finally {
+      setEvaluatingAll(false);
+    }
+  };
+
 
   const handleSaveTask = async (taskIndex) => {
     const task = tasks[taskIndex];
@@ -616,6 +657,11 @@ const handleSendComment = async () => {
               });
             }}
           ></i>
+          <div className="evaluation-header-actions">
+            <button className="save-btn" type="button" onClick={handleAiEvaluateAll} disabled={evaluatingAll || saving || loading}>
+              {evaluatingAll ? "AI arvioi tehtäviä..." : "Arvioi tehtävät tekoälyllä"}
+            </button>
+          </div>
           <h1>{exercise?.exercise_name || "Tehtävän arviointi"}</h1>
         </div>
 

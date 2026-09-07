@@ -7,6 +7,7 @@ import { useUser } from "../context/useUser.js";
 
 import DrawingBoard from "../components/DrawingBoard.js";
 import DrawingReview from "../components/DrawingReview.js";
+import AiChat from "../components/AiChat.js";
 
 import { useTheme } from "../context/ThemeContext.js";
 
@@ -223,6 +224,12 @@ function CreateTask() {
     const updated = [...tasks];
     updated[index] = newTask;
     setTasks(updated);
+  };
+
+  const applyAiTasks = ({ name, description, tasks: generatedTasks }) => {
+    if (name) setTaskName(name);
+    if (description) setTaskDescription(description);
+    setTasks(generatedTasks);
   };
 
 
@@ -748,6 +755,7 @@ function CreateTask() {
       </div>
 
       </div>
+      <AiChat onTasksGenerated={applyAiTasks} />
     </div>
   );
 }

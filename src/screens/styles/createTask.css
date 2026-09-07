@@ -31,6 +31,10 @@
   margin-bottom: 24px;
 }
 
+.evaluation-header-actions {
+  margin-left: auto;
+}
+
 .back-arrow {
   color: #1d283a;
   font-size: 2.5rem;
