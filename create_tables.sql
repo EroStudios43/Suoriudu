@@ -111,6 +111,7 @@ CREATE TABLE taskcomments (
   anonymous tinyint NOT NULL,
   comment TEXT NOT NULL,
   timestamp_of_message datetime NOT NULL,
+  comment_read tinyint NOT NULL DEFAULT 0,
   FOREIGN KEY (idtaskresult) REFERENCES taskresults(idtaskresult) ON DELETE CASCADE ON UPDATE CASCADE,
   FOREIGN KEY (idcommentor) REFERENCES users(iduser)
 );

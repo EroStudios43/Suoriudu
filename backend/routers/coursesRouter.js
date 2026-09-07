@@ -28,9 +28,12 @@ import { getUsersCourses,
     insertUserTaskComment,
     insertTeacherTaskComment,
     markTeacherQuestionAsRead,
-    getUnreadTeacherQuestions
+    getUnreadTeacherQuestions,
+    updateTaskCommentReadStatus,
+    
  } from "../controllers/coursesController.js"
 import { getTeacherExamOverview, createExercise, removeExercise} from "../controllers/exercisesController.js"
+import { updateUserAiNotes } from "../controllers/aiNotesController.js"
 import { auth } from '../helpers/auth.js'
 
 const router = Router()
@@ -60,10 +63,10 @@ router.post("/insertTaskComment/student", auth, insertUserTaskComment)
 router.post("/", auth, createCourse)
 router.post("/:courseId/exercises", auth, createExercise)
 router.post("/taskComments/teacher", auth, insertTeacherTaskComment)
-// Add a separate function to add a teacher comment, since the student's version 
-// only let's inserts through if the user owns the taskresult
-//router.post("/insertTaskComment/teacher", auth, insertTaskCommentTeacher)
+router.post("/updateAiNotes", auth, updateUserAiNotes)
 router.post("/:courseId/members", auth, addCourseMember)
+
+router.put("/updateCommentAsRead", auth, updateTaskCommentReadStatus)
 router.put("/:courseId/exercises/:exerciseId/submissions/:userId/review", auth, saveStudentExerciseReview)
 router.put("/:courseId", auth, updateCourse)
 router.put("/:courseId/exercises/:exerciseId", auth, updateExerciseAndTasks)
