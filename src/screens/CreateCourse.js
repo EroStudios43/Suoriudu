@@ -6,6 +6,8 @@ import Calendar from "../components/calendar.js";
 import TimePicker from "../components/timepicker.js";
 import axios from "axios";
 import { useUser } from "../context/useUser.js";
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -38,6 +40,10 @@ function CreateCourse() {
   const [showEndTime, setShowEndTime] = useState(false);
 
   const [startTime, setStartTime] = useState("12:00");
+
+  const { isDarkMode, toggleTheme } = useTheme();
+
+
 
   const [weeks, setWeeks] = useState(() => {
     const savedWeeks = localStorage.getItem("draftcourseWeeks");
@@ -349,7 +355,7 @@ function CreateCourse() {
   }, [students]);
 
   return (
-    <div className="createCourse-container">
+    <div className={`createCourse-container ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar">
             <div className="topbar-left">
               <div className="logo">

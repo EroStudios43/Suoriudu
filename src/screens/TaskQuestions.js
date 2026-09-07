@@ -4,12 +4,23 @@ import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
+import DrawingBoard from "../components/DrawingBoard.js";
+import DrawingReview from "../components/DrawingReview.js";
+
+
+
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
+
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers, setShowCommentBox, setChosenTask})  => {
-  if (task.tasktype === "essay" || task.tasktype === "coding" || task.tasktype === "drawing") {
+const RenderTask = React.memo(({task, index, answers, setAnswers, setShowCommentBox, setChosenTask, drawingStates, setDrawingStates, drawingRefs})  => {
+  const taskDrawingState = drawingStates[task.idtask];
+  const lines = Array.isArray(taskDrawingState?.lines) ? taskDrawingState.lines : [];
+
+  if (task.tasktype === "essay" || task.tasktype === "coding") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -31,7 +42,59 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, setShowComment
         <hr />
       </>
     )
-  } else if (task.tasktype === "multiple_choice") {
+  }else if (task.tasktype === "drawing") {
+    return ( 
+      <>
+      <div id={`scrollspy-section${index}`} className="col single-task">
+        <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+
+        {/* Tehtävänanto näkyviin */}
+        <p>{task.question}</p>
+
+        {/* Piirtolaatikko */}
+        <DrawingBoard
+          onRegisterGetJson={(getJson) => {
+            drawingRefs.current[task.idtask] = getJson;
+          }}
+          lines={lines}
+          setLines={(newLines) => {
+            setDrawingStates(prev => {
+              const currentTaskState = prev[task.idtask] || {};
+              const currentLines = Array.isArray(currentTaskState.lines) ? currentTaskState.lines : [];
+              
+              const updatedLines = typeof newLines === "function" 
+                ? newLines(currentLines) 
+                : newLines;
+
+              return {
+                ...prev,
+                [task.idtask]: {
+                  ...currentTaskState,
+                  lines: updatedLines
+                }
+              };
+            });
+          }}
+          onSave={(json) => {
+            setAnswers(prev => ({
+              ...prev,
+              [task.idtask]: json
+            }));
+          }}
+        />
+
+        {/* Näytä tallennettu piirros oppilaalle */}
+        {answers[task.idtask] && (
+          <>
+            <p className="mt-3">Tallennettu piirros:</p>
+            <DrawingReview json={answers[task.idtask]} />
+          </>
+        )}
+      </div>
+      <hr />
+    </>
+    )
+  }else if (task.tasktype === "multiple_choice") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -126,6 +189,9 @@ function TaskQuestions() {
   const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
   const [ idweek, setIdWeek ] = useState(location.state?.idweek)
 
+  const { isDarkMode, toggleTheme } = useTheme();
+
+
   // Data for tasks and exercise
   const [ tasks, setTasks ] = useState([])
   const [ taskResults, setTaskResults ] = useState([])
@@ -145,7 +211,10 @@ function TaskQuestions() {
   const [ newStudentComment, setNewStudentComment ] = useState({question: "", public_question: false, anonymous_question: false})
   const [ newCommentErrors, setNewCommentErrors ] = useState([])
   const [ chosenTask, setChosenTask ] = useState("")
-  const commentContainerRef = useRef(null)
+  const commentContainerRef = useRef(null);
+  const [drawingStates, setDrawingStates] = useState({});
+  const drawingRefs = useRef({});
+  
 
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -260,9 +329,17 @@ function TaskQuestions() {
 
   const handleSubmit = async () => {
     try {
+      const taskResults = {...answers};
+      tasks.forEach((task) => {
+        if (task.tasktype === "drawing") {
+          const drawingJson = drawingRefs.current[task.idtask]?.();
+          if (drawingJson) taskResults[task.idtask] = drawingJson;
+        }
+      });
+
       const exerciseObject = {
         idexercise: idexercise,
-        taskResults: answers
+        taskResults
       }
       
       const res = await axios.post(url + "/courses/addExerciseAndTaskResults", exerciseObject, {headers: {Authorization: "Bearer " + user.access_token}})
@@ -402,9 +479,9 @@ function TaskQuestions() {
     )
   }
 
-  if (user.role === "student" || user.role === "teacher") {
+  if (user?.role === "student" || user?.role === "teacher") {
     return (
-      <div className="container-fluid min-vh-100 exercises-container">
+      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
           <div className="row">
             <div className="col-md-1" />
             { /* White box for page content */}
@@ -425,16 +502,25 @@ function TaskQuestions() {
                 </div>
               </div>
               <div className="row">
-                <form noValidate>
+                <div className="task-form-wrapper">
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} setShowCommentBox={setShowCommentBox} setChosenTask={setChosenTask} />
+                      <RenderTask task={task} 
+                                  index={index} 
+                                  key={task.idtask} 
+                                  answers={answers} 
+                                  setAnswers={setAnswers} 
+                                  setShowCommentBox={setShowCommentBox} 
+                                  setChosenTask={setChosenTask} 
+                                  drawingStates={drawingStates} 
+                                  setDrawingStates={setDrawingStates}
+                                  drawingRefs={drawingRefs} />
                     )
                   })}
                   <div className="text-center">
                     <button type="button" className="btn btn-submit rounded-5" onClick={() => setShowConfirm(!showConfirm)}>Palauta tehtäväpaketti</button>
                   </div>
-                </form>
+                </div>
               </div>
               { /* Show the hovering box here, the styles are the same used on coursepage, and can be found from coursePage.css */}
               {showConfirm && (
@@ -582,7 +668,7 @@ function TaskQuestions() {
                           <br />
                           <br />
                           
-                          <div class="row">
+                          <div className="row">
                             <div className="col text-start">
                               <button type="button" className="btn btn-cancel rounded-5" onClick={() => {setShowNewQuestionBox(false); setShowCommentBox(true)}}>Peruuta</button>
                             </div>

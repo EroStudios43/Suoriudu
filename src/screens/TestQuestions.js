@@ -1,17 +1,26 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/exercises.css";
 import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 import ProgressBarTimer from "../components/progressbartimer.js";
+import DrawingBoard from "../components/DrawingBoard.js";
+import DrawingReview from "../components/DrawingReview.js";
+
 
 import GazeTracker from "../components/GazeTracker.js";
+
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
+const RenderTask = React.memo(({task, index, answers, setAnswers, drawingStates, setDrawingStates, drawingRefs})  => {
+  const taskDrawingState = drawingStates[task.idtask];
+  const lines = Array.isArray(taskDrawingState?.lines) ? taskDrawingState.lines : [];
+
   if (task.tasktype === "essay") {
     return (
       <>
@@ -32,7 +41,59 @@ const RenderTask = React.memo(({task, index, answers, setAnswers})  => {
         <hr />
       </>
     )
-  } else if (task.tasktype === "multiple_choice") {
+  } 
+  else if (task.tasktype === "drawing") {
+    return ( 
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+
+          {/* Tehtävänanto näkyviin */}
+          <p>{task.question}</p>
+
+          {/* Piirtolaatikko */}
+          <DrawingBoard
+            onRegisterGetJson={(getJson) => {
+              drawingRefs.current[task.idtask] = getJson;
+            }}
+            lines={lines}
+            setLines={(newLines) => {
+              setDrawingStates(prev => {
+                const currentTaskState = prev[task.idtask] || {};
+                const currentLines = Array.isArray(currentTaskState.lines) ? currentTaskState.lines : [];
+                const updatedLines = typeof newLines === "function"
+                  ? newLines(currentLines)
+                  : newLines;
+
+                return {
+                  ...prev,
+                  [task.idtask]: {
+                    ...currentTaskState,
+                    lines: updatedLines
+                  }
+                };
+              });
+            }}
+            onSave={(json) => {
+              setAnswers(prev => ({
+                ...prev,
+                [task.idtask]: json
+              }));
+            }}
+          />
+
+          {/* Näytä tallennettu piirros oppilaalle */}
+          {answers[task.idtask] && (
+            <>
+              <p className="mt-3">Tallennettu piirros:</p>
+              <DrawingReview json={answers[task.idtask]} />
+            </>
+          )}
+        </div>
+        <hr />
+      </>
+    )}
+    else if (task.tasktype === "multiple_choice") {
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -134,6 +195,8 @@ function TestQuestions() {
 
   // Variable for student's answers (both from the database and the current ones)
   const [ answers, setAnswers ] = useState({})
+  const [drawingStates, setDrawingStates] = useState({});
+  const drawingRefs = useRef({});
 
   // Variable for showing the confirmation screen for returning the exercise
   const [showConfirm, setShowConfirm ] = useState(false)
@@ -148,6 +211,8 @@ function TestQuestions() {
   const [ fiveMinutesLeft, setFiveMinutesLeft ] = useState(false) // Used to determine when the warning should be shown.
   const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
   const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   // Fetch data when landing on the page
   const fetchUserExerciseAndTaskData = useCallback(async (signal) => {
@@ -280,9 +345,17 @@ function TestQuestions() {
   // Function for submitting answers
   const handleSubmit = async () => {
     try {
+      const taskResults = {...answers};
+      tasks.forEach((task) => {
+        if (task.tasktype === "drawing") {
+          const drawingJson = drawingRefs.current[task.idtask]?.();
+          if (drawingJson) taskResults[task.idtask] = drawingJson;
+        }
+      });
+
       const exerciseObject = {
         idexercise: idexercise,
-        taskResults: answers
+        taskResults
       }
       
       const res = await axios.post(url + "/courses/addExerciseAndTaskResults", exerciseObject, {headers: {Authorization: "Bearer " + user.access_token}})
@@ -340,7 +413,7 @@ function TestQuestions() {
 
   if (user.role === "student" || user.role === "teacher") {
     return (
-      <div className="container-fluid min-vh-100 exercises-container">
+      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
 
           {/* Välitetään kokeen ID GazeTrackerille: */}
           <GazeTracker idexercise={exercisedata?.idexercise} />
@@ -380,7 +453,16 @@ function TestQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} />
+                      <RenderTask
+                        task={task}
+                        index={index}
+                        key={task.idtask}
+                        answers={answers}
+                        setAnswers={setAnswers}
+                        drawingStates={drawingStates}
+                        setDrawingStates={setDrawingStates}
+                        drawingRefs={drawingRefs}
+                      />
                     )
                   })}
                   <div className="text-center">

@@ -1,14 +1,17 @@
-import React, {useState} from "react";
+import React, {useState, useEffect} from "react";
 import "./styles/profile.css";
 import { useNavigate } from "react-router-dom"
 import { useUser } from "../context/useUser.js";
 import axios from "axios";
+
+import { useTheme } from "../context/ThemeContext.js";
 
 const url = process.env.REACT_APP_API_URL;
 
 export default function Profile() {
   const navigate = useNavigate();
   const {user, setUser} = useUser()
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const normalizeRole = (role) => {
     const normalizedRole = String(role || "").trim().toLowerCase();
@@ -35,6 +38,9 @@ export default function Profile() {
     }
   };
 
+  const [avatarSvg, setAvatarSvg] = useState("");
+  const initialSeed = user.avatar_seed || "default";
+
   const [darkMode, setDarkMode] = useState(true);
 
   const [editMode, setEditMode] = useState(null);
@@ -46,17 +52,21 @@ export default function Profile() {
       lastname: user.lastname,
       role: normalizeRole(user.role),
       email: user.email,
-      phone: user.phone || ""
+      phone: user.phone || "",
+      avatar_seed: initialSeed
   });
-
-  const toggleTheme = () => {
-    setDarkMode(prev => !prev);
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({...prev, [name]:value}))
   };
+
+  const generateNewAvatar = () => {
+    const randomSeed = Math.random().toString(36).substring(2, 10);
+    setFormData(prev => ({ ...prev, avatar_seed: randomSeed }));
+    setEditMode("avatar");
+  };
+
 
   const saveProfile = async () => {
     try{
@@ -89,12 +99,30 @@ export default function Profile() {
       setSaving(false);
     }
   };
+
   
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      try {
+        // Parametrit: animationVariant=medium, animationProbability=100
+        const dicebearUrl = `https://api.dicebear.com/10.x/planets/svg?seed=${encodeURIComponent(
+          formData.avatar_seed
+        )}&animationVariant=fast&animationProbability=100`;
+
+        const res = await axios.get(dicebearUrl);
+        setAvatarSvg(res.data);
+      } catch (err) {
+        console.error("Virhe ladattaessa avatar-kuvaa:", err);
+      }
+    };
+
+    fetchAvatar();
+  }, [formData.avatar_seed]);
 
 
 
   return (
-    <div className={`profile-container ${darkMode ? "dark" : "light"}`}>
+    <div className={`profile-container ${isDarkMode ? "dark" : "light"}`}>
       <div className="profile-header">
         
 
@@ -103,14 +131,29 @@ export default function Profile() {
           <span>Asetukset</span>
         </div>
 
-        <div className="profile-picture">
-          <i className="fa-solid fa-circle-user profilepic-icon"></i>
-          <i className="fa-regular fa-pen-to-square edit-profile-icon"></i>
+        <div className="profile-picture" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          {avatarSvg ? (
+            <div 
+              style={{ width: "200%", height: "auto", borderRadius: "50%", overflow: "hidden" }}
+              dangerouslySetInnerHTML={{ __html: avatarSvg }} 
+            />
+          ) : (
+            <div style={{ width: "90px", height: "90px" }}>Ladataan...</div>
+          )}
+          <button 
+            type="button" 
+            onClick={generateNewAvatar}
+            style={{ border: "none", background: "transparent", cursor: "pointer", color: "inherit" }}
+            title="Vaihda profiilikuva"
+          >
+            <i className="fa-solid fa-arrows-rotate"></i> Vaihda kuva
+          </button>
         </div>
+
 
         <div className="settings-right">
           <p>Vaihda teema</p>
-          <div className={`sky ${darkMode ? "night" : "light"}`} onClick={toggleTheme}>
+          <div className={`sky ${isDarkMode ? "night" : "light"}`} onClick={toggleTheme}>
             <div className="sun">
               <div className="rays" />
             </div>
@@ -205,7 +248,7 @@ export default function Profile() {
         </button>
       }
 
-      <button className="btn btn-link text-white fs-4 text-decoration-none" onClick={e => navigate("/home")}>
+      <button className="back-btn" onClick={e => navigate("/home")}>
                 Takaisin
         </button>
 

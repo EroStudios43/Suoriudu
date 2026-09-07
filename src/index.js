@@ -34,52 +34,56 @@ import SpecificQuestion from './screens/SpecificQuestion.js';
 
 import ProtectedRoute from "./components/ProtectedRoute.js";
 
+import { ThemeProvider } from "./context/ThemeContext.js";
+
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
  <React.StrictMode>
     <BrowserRouter>
-      <UserProvider>
-        <Routes>
+      <ThemeProvider>
+        <UserProvider>
+          <Routes>
 
-          {/* PUBLIC */}
-          
-          {/* 
-          Wave pattern background pages.
-          The elements inside do not need the body class div, since it's included in the parent layout
-          */}
-          <Route element={<WavePagesLayout />}>
-            <Route path="/" element={<WelcomePage/>} />
-            <Route path="/login" element={<Login/>} />
-            <Route path="/register" element={<Register/>} />
-          </Route>
-          
-          {/* PROTECTED */}
-          <Route element={<ProtectedRoute />}>
+            {/* PUBLIC */}
+            
+            {/* 
+            Wave pattern background pages.
+            The elements inside do not need the body class div, since it's included in the parent layout
+            */}
+            <Route element={<WavePagesLayout />}>
+              <Route path="/" element={<WelcomePage/>} />
+              <Route path="/login" element={<Login/>} />
+              <Route path="/register" element={<Register/>} />
+            </Route>
+            
+            {/* PROTECTED */}
+            <Route element={<ProtectedRoute />}>
 
-            <Route path="/home" element={<Home/>} />
-            <Route path="/profile" element={<Profile/>} />
-            <Route path="/CreateTask" element={<CreateTask/>} />
-            <Route path="/CreateExam" element={<CreateExam/>} />
-            <Route path="/CreateCourse" element={<CreateCourse/>} />
-            <Route path="/CoursePage/:courseId" element={<CoursePage/>} />
-            <Route path="/TaskOverview" element={<TaskOverview/>} />
-            <Route path="/TestOverview" element={<TestOverview/>} />
-            <Route path="/TaskResults/:idexercise" element={<TaskResults/>} />
-            <Route path="/TaskQuestions/:idexercise" element={<TaskQuestions/>} />
-            <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
-            <Route path="/TestEvaluation" element={<TestEvaluation/>} />
-            <Route path="/TestQuestions/:idexercise" element={<TestQuestions/>} />
-            <Route path="/ExamLobby/:idexercise" element={<ExamLobby />} />
-            <Route path="/WeekOverview" element={<WeekOverview/>} />
-            <Route path="/WeeksExercises/:idweek" element={<WeeksExercises />} />
-            <Route path="/StartExamPage" element={<StartExamPage />} />
-            <Route path="/Questions" element={<Questions />} />
-            <Route path="/SpecificQuestion" element={<SpecificQuestion />} />
-          </Route>
+              <Route path="/home" element={<Home/>} />
+              <Route path="/profile" element={<Profile/>} />
+              <Route path="/CreateTask" element={<CreateTask/>} />
+              <Route path="/CreateExam" element={<CreateExam/>} />
+              <Route path="/CreateCourse" element={<CreateCourse/>} />
+              <Route path="/CoursePage/:courseId" element={<CoursePage/>} />
+              <Route path="/TaskOverview" element={<TaskOverview/>} />
+              <Route path="/TestOverview" element={<TestOverview/>} />
+              <Route path="/TaskResults/:idexercise" element={<TaskResults/>} />
+              <Route path="/TaskQuestions/:idexercise" element={<TaskQuestions/>} />
+              <Route path="/TaskEvaluation" element={<TaskEvaluation/>} />
+              <Route path="/TestEvaluation" element={<TestEvaluation/>} />
+              <Route path="/TestQuestions/:idexercise" element={<TestQuestions/>} />
+              <Route path="/ExamLobby/:idexercise" element={<ExamLobby />} />
+              <Route path="/WeekOverview" element={<WeekOverview/>} />
+              <Route path="/WeeksExercises/:idweek" element={<WeeksExercises />} />
+              <Route path="/StartExamPage" element={<StartExamPage />} />
+              <Route path="/Questions" element={<Questions />} />
+              <Route path="/SpecificQuestion" element={<SpecificQuestion />} />
+            </Route>
 
-        </Routes>
-      </UserProvider>
+          </Routes>
+        </UserProvider>
+      </ThemeProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

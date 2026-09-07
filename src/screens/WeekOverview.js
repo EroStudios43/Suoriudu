@@ -4,6 +4,9 @@ import "./styles/coursePage.css";
 import "./styles/weekPage.css";
 import { useNavigate, useLocation } from "react-router-dom";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 import axios from "axios";
 import { useUser } from "../context/useUser.js";
 
@@ -29,6 +32,8 @@ function WeekOverview() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [exerciseToDelete, setExerciseToDelete] = useState(null);
   const [deletingExercise, setDeletingExercise] = useState(false);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     const fetchExercises = async () => {
@@ -184,7 +189,7 @@ function WeekOverview() {
   };
 
   return (
-    <div className="coursepage">
+    <div className={`coursepage ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar">
         <div className="topbar-left">
           <div className="course-title">

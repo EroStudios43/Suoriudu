@@ -12,6 +12,9 @@ import valilehtikuva2 from "../pictures/valilehtikuva2.png"
 import selainkuva1 from "../pictures/selainkuva1.png"
 import selainkuva2 from "../pictures/selainkuva2.png"
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL
 
 function ExamLobby () {
@@ -34,6 +37,8 @@ function ExamLobby () {
   // Variables for exam form
   const [ studentPass, setStudentPass ] = useState("")
   const [ passwordValid, setPasswordValid ] = useState(true)
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const fetchExerciseData = useCallback(async (signal) => {
     // Check that user has access token
@@ -123,7 +128,7 @@ function ExamLobby () {
 
   if (user.role === "student" || user.role === "teacher"){
     return (
-      <div className="container-fluid coursepage d-flex flex-column min-vh-100 exercises-container">
+      <div className={`container-fluid coursepage d-flex flex-column min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
           { /* Topbar */}
           <div className="d-flex flex-column flex-md-row">
             <div className="flex">

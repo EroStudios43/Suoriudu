@@ -436,30 +436,34 @@ const insertOrUpdateTaskResult = async (entries, idexerciseresult, iduser) => {
   console.log("idexerciseresult:", idexerciseresult);
   console.log("iduser:", iduser);
 
-  const values = entries.map(([idtask, answer]) => {
+  for (const [idtask, answer] of entries) {
     const normalizedAnswer = typeof answer === 'string'
       ? answer
       : JSON.stringify(answer)
 
-    return [
-      idexerciseresult,
-      Number(idtask),
-      iduser,
-      normalizedAnswer
-    ]
-  })
+    const [existingRows] = await pool.promise().query(
+      `SELECT idtaskresult
+       FROM taskresults
+       WHERE idexerciseresult = ? AND idtask = ? AND iduser = ?
+       LIMIT 1`,
+      [idexerciseresult, Number(idtask), iduser]
+    )
 
-  const placeholders = values.map(() => '(?, ?, ?, ?)').join(', ')
-  const flatValues = values.flat()
-
-  const [rows] = await pool.promise().query(
-    `INSERT INTO taskresults (idexerciseresult, idtask, iduser, answer)
-    VALUES ${placeholders}
-    ON DUPLICATE KEY UPDATE
-      answer = VALUES(answer)`,
-      flatValues
-  )
-  return rows
+    if (existingRows.length > 0) {
+      await pool.promise().query(
+      `UPDATE taskresults
+       SET answer = ?
+       WHERE idexerciseresult = ? AND idtask = ? AND iduser = ?`,
+      [normalizedAnswer, idexerciseresult, Number(idtask), iduser]
+      )
+    } else {
+      await pool.promise().query(
+        `INSERT INTO taskresults (idexerciseresult, idtask, iduser, answer)
+         VALUES (?, ?, ?, ?)`,
+        [idexerciseresult, Number(idtask), iduser, normalizedAnswer]
+      )
+    }
+  }
 }
 
   const selectExerciseForCourse = async (exerciseId, courseId) => {
@@ -544,7 +548,7 @@ const checkExerciseResultOwnership = async (iduser, idexerciseresult) => {
   return rows
 }
 
-const selectTaskResultForReview = async (userId, exerciseId, taskId) => {
+const selectTaskResultForReview = async (userId, exerciseId, taskId, exerciseResultId = null) => {
     const [rows] = await pool.promise().query(
         `SELECT tr.idtaskresult, tr.idexerciseresult
          FROM taskresults tr
@@ -552,8 +556,9 @@ const selectTaskResultForReview = async (userId, exerciseId, taskId) => {
          WHERE tr.iduser = ?
            AND t.idexercise = ?
            AND tr.idtask = ?
+            AND (? IS NULL OR tr.idexerciseresult = ?)
          LIMIT 1`,
-        [userId, exerciseId, taskId]
+          [userId, exerciseId, taskId, exerciseResultId, exerciseResultId]
     );
 
     return rows;
@@ -624,13 +629,16 @@ const selectStudentExerciseReviewTasks = async (userId, exerciseId) => {
             tr.teacher_comment,
             tr.idtaskresult,
             tr.answer AS student_answer,
+            tr.idexerciseresult,
             tr.points AS teacher_points,
-            er.ai_notes
+            er.ai_notes,
+            er.starting_time,
+            er.complete_time
           FROM task t
           LEFT JOIN taskresults tr
             ON tr.idtask = t.idtask AND tr.iduser = ?
           LEFT JOIN exerciseresults er 
-            ON er.idexercise = t.idexercise AND er.iduser = tr.iduser
+            ON er.idexerciseresult = tr.idexerciseresult
           WHERE t.idexercise = ?
           ORDER BY t.idtask ASC`,
         [userId, exerciseId]

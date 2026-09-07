@@ -6,6 +6,9 @@ import axios from "axios";
 import Calendar from "../components/calendar.js";
 import Timepicker from "../components/timepicker.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function CoursePage() {
@@ -39,6 +42,7 @@ function CoursePage() {
   const [courseNameLoaded, setCourseNameLoaded] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const refreshCourseData = async () => {
     if (!user || !user.access_token || !courseId) {
@@ -496,7 +500,7 @@ function CoursePage() {
 
   if (user.role === "teacher") {
     return (
-    <div className="coursepage">
+    <div className={`coursepage ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar">
         <div className="topbar-left">
           <div className="course-title">
@@ -863,7 +867,7 @@ function CoursePage() {
 
     // Return the page
     return (
-        <div className="coursepage d-flex flex-column min-vh-100">
+        <div className={`coursepage d-flex flex-column min-vh-100 ${isDarkMode ? '' : 'light-theme'}`}>
             { /* Topbar */}
             <div className="d-flex flex-column flex-md-row">
                 <div className="flex">

@@ -6,6 +6,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
 import { getReviewDisplayName } from "../utils/reviewSelection.js";
+import DrawingReview from "../components/DrawingReview.js";
+
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -21,6 +25,8 @@ function TestEvaluation() {
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [aiModal, setAiModal] = useState({
     open: false,
@@ -287,7 +293,7 @@ function TestEvaluation() {
       .filter(Boolean);
   }
   return (
-    <div className="task-page">
+    <div className={`task-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="task-paper">
         <div className="task-header">
           <i
@@ -328,7 +334,12 @@ function TestEvaluation() {
                     {task.instruction || "Tehtävänanto"}
                   </p>
 
-                  {task.type !== "choice" && task.exampleAnswer ? (
+                  {task.type === "drawing" && task.exampleAnswer ? (
+                    <div className="option-card example-answer-card">
+                      <strong>Esimerkkivastaus</strong>
+                      <DrawingReview json={task.exampleAnswer} />
+                    </div>
+                  ) : task.type !== "choice" && task.exampleAnswer ? (
                     <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
@@ -336,7 +347,16 @@ function TestEvaluation() {
                   ) : null}
 
                   <div className="student-answer-wrapper">
-                    {task.type === "choice" ? (
+                    {task.type === "drawing" ? (
+                      <div className="drawing-review-wrapper">
+                        <strong>Oppilaan piirros</strong>
+                        {task.studentAnswer ? (
+                          <DrawingReview json={task.studentAnswer} />
+                        ) : (
+                          <p>Oppilas ei jättänyt piirrosta.</p>
+                        )}
+                      </div>
+                    ) : task.type === "choice" ? (
                       <div className="option-card">
                         <strong>Oppilaan vastaus</strong>
 

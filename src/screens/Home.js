@@ -7,6 +7,9 @@ import { useUser } from "../context/useUser.js";
 import axios from "axios";
 import { pickRandomUnreviewedSubmission } from "../utils/reviewSelection.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 export default function Home() {
@@ -59,6 +62,9 @@ export default function Home() {
     const [courseLateStatus, setCourseLateStatus] = useState({});
 
     const [unreadQuestions, setUnreadQuestions] = useState(0);
+
+    const { isDarkMode, toggleTheme } = useTheme();
+    
 
     const handleMarathonStart = async () => {
         if (!user || !user.access_token) return;
@@ -488,7 +494,7 @@ export default function Home() {
 
   if (user.role === "teacher"){
     return (
-        <div className="home-container">
+        <div className={`home-container ${isDarkMode ? '' : 'light-theme'}`}>
             <div className="topbar">
                 <h1 className="welcome-text">
                     Hei {user.firstname} {user.lastname}!
@@ -651,7 +657,7 @@ export default function Home() {
     );
   } else if (user.role === "student") {
     return(
-    <div className="container-fluid home-container">
+    <div className={`container-fluid home-container ${isDarkMode ? '' : 'light-theme'}`}>
         <div className="topbar">
             <h1 className="welcome-text">
                 Hei {user.firstname} {user.lastname}!

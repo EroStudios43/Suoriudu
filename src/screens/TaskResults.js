@@ -5,6 +5,11 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+import DrawingReview from "../components/DrawingReview.js";
+
+
 const url = process.env.REACT_APP_API_URL
 
 // The function to render all task boxes.
@@ -27,7 +32,25 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer})  =
         <hr />
       </>
     )
-  } else if (task.tasktype === "multiple_choice") {
+  } else if (task.tasktype === "drawing") {
+    return (
+      <>
+        <div id={`scrollspy-section${task.idtask}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1} (Piirros)</b></p>
+          <p>{task.question}</p>
+          
+          {student_answer ? (
+            <DrawingReview key={student_answer} json={student_answer} />
+          ) : (
+            <p className="text-muted fs-6"><i>Opiskelija ei jättänyt piirrosta.</i></p>
+          )}
+        </div>
+        <hr />
+      </>
+    );
+  }
+  
+  else if (task.tasktype === "multiple_choice") {
     const studentAnswer = JSON.parse(student_answer).sort()
     const correctAnswer = JSON.parse(correct_answer).correctAnswers.sort()
     const taskOptions = JSON.parse(correct_answer).options.sort()
@@ -126,6 +149,8 @@ function TaskResults() {
   // Variable for currently chosen attempt
   const [chosenAttemptId, setChosenAttemptId ] = useState(null)
 
+  const { isDarkMode, toggleTheme } = useTheme();
+
   // Function for fetching all the user's previous attempts
   const fetchCompletedExerciseAndTaskData = useCallback(async (signal) => {
     // Check that user has access token
@@ -154,7 +179,14 @@ function TaskResults() {
       console.log(response.data)
 
       setExercisedata(response.data.exercise)
-      setChosenAttemptId(response.data.exercise.exerciseresults[0].idexerciseresult)
+
+
+      const results = response.data.exercise?.exerciseresults;
+      if (results && results.length > 0) {
+        // Muutos: Otetaan taulukon viimmeinen alkio (uusin yritys) ensimmäisen sijaan
+        const latestAttempt = results[results.length - 1];
+        setChosenAttemptId(latestAttempt.idexerciseresult);
+      }
       updateToken(response)
       return response.data
     } catch (error) {
@@ -257,7 +289,7 @@ function TaskResults() {
 
   if (user.role === "student" || user.role === "teacher") {
     return (
-      <div className="container-fluid min-vh-100 exercises-container">
+      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
          <div className="row">
             <div className="col-md-1" />
             { /* White box for page content */}

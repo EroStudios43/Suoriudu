@@ -7,6 +7,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { pickRandomUnreviewedSubmission } from "../utils/reviewSelection.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function TestOverview() {
@@ -19,6 +22,8 @@ function TestOverview() {
   const [loading, setLoading] = useState(true);
   const [notesOpen, setNotesOpen] = useState(false);
   const [submissions, setSubmissions] = useState({ unreviewed: [], reviewed: [], totalStudents: 0 });
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!courseId || !exercise?.idexercise || !user?.access_token) {
@@ -100,8 +105,51 @@ function TestOverview() {
     }
   };
 
+  const parseAiNotes = (lista) => {
+    if (!lista) return [];
+    
+    // Jos data on tietokannasta tuleva JSON-merkkijono, parsitaan se taulukoksi
+    let parsedList = lista;
+    if (typeof lista === "string") {
+      try {
+        parsedList = JSON.parse(lista);
+      } catch (e) {
+        return [];
+      }
+    }
+
+    if (!Array.isArray(parsedList)) return [];
+
+    return parsedList
+      .map((item) => {
+        if (typeof item === "object" && item !== null) {
+          return {
+            cause: item.cause || item.teksti || "Merkintä",
+            timestamp: item.timestamp || item.aika || "",
+          };
+        }
+        return null;
+      })
+      .filter(Boolean);
+  };
+
+ const allSubmissions = [...submissions.unreviewed, ...submissions.reviewed];
+
+  const studentNotesMap = allSubmissions.reduce((acc, sub) => {
+    const notes = parseAiNotes(sub.ai_notes || sub.ai_logs);
+    if (notes.length > 0) {
+      const studentName = sub.name || "Tuntematon opiskelija";
+      if (!acc[studentName]) {
+        acc[studentName] = [];
+      }
+      acc[studentName].push(...notes);
+    }
+    return acc;
+  }, {});
+
+
   return (
-    <div className="coursepage task-overview-page">
+    <div className={`coursepage task-overview-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar task-overview-topbar">
         <div className="topbar-left">
           <div className="course-title">
@@ -257,7 +305,7 @@ function TestOverview() {
 
       {notesOpen && (
         <div className="modal-overlay">
-          <div className="modal-dialog" style={{ width: "min(520px, 100%)" }}>
+          <div className="modal-dialog" style={{ width: "min(650px, 100%)" }}>
             <div className="modal-header">
               <h3>Kokeen merkinnät</h3>
               <button type="button" className="modal-close" onClick={() => setNotesOpen(false)} aria-label="Sulje">
@@ -265,7 +313,54 @@ function TestOverview() {
               </button>
             </div>
             <div className="modal-body">
-              <p style={{ margin: 0, color: "#ffffff", lineHeight: 1.6 }}>Toistaiseksi ei merkintöjä.</p>
+              {Object.keys(studentNotesMap).length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                  {Object.entries(studentNotesMap).map(([studentName, notes], sIdx) => (
+                    <div
+                      key={sIdx}
+                      style={{
+                        padding: "14px 16px",
+                        borderRadius: "8px",
+                        backgroundColor: "#f8f9fa",
+                        borderLeft: "4px solid #e74c3c",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "10px"
+                      }}
+                    >
+                      {/* Opiskelijan nimi otsikkona */}
+                      <div style={{ fontWeight: "bold", color: "#2c3e50", fontSize: "1.05rem", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px" }}>
+                        {studentName} ({notes.length} merkintää)
+                      </div>
+
+                      {/* Kaikki opiskelijan rikkeet listattuna alle */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {notes.map((note, nIdx) => (
+                          <div
+                            key={nIdx}
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              fontSize: "0.9rem"
+                            }}
+                          >
+                            <span style={{ color: "#7f8c8d", fontSize: "0.8rem" }}>
+                              {formatSubmittedAt(note.timestamp) || "Ei aikaa"}
+                            </span>
+                            <span style={{ color: "#c0392b", fontWeight: "500" }}>
+                              {note.cause}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p style={{ margin: 0, color: "#ffffff", lineHeight: 1.6 }}>Toistaiseksi ei merkintöjä.</p>
+              )}
+
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 22 }}>
                 <button type="button" className="save-btn" onClick={() => setNotesOpen(false)}>
                   Sulje

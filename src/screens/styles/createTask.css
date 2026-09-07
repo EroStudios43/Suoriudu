@@ -1,11 +1,19 @@
 .task-page {
+  --bg-main: #1D283A;
+
+  background-color: var(--bg-main);
+
   min-height: 100vh;
-  background-color: #1d283a;
   padding: 40px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
 }
+
+.task-page.light-theme {
+    --bg-main: linear-gradient(#4facfe, #7ed6ff);
+}
+
 
 .task-paper {
   width: min(100%, 980px);
