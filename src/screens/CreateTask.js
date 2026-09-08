@@ -5,6 +5,13 @@ import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 
+import DrawingBoard from "../components/DrawingBoard.js";
+import DrawingReview from "../components/DrawingReview.js";
+import AiChat from "../components/AiChat.js";
+
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function CreateTask() {
@@ -27,6 +34,12 @@ function CreateTask() {
   const initialFormRef = useRef(null);
 
   const week = location.state?.week || {};
+
+  const { isDarkMode, toggleTheme } = useTheme();
+
+
+  const [drawingStates, setDrawingStates] = useState({});
+
 
   const [tasks, setTasks] = useState([
     {
@@ -211,6 +224,12 @@ function CreateTask() {
     const updated = [...tasks];
     updated[index] = newTask;
     setTasks(updated);
+  };
+
+  const applyAiTasks = ({ name, description, tasks: generatedTasks }) => {
+    if (name) setTaskName(name);
+    if (description) setTaskDescription(description);
+    setTasks(generatedTasks);
   };
 
 
@@ -438,8 +457,9 @@ function CreateTask() {
   return true;
 };
 
+
   return (
-    <div className="task-page">
+    <div className={`task-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="task-paper">
         <div className="task-header">
           <i
@@ -682,18 +702,41 @@ function CreateTask() {
             )}
 
             {task.type === "drawing" && (
-              <textarea
-                className="large-answer-input"
-                placeholder="Kirjoita piirto-tehtävän kuvaus..."
-                value={task.answer}
-                onChange={(e) => {
-                  const updatedTask = {
-                    ...task,
-                    answer: e.target.value
-                  };
-                  updateTask(taskIndex, updatedTask);
-                }}
-              />
+              <div className="mb-3">
+                <label className="form-label d-block">Piirra pohja / esimerkkipiirros (valinnainen):</label>
+                <DrawingBoard
+                  lines={drawingStates[taskIndex]?.lines || []}
+                  setLines={(newLines) => {
+                    setDrawingStates((prev) => {
+                      const currentTaskState = prev[taskIndex] || {};
+                      const currentLines = Array.isArray(currentTaskState.lines)
+                        ? currentTaskState.lines
+                        : [];
+
+                      const updatedLines =
+                        typeof newLines === "function"
+                          ? newLines(currentLines)
+                          : newLines;
+
+                      return {
+                        ...prev,
+                        [taskIndex]: {
+                          ...currentTaskState,
+                          lines: updatedLines
+                        }
+                      };
+                    });
+                  }}
+                  onSave={(json) => updateTask(taskIndex, { ...task, answer: json })}
+                />
+
+                {task.answer && (
+                  <div className="mt-3">
+                    <p className="fw-bold">Tallennettu mallipiirros esikatselussa:</p>
+                    <DrawingReview json={task.answer} />
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="divider"></div>
@@ -712,6 +755,7 @@ function CreateTask() {
       </div>
 
       </div>
+      <AiChat onTasksGenerated={applyAiTasks} />
     </div>
   );
 }

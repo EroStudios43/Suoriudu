@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import axios from "axios";
 import "./styles/createTask.css";
 import "./styles/overviews.css"
@@ -6,6 +6,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
 import { getReviewDisplayName } from "../utils/reviewSelection.js";
+import DrawingReview from "../components/DrawingReview.js";
+
+
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -22,8 +27,13 @@ function TaskEvaluation({ isExamMode = false }) {
   const [loading, setLoading] = useState(true);
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
+  const [attempts, setAttempts] = useState([]);
+  const [chosenAttemptId, setChosenAttemptId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [evaluatingAll, setEvaluatingAll] = useState(false);
   const commentMessagesRef = useRef(null);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const [commentModal, setCommentModal] = useState({
     open: false,
@@ -34,6 +44,33 @@ function TaskEvaluation({ isExamMode = false }) {
   });
 
   const [commentText, setCommentText] = useState("");
+
+  const getChoiceStudentSelections = useCallback((task) => {
+    if (task.type !== "choice") return [];
+    return normalizeChoiceSelection(task.studentSelectedAnswers ?? task.studentAnswer);
+  }, []);
+
+  const getChoiceAutoPoints = useCallback((task) => {
+    if (task.type !== "choice") return task.teacherPoints ?? "";
+
+    const correctAnswers = Array.isArray(task.correctAnswers) ? task.correctAnswers.map((value) => Number(value)) : [];
+    const selectedAnswers = getChoiceStudentSelections(task).map((value) => Number(value));
+    const maxPoints = Number(task.points ?? 0);
+
+    if (!correctAnswers.length) return 0;
+
+    if (correctAnswers.length === 1) {
+      return selectedAnswers.some((v) => correctAnswers.includes(v)) ? (maxPoints || 0) : 0;
+    }
+
+    if (maxPoints && correctAnswers.length > 0) {
+      const per = maxPoints / correctAnswers.length;
+      const correctSelectedCount = selectedAnswers.filter((v) => correctAnswers.includes(v)).length;
+      return Number((per * correctSelectedCount).toFixed(2));
+    }
+
+    return selectedAnswers.filter((value) => correctAnswers.includes(value)).length;
+  }, [getChoiceStudentSelections]);
 
   const studentDisplayName = useMemo(() => getReviewDisplayName({
     studentData,
@@ -72,6 +109,15 @@ function TaskEvaluation({ isExamMode = false }) {
         );
 
         setStudentData(response.data?.student || null);
+        const loadedAttempts = response.data?.attempts || [];
+        setAttempts(loadedAttempts);
+        setChosenAttemptId((currentAttemptId) =>
+          currentAttemptId && loadedAttempts.some(
+            (attempt) => Number(attempt.idexerciseresult) === Number(currentAttemptId)
+          )
+            ? currentAttemptId
+            : loadedAttempts[0]?.idexerciseresult || null
+        );
 
         const loadedTasks = (response.data?.tasks || []).map((task) => {
           const nextTask = {
@@ -195,41 +241,39 @@ function TaskEvaluation({ isExamMode = false }) {
     };
 
     fetchReviewData();
-  }, [courseId, exercise?.idexercise, user?.access_token, submission?.iduser, userId]);
+  }, [courseId, exercise?.idexercise, user?.access_token, submission?.iduser, userId, getChoiceAutoPoints]);
+
+  useEffect(() => {
+    const selectedAttempt = attempts.find(
+      (attempt) => Number(attempt.idexerciseresult) === Number(chosenAttemptId)
+    );
+
+    if (!selectedAttempt) return;
+
+    setTasks(selectedAttempt.tasks.map((task) => ({
+      ...task,
+      teacherPoints:
+        task.teacherPoints !== "" && task.teacherPoints !== null && task.teacherPoints !== undefined
+          ? Number(task.teacherPoints)
+          : getChoiceAutoPoints(task),
+      teacherComment: task.teacherComment ?? "",
+      options: Array.isArray(task.options) ? task.options : [],
+      correctAnswers: Array.isArray(task.correctAnswers)
+        ? task.correctAnswers.map((value) => Number(value))
+        : [],
+      studentSelectedAnswers: Array.isArray(task.studentSelectedAnswers)
+        ? task.studentSelectedAnswers.map((value) => Number(value))
+        : [],
+      points: task.points ?? null,
+      hasUnreadStudentComment: false,
+    })));
+  }, [attempts, chosenAttemptId, getChoiceAutoPoints]);
 
   const updateTaskField = (taskIndex, field, value) => {
     setTasks((prev) => prev.map((task, index) => {
       if (index !== taskIndex) return task;
       return { ...task, [field]: value };
     }));
-  };
-
-  const getChoiceStudentSelections = (task) => {
-    if (task.type !== "choice") return [];
-    return normalizeChoiceSelection(task.studentSelectedAnswers ?? task.studentAnswer);
-  };
-
-  const getChoiceAutoPoints = (task) => {
-    if (task.type !== "choice") return task.teacherPoints ?? "";
-
-    const correctAnswers = Array.isArray(task.correctAnswers) ? task.correctAnswers.map((value) => Number(value)) : [];
-    const selectedAnswers = getChoiceStudentSelections(task).map((value) => Number(value));
-    const maxPoints = Number(task.points ?? 0);
-
-
-    if (!correctAnswers.length) return 0;
-
-    if (correctAnswers.length === 1) {
-      return selectedAnswers.some((v) => correctAnswers.includes(v)) ? (maxPoints || 0) : 0;
-    }
-
-    if (maxPoints && correctAnswers.length > 0) {
-      const per = maxPoints / correctAnswers.length;
-      const correctSelectedCount = selectedAnswers.filter((v) => correctAnswers.includes(v)).length;
-      return Number((per * correctSelectedCount).toFixed(2));
-    }
-
-    return selectedAnswers.filter((value) => correctAnswers.includes(value)).length;
   };
 
   const resolveTaskPoints = (task) => {
@@ -312,6 +356,46 @@ function TaskEvaluation({ isExamMode = false }) {
     return "";
   };
 
+  const handleAiEvaluateAll = async () => {
+    const essayTasks = tasks
+      .map((task, index) => ({ task, index, studentAnswer: formatStudentAnswer(task) }))
+      .filter(({ task, studentAnswer }) =>
+        task.type === "essay" && studentAnswer && studentAnswer !== "Ei vastausta"
+      );
+
+    if (essayTasks.length === 0) {
+      alert("Tehtävässä ei ole arvioitavia esseetehtäviä.");
+      return;
+    }
+
+    try {
+      setEvaluatingAll(true);
+      const results = await Promise.all(essayTasks.map(async ({ task, index, studentAnswer }) => {
+        const response = await axios.post(`${url}/ai/evaluate`, {
+          type: task.type,
+          question: task.instruction,
+          studentAnswer,
+          exampleAnswer: task.exampleAnswer,
+          maxPoints: getMaxPoints(task),
+        }, { headers: { Authorization: `Bearer ${user.access_token}` } });
+
+        return { index, points: response.data.points, comment: response.data.comment };
+      }));
+
+      setTasks((previous) => previous.map((task, index) => {
+        const result = results.find((item) => item.index === index);
+        return result
+          ? { ...task, teacherPoints: result.points, teacherComment: result.comment }
+          : task;
+      }));
+    } catch (error) {
+      console.error("AI essay evaluation failed", error);
+      alert(error.response?.data?.error || "AI-arviointi epäonnistui.");
+    } finally {
+      setEvaluatingAll(false);
+    }
+  };
+
 
   const handleSaveTask = async (taskIndex) => {
     const task = tasks[taskIndex];
@@ -324,6 +408,7 @@ function TaskEvaluation({ isExamMode = false }) {
         {
           reviews: [{
             idtask: task.idtask,
+            exerciseResultId: chosenAttemptId,
             teacherPoints: resolveTaskPoints(task),
             teacher_comment: task.teacherComment,
           }],
@@ -347,6 +432,7 @@ function TaskEvaluation({ isExamMode = false }) {
         {
           reviews: tasks.map((task) => ({
             idtask: task.idtask,
+            exerciseResultId: chosenAttemptId,
             teacherPoints: resolveTaskPoints(task),
             teacher_comment: task.teacherComment,
           }))
@@ -550,7 +636,7 @@ const handleSendComment = async () => {
 
 
   return (
-    <div className="task-page">
+    <div className={`task-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="task-paper">
         <div className="task-header">
           <i
@@ -571,6 +657,11 @@ const handleSendComment = async () => {
               });
             }}
           ></i>
+          <div className="evaluation-header-actions">
+            <button className="save-btn" type="button" onClick={handleAiEvaluateAll} disabled={evaluatingAll || saving || loading}>
+              {evaluatingAll ? "AI arvioi tehtäviä..." : "Arvioi tehtävät tekoälyllä"}
+            </button>
+          </div>
           <h1>{exercise?.exercise_name || "Tehtävän arviointi"}</h1>
         </div>
 
@@ -587,6 +678,33 @@ const handleSendComment = async () => {
 
             <div className="divider"></div>
 
+            {attempts.length > 0 && (
+              <div className="attempt-selector-wrapper">
+                <label htmlFor="task-attempt" className="task-time-label">
+                  Suoritus
+                </label>
+                <select
+                  id="task-attempt"
+                  className="form-select attempt-selector"
+                  value={chosenAttemptId || ""}
+                  onChange={(event) => setChosenAttemptId(Number(event.target.value))}
+                >
+                  {attempts.map((attempt, index) => (
+                    <option key={attempt.idexerciseresult} value={attempt.idexerciseresult}>
+                      {`Suoritus ${attempts.length - index} - `}
+                      {new Date(attempt.starting_time).toLocaleString("fi-FI", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             {tasks.length === 0 ? (
               <p>Ei tehtäviä arvioitavaksi.</p>
             ) : (
@@ -600,7 +718,12 @@ const handleSendComment = async () => {
                     {task.instruction || "Tehtävänanto"}
                   </p>
 
-                  {task.type !== "choice" && task.exampleAnswer ? (
+                  {task.type === "drawing" && task.exampleAnswer ? (
+                    <div className="option-card example-answer-card">
+                      <strong>Esimerkkivastaus</strong>
+                      <DrawingReview json={task.exampleAnswer} />
+                    </div>
+                  ) : task.type !== "choice" && task.exampleAnswer ? (
                     <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
@@ -608,7 +731,12 @@ const handleSendComment = async () => {
                   ) : null}
 
                   <div className="student-answer-wrapper">
-                    {task.type === "choice" ? (
+                    {task.type === "drawing" ? (
+                      <div className="drawing-review-wrapper">
+                        <strong>Oppilaan piirros</strong>
+                        <DrawingReview json={task.studentAnswer} />
+                      </div>
+                    ) : task.type === "choice" ? (
                       <div className="option-card">
                         <strong>Oppilaan vastaus</strong>
 
@@ -681,6 +809,7 @@ const handleSendComment = async () => {
                         />
                       </div>
                     )}
+                    
                   </div>
 
                   <div className="issue-row">

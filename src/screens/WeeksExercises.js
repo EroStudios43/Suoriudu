@@ -5,6 +5,9 @@ import { useNavigate, useLocation, useParams } from "react-router-dom"
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 import axios from "axios";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function WeeksExercises() {
@@ -25,6 +28,8 @@ function WeeksExercises() {
 
   // Variable for opening and closing the exercise boxes
   const [openBoxes, setOpenBoxes] = useState({})
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   // Fetch required data from database
   // -> Get week data in case the object didn't get passed through the state
@@ -121,7 +126,7 @@ function WeeksExercises() {
 
   if (user.role === "student" || user.role === "teacher"){
     return (
-      <div className="container-fluid coursepage d-flex flex-column min-vh-100 exercises-container">
+      <div className={`container-fluid coursepage d-flex flex-column min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
           { /* Topbar */}
           <div className="d-flex flex">
             <i className="fa-regular fa-circle-left back-icon" onClick={e => navigate(`/CoursePage/${location.state?.idcourse}`)}></i>

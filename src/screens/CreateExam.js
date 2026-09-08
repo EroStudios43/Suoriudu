@@ -4,6 +4,12 @@ import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
+import { useTheme } from "../context/ThemeContext.js";
+import DrawingBoard from "../components/DrawingBoard.js";
+import DrawingReview from "../components/DrawingReview.js";
+import AiChat from "../components/AiChat.js";
+
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -26,6 +32,10 @@ function CreateExam() {
   const source = location.state?.source;
   const courseId = location.state?.courseId;
   const initialFormRef = useRef(null);
+
+  const { isDarkMode, toggleTheme } = useTheme();
+  const [drawingStates, setDrawingStates] = useState({});
+  const drawingRefs = useRef({});
 
 
   const [tasks, setTasks] = useState([
@@ -136,6 +146,12 @@ function CreateExam() {
     const updated = [...tasks];
     updated[index] = newTask;
     setTasks(updated);
+  };
+
+  const applyAiTasks = ({ name, description, tasks: generatedTasks }) => {
+    if (name) setExamName(name);
+    if (description) setExamDescription(description);
+    setTasks(generatedTasks);
   };
 
 
@@ -257,6 +273,13 @@ function CreateExam() {
   const createTask = async () => {
     if (!validateExercise()) return;
 
+    const tasksToSave = tasks.map((task, taskIndex) => {
+      if (task.type !== "drawing") return task;
+
+      const drawingJson = drawingRefs.current[taskIndex]?.();
+      return drawingJson ? { ...task, answer: drawingJson } : task;
+    });
+
 
     const exercise = {
       id: editExercise?.id || Date.now(),
@@ -267,7 +290,7 @@ function CreateExam() {
       start_time: startTime, 
       end_time: endTime,
       max_time: examDuration,
-      tasks,
+      tasks: tasksToSave,
     };
 
     console.log(exercise.exercise_type)
@@ -282,7 +305,7 @@ function CreateExam() {
             end_time: endTime,
             allow_late_submissions: allowLateSubmissions ? 1 : 0,
             max_time: examDuration,
-            tasks: normalizeTasksForBackend(),
+            tasks: normalizeTasksForBackend(tasksToSave),
           };
 
           const response = await axios.post(
@@ -323,7 +346,7 @@ function CreateExam() {
             start_time: startTime,
             end_time: endTime,
             max_time: examDuration,
-            tasks: normalizeTasksForBackend(tasks),
+            tasks: normalizeTasksForBackend(tasksToSave),
           },
           { headers: { Authorization: `Bearer ${user.access_token}` } }
         );
@@ -336,7 +359,7 @@ function CreateExam() {
             end_time: endTime,
             max_time: examDuration,
             allow_late_submissions: allowLateSubmissions ? 1 : 0,
-            tasks: normalizeTasksForBackend()
+            tasks: normalizeTasksForBackend(tasksToSave)
         };
 
         const currentWeek = location.state?.week || {};
@@ -378,7 +401,7 @@ function CreateExam() {
     navigate(-1);
   };
 
-  const normalizeTasksForBackend = () => tasks.map((task) => {
+  const normalizeTasksForBackend = (tasksToNormalize = tasks) => tasksToNormalize.map((task) => {
     if (task.type === "choice") {
       return {
         tasktype: task.choiceMode === "multiple" ? "multiple_choice" : "single_choice",
@@ -507,7 +530,7 @@ function CreateExam() {
   };
 
   return (
-    <div className="task-page">
+    <div className={`task-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="task-paper">
         <div className="task-header">
           <i className="fa-regular fa-circle-left back-arrow" onClick={e => navigate(-1)}></i>
@@ -725,18 +748,42 @@ function CreateExam() {
             )}
 
             {task.type === "drawing" && (
-              <textarea
-                className="large-answer-input"
-                placeholder="Kirjoita piirto-tehtävän kuvaus..."
-                value={task.answer}
-                onChange={(e) => {
-                  const updatedTask = {
-                    ...task,
-                    answer: e.target.value
-                  };
-                  updateTask(taskIndex, updatedTask);
-                }}
-              />
+              <div className="mb-3">
+                <label className="form-label d-block">Piirra pohja / esimerkkipiirros (valinnainen):</label>
+                <DrawingBoard
+                  onRegisterGetJson={(getJson) => {
+                    drawingRefs.current[taskIndex] = getJson;
+                  }}
+                  lines={drawingStates[taskIndex]?.lines || []}
+                  setLines={(newLines) => {
+                    setDrawingStates((prev) => {
+                      const currentTaskState = prev[taskIndex] || {};
+                      const currentLines = Array.isArray(currentTaskState.lines)
+                        ? currentTaskState.lines
+                        : [];
+                      const updatedLines = typeof newLines === "function"
+                        ? newLines(currentLines)
+                        : newLines;
+
+                      return {
+                        ...prev,
+                        [taskIndex]: {
+                          ...currentTaskState,
+                          lines: updatedLines
+                        }
+                      };
+                    });
+                  }}
+                  onSave={(json) => updateTask(taskIndex, { ...task, answer: json })}
+                />
+
+                {task.answer && (
+                  <div className="mt-3">
+                    <p className="fw-bold">Tallennettu mallipiirros esikatselussa:</p>
+                    <DrawingReview json={task.answer} />
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="divider"></div>
@@ -755,6 +802,7 @@ function CreateExam() {
       </div>
 
       </div>
+      <AiChat onTasksGenerated={applyAiTasks} />
     </div>
   );
 }

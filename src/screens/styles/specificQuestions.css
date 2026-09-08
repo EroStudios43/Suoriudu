@@ -1,9 +1,14 @@
 .specific-question-page {
+    --bg-main: #1D283A;
+
+    background-color: var(--bg-main);
     min-height: 100vh;
     padding: 30px 5%;
-    background-color: #1D283A;
     color: #ffffff;
     font-family: Arial, sans-serif;
+}
+.specific-question-page.light-theme {
+    --bg-main: linear-gradient(#4facfe, #7ed6ff);
 }
 
 .specific-question-topbar {

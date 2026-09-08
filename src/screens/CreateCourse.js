@@ -6,6 +6,9 @@ import Calendar from "../components/calendar.js";
 import TimePicker from "../components/timepicker.js";
 import axios from "axios";
 import { useUser } from "../context/useUser.js";
+import { useTheme } from "../context/ThemeContext.js";
+import AiChat from "../components/AiChat.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -38,6 +41,10 @@ function CreateCourse() {
   const [showEndTime, setShowEndTime] = useState(false);
 
   const [startTime, setStartTime] = useState("12:00");
+
+  const { isDarkMode, toggleTheme } = useTheme();
+
+
 
   const [weeks, setWeeks] = useState(() => {
     const savedWeeks = localStorage.getItem("draftcourseWeeks");
@@ -138,6 +145,12 @@ function CreateCourse() {
         idx === index ? { ...week, content: value } : week
       )
     );
+  };
+
+  const applyAiCourse = ({ name, description, weeks: generatedWeeks }) => {
+    if (name) setCourseName(name);
+    if (description) setCourseDescription(description);
+    setWeeks(generatedWeeks);
   };
 
   const handleAddTask = (weekIndex) => {
@@ -349,7 +362,7 @@ function CreateCourse() {
   }, [students]);
 
   return (
-    <div className="createCourse-container">
+    <div className={`createCourse-container ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar">
             <div className="topbar-left">
               <div className="logo">
@@ -609,6 +622,7 @@ function CreateCourse() {
             {isCreating ? "Luodaan..." : "Luo kurssi"}
           </button>
         </div>
+        <AiChat mode="course" onCourseGenerated={applyAiCourse} />
     </div>
   );
 }

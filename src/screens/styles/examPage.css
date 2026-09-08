@@ -1,73 +1,132 @@
+.coursepage {
+  --bg-overlay: rgba(29, 40, 58, 0.65);
+  --bg-popup: #ffffff;
+  --text-primary: #222222;
+  --text-secondary: #555555;
+  --box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  --border-color: rgba(0, 0, 0, 0.06);
 
+  --pwd-box-bg: #E8DEF8;
+  --pwd-box-text: #4A4459;
 
+  --btn-follow-bg: #6750A4;
+  
+  --btn-cancel-bg: #e9e9e9;
+  --btn-cancel-text: #333333;
+  --btn-cancel-hover: #dddddd;
 
+  --btn-confirm-bg: #4f46e5;
+  --btn-confirm-text: #ffffff;
+  --btn-confirm-hover: #4338ca;
+
+  --btn-back-bg: #525D7D;
+  --btn-back-text: #ffffff;
+  --btn-back-border: #cccccc;
+  --btn-back-hover: #7182b6;
+
+  --btn-continue-bg: #232859;
+  --btn-continue-text: #ffffff;
+  --btn-continue-hover: #3f4899;
+}
+
+.coursepage.light-theme {
+  --bg-overlay: rgba(0, 0, 0, 0.45);
+  --bg-popup: #ffffff;
+  --text-primary: #222222;
+  --text-secondary: #555555;
+  --box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  --border-color: transparent;
+
+  --pwd-box-bg: #e3b4f8;
+  --pwd-box-text: #4A4459;
+
+  --btn-follow-bg: #6750A4;
+
+  --btn-cancel-bg: #e9e9e9;
+  --btn-cancel-text: #333333;
+  --btn-cancel-hover: #dddddd;
+
+  --btn-confirm-bg: #4f46e5;
+  --btn-confirm-text: #ffffff;
+  --btn-confirm-hover: #4338ca;
+
+  --btn-back-bg: #525D7D;
+  --btn-back-text: #ffffff;
+  --btn-back-border: #cccccc;
+  --btn-back-hover: #7182b6;
+
+  --btn-continue-bg: #232859;
+  --btn-continue-text: #ffffff;
+  --btn-continue-hover: #3f4899;
+}
 .exam-center-content {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-top: 70px;
-}
-
-.exam-password-box{
-    background-color: #E8DEF8;
-    padding: 10px;
-    color: #4A4459;
-    font-size: 20px;
-    border-radius: 10px;
-}
-.small-info-text{
-    font-style: italic;
-}
-.exam-content-wrapper {
-    position: relative;
-    width: 100%;
-    min-height: 500px;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.exam-overview-section {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    text-align: center;
-}
-
-.exam-follow-button {
-    position: absolute;
-    top: 20px;
-    right: 32px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 70px;
 }
 
 .exam-password-box {
-    background-color: #E8DEF8;
-    padding: 20px;
-    color: #4A4459;
-    font-size: 40px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-
+  background-color: var(--pwd-box-bg);
+  padding: 10px;
+  color: var(--pwd-box-text);
+  font-size: 20px;
+  border-radius: 10px;
 }
 
 .small-info-text {
-    font-style: italic;
+  font-style: italic;
 }
 
-.exam-follow-button{
-    background-color: #6750A4;
-    border-radius: 20px;
+.exam-content-wrapper {
+  position: relative;
+  width: 100%;
+  min-height: 500px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.exam-overview-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+}
+
+.exam-follow-button {
+  position: absolute;
+  top: 20px;
+  right: 32px;
+}
+
+.exam-password-box {
+  background-color: var(--pwd-box-bg);
+  padding: 20px;
+  color: var(--pwd-box-text);
+  font-size: 40px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.small-info-text {
+  font-style: italic;
+}
+
+.exam-follow-button {
+  background-color: var(--btn-follow-bg);
+  border-radius: 20px;
 }
 
 .confirmation-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--bg-overlay);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -78,22 +137,22 @@
 .confirmation-popup {
   width: 100%;
   max-width: 520px;
-  background: #fff;
+  background: var(--bg-popup);
   border-radius: 14px;
   padding: 28px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: var(--box-shadow);
 }
 
 .confirmation-popup h2 {
   margin: 0 0 16px;
   font-size: 22px;
-  color: #222;
+  color: var(--text-primary);
 }
 
 .confirmation-popup p {
   margin: 0 0 28px;
   line-height: 1.5;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .confirmation-buttons {
@@ -113,38 +172,38 @@
 }
 
 .confirmation-cancel-btn {
-  background: #e9e9e9;
-  color: #333;
+  background: var(--btn-cancel-bg);
+  color: var(--btn-cancel-text);
 }
 
 .confirmation-cancel-btn:hover {
-  background: #ddd;
+  background: var(--btn-cancel-hover);
 }
 
 .confirmation-confirm-btn {
-  background: #4f46e5;
-  color: white;
+  background: var(--btn-confirm-bg);
+  color: var(--btn-confirm-text);
 }
 
 .confirmation-confirm-btn:hover {
-  background: #4338ca;
+  background: var(--btn-confirm-hover);
 }
 
 @media (max-width: 600px) {
   .confirmation-buttons {
-    flex-direction: column-reverse;
+      flex-direction: column-reverse;
   }
 
   .confirmation-cancel-btn,
   .confirmation-confirm-btn {
-    width: 100%;
+      width: 100%;
   }
 }
 
 .exam-confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(29, 40, 58, 0.65);
+  background: var(--bg-overlay);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -154,24 +213,24 @@
 
 .exam-confirm-popup {
   width: min(100%, 560px);
-  background: #ffffff;
+  background: var(--bg-popup);
   border-radius: 28px;
   padding: 40px 50px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: var(--box-shadow);
+  border: 1px solid var(--border-color);
 }
 
 .exam-confirm-popup h2 {
   margin: 0 0 20px;
-  color: #222222;
+  color: var(--text-primary);
   font-size: 1.8rem;
   line-height: 1.25;
 }
 
 .exam-confirm-popup p {
   margin: 0;
-  color: #555555;
-  font-size: 1rem;
+  color: var(--text-secondary);
+  font-size: 1.0rem;
   line-height: 1.6;
 }
 
@@ -194,46 +253,46 @@
 }
 
 .exam-confirm-back-btn {
-  background: #525D7D;
-  color: white;
-  border: 1px solid #cccccc;
+  background: var(--btn-back-bg);
+  color: var(--btn-back-text);
+  border: 1px solid var(--btn-back-border);
 }
 
 .exam-confirm-back-btn:hover {
-  background: #7182b6;
+  background: var(--btn-back-hover);
 }
 
 .exam-confirm-continue-btn {
-  background: #232859;
-  color: white;
+  background: var(--btn-continue-bg);
+  color: var(--btn-continue-text);
   border: none;
 }
 
 .exam-confirm-continue-btn:hover {
-  background: #3f4899;
+  background: var(--btn-continue-hover);
 }
 
 @media (max-width: 600px) {
   .exam-confirm-overlay {
-    padding: 20px;
+      padding: 20px;
   }
 
   .exam-confirm-popup {
-    padding: 30px 25px;
-    border-radius: 22px;
+      padding: 30px 25px;
+      border-radius: 22px;
   }
 
   .exam-confirm-popup h2 {
-    font-size: 1.5rem;
+      font-size: 1.5rem;
   }
 
   .exam-confirm-actions {
-    flex-direction: column-reverse;
-    align-items: stretch;
+      flex-direction: column-reverse;
+      align-items: stretch;
   }
 
   .exam-confirm-back-btn,
   .exam-confirm-continue-btn {
-    width: 100%;
+      width: 100%;
   }
 }

@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import userRouter from "./routers/userRouter.js";
 import coursesRouter from "./routers/coursesRouter.js";
 import trackingRouter from "./routers/trackingRouter.js"
+import aiRouter from "./routers/aiRouter.js"
 
 const app = express();
 
@@ -25,7 +26,7 @@ app.use((req,res,next) => {
 
 app.use("/users", userRouter);
 app.use("/courses", coursesRouter);
-app.use("/ai", trackingRouter)
+app.use("/ai", aiRouter);
 
 app.use((err, req, res, next) => {
     console.error(err);

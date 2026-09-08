@@ -1,7 +1,12 @@
 .questions-page {
     min-height: 100vh;
     padding: 0 5%;
-    background: #1D283A;
+    --bg-main: #1D283A;
+
+    background-color: var(--bg-main);
+}
+.questions-page.light-theme {
+    --bg-main: linear-gradient(#4facfe, #7ed6ff);
 }
 
 .questions-topbar {

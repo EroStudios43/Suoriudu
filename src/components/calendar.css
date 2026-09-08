@@ -1,14 +1,43 @@
 .calendar {
-    width: fit-content;
+    --cal-bg: #979DAD;
+    --cal-text: #ffffff;
+    --cal-day-text: #313131;
+    --cal-date-text: #1d1d1d;
+    --cal-inactive: #a5a5a5;
+    --cal-hover-bg: #232859;
+    --cal-hover-text: #ffffff;
+    --cal-today-bg: rgba(255, 255, 255, 0.15);
+    --cal-today-border: #ffffff;
+    --cal-exam-text: #00F3FB;
+    --cal-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
+
+    background-color: var(--cal-bg);
+    color: var(--cal-text);
+    box-shadow: var(--cal-shadow);
+
+
+    width: fit-content; 
     height: auto;
-    background-color: #979DAD;
     display: flex;
     flex-direction: column;
     padding: 10px;
     border-radius: 10px;
-    box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.5);
     
 }
+.calendar.light-theme {
+    --cal-bg: #e5f4f8;
+    --cal-text: #1e293b;
+    --cal-day-text: #5c6b80;
+    --cal-date-text: #1e293b;
+    --cal-inactive: #cbd5e1;
+    --cal-hover-bg: #2563eb;
+    --cal-hover-text: #ffffff;
+    --cal-today-bg: #eff6ff;
+    --cal-today-border: #2563eb;
+    --cal-exam-text: #0284c7;
+    --cal-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
 
 .calendar-header {
     display: flex;
@@ -27,6 +56,7 @@
     width: 40px;
     height: 40px;
     background: transparent;
+    color: var(--cal-text);
 
 }
 
@@ -42,6 +72,7 @@
     text-align: center;
     font-weight: 600;
     width: 150px;
+    color: var(--cal-text);
 }
 
 
@@ -58,7 +89,7 @@
 .day {
     text-align: center;
     padding: 5px;
-    color: #313131;
+    color: var(--cal-day-text);
     font-weight: 500;
 }
 
@@ -81,36 +112,36 @@
     width: 40px;
     height: 40px;
     transition: 0.2s;
-    color: #1d1d1d;
+    color: var(--cal-date-text);
 }
 
 .date:hover,
 .date.active {
-    background-color: #232859;
-    color: #fff;
+    background-color: var(--cal-hover-bg);
+    color: var(--cal-hover-text);
 }
 
 .date.inactive {
-    color: #a5a5a5;
+    color: var(--cal-inactive);
     cursor: default;
 }
 
 .date.inactive:hover {
-    color: #fff;
+    color: var(--cal-hover-text);
     cursor: default;
 }
 
 .date.today {
-    background-color: rgba(255, 255, 255, 0.15);
-    border: 1px solid #ffffff;
+    background-color: var(--cal-today-bg);
+    border: 1px solid var(--cal-today-border);
 }
 
 .date.selected {
-    background-color: #232859;
-    color: white;
+    background-color: var(--cal-hover-bg);
+    color: var(--cal-hover-text);
 }
 
 .date.exam .date-number {
-    color: #00F3FB;
+    color: var(--cal-exam-text);
 }
 
