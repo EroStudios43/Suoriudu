@@ -24,7 +24,7 @@ const selectUserById = async (id) => {
 }
 
 const updateUser = (email,data)=>{
-    return new Promise((resolve,reject)=>{pool.query("UPDATE users SET firstname=?, lastname=?, email=?, phone=?, role=? WHERE email=? ",[data.firstname,data.lastname,data.email,data.phone,data.role,email],            
+    return new Promise((resolve,reject)=>{pool.query("UPDATE users SET firstname=?, lastname=?, email=?, phone=?, role=?, avatar_seed = ? WHERE email=? ",[data.firstname,data.lastname,data.email,data.phone,data.role,data.avatar_seed,email,],            
         (err,result)=>{
                 if(err){
                     reject(err);

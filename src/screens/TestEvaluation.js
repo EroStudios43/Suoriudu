@@ -8,6 +8,9 @@ import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
 import { getReviewDisplayName } from "../utils/reviewSelection.js";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
+import DrawingReview from "../components/DrawingReview.js";
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -23,6 +26,9 @@ function TestEvaluation() {
   const [studentData, setStudentData] = useState(null);
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [evaluatingAll, setEvaluatingAll] = useState(false);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   // Variables for coding exercises
   const [ codeRunResult, setCodeRunResult ] = useState({})
@@ -192,6 +198,46 @@ function TestEvaluation() {
   return "";
 };
 
+  const handleAiEvaluateAll = async () => {
+    const essayTasks = tasks
+      .map((task, index) => ({ task, index, studentAnswer: formatStudentAnswer(task) }))
+      .filter(({ task, studentAnswer }) =>
+        task.type === "essay" && studentAnswer && studentAnswer !== "Ei vastausta"
+      );
+
+    if (essayTasks.length === 0) {
+      alert("Kokeessa ei ole arvioitavia esseetehtäviä.");
+      return;
+    }
+
+    try {
+      setEvaluatingAll(true);
+      const results = await Promise.all(essayTasks.map(async ({ task, index, studentAnswer }) => {
+        const response = await axios.post(`${url}/ai/evaluate`, {
+          type: task.type,
+          question: task.instruction,
+          studentAnswer,
+          exampleAnswer: task.exampleAnswer,
+          maxPoints: getMaxPoints(task),
+        }, { headers: { Authorization: `Bearer ${user.access_token}` } });
+
+        return { index, points: response.data.points, comment: response.data.comment };
+      }));
+
+      setTasks((previous) => previous.map((task, index) => {
+        const result = results.find((item) => item.index === index);
+        return result
+          ? { ...task, teacherPoints: result.points, teacherComment: result.comment }
+          : task;
+      }));
+    } catch (error) {
+      console.error("AI essay evaluation failed", error);
+      alert(error.response?.data?.error || "AI-arviointi epäonnistui.");
+    } finally {
+      setEvaluatingAll(false);
+    }
+  };
+
 
   const handleSaveTask = async (taskIndex) => {
     const task = tasks[taskIndex];
@@ -343,7 +389,7 @@ function TestEvaluation() {
   }
 
   return (
-    <div className="task-page">
+    <div className={`task-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="task-paper">
         <div className="task-header">
           <i
@@ -351,6 +397,11 @@ function TestEvaluation() {
             onClick={handleBack}          
           ></i>
           <h1>{exercise?.exercise_name || "Kokeen arviointi"}</h1>
+          <div className="evaluation-header-actions">
+            <button className="save-btn" type="button" onClick={handleAiEvaluateAll} disabled={evaluatingAll || saving || loading}>
+              {evaluatingAll ? "AI arvioi koetta..." : "Arvioi koko koe tekoälyllä"}
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -384,7 +435,12 @@ function TestEvaluation() {
                     {task.instruction || "Tehtävänanto"}
                   </p>
 
-                  {task.type !== "choice" && task.type !== "coding" && task.exampleAnswer ? (
+                  {task.type === "drawing" && task.exampleAnswer ? (
+                    <div className="option-card example-answer-card">
+                      <strong>Esimerkkivastaus</strong>
+                      <DrawingReview json={task.exampleAnswer} />
+                    </div>
+                  ) : task.type !== "choice" && task.type !== "coding" && task.exampleAnswer ? (
                     <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
@@ -392,7 +448,16 @@ function TestEvaluation() {
                   ) : null}
 
                   <div className="student-answer-wrapper">
-                    {task.type === "choice" ? (
+                    {task.type === "drawing" ? (
+                      <div className="drawing-review-wrapper">
+                        <strong>Oppilaan piirros</strong>
+                        {task.studentAnswer ? (
+                          <DrawingReview json={task.studentAnswer} />
+                        ) : (
+                          <p>Oppilas ei jättänyt piirrosta.</p>
+                        )}
+                      </div>
+                    ) : task.type === "choice" ? (
                       <div className="option-card">
                         <strong>Oppilaan vastaus</strong>
 

@@ -1,14 +1,20 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import "./styles/exercises.css";
 import { useUser } from "../context/useUser.js";
 import { useNavigate, useLocation, useParams } from "react-router-dom"
 import axios from "axios";
 import useFetchData from "../hooks/fetchHookWithNavState.js";
 import ProgressBarTimer from "../components/progressbartimer.js";
+import DrawingBoard from "../components/DrawingBoard.js";
+import DrawingReview from "../components/DrawingReview.js";
+
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 
 import GazeTracker from "../components/GazeTracker.js";
+
+import { useTheme } from "../context/ThemeContext.js";
+
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -39,8 +45,13 @@ const TestResults = ({ results }) => {
 }
 
 // The function to render all task boxes.
-const RenderTask = React.memo(({task, index, answers, setAnswers, handleCodeRun, codeRunResult})  => {
-  if (task.tasktype === "essay" || task.tasktype === "drawing") {
+
+const RenderTask = React.memo(({task, index, answers, setAnswers, handleCodeRun, codeRunResult, drawingStates, setDrawingStates, drawingRefs})  => {
+  const taskDrawingState = drawingStates[task.idtask];
+  const lines = Array.isArray(taskDrawingState?.lines) ? taskDrawingState.lines : [];
+  
+  if (task.tasktype === "essay") {
+
     return (
       <>
         <div id={`scrollspy-section${index}`} className="col single-task">
@@ -56,6 +67,59 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, handleCodeRun,
             }))
           }/>
           <span className="text-muted text-end d-block"><small>{answers[task.idtask]?.length || 0}/{10000} merkkiä</small></span>
+        </div>
+        <hr />
+      </>
+    )
+
+  } 
+  else if (task.tasktype === "drawing") {
+    return ( 
+      <>
+        <div id={`scrollspy-section${index}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1}</b></p>
+
+          {/* Tehtävänanto näkyviin */}
+          <p>{task.question}</p>
+
+          {/* Piirtolaatikko */}
+          <DrawingBoard
+            onRegisterGetJson={(getJson) => {
+              drawingRefs.current[task.idtask] = getJson;
+            }}
+            lines={lines}
+            setLines={(newLines) => {
+              setDrawingStates(prev => {
+                const currentTaskState = prev[task.idtask] || {};
+                const currentLines = Array.isArray(currentTaskState.lines) ? currentTaskState.lines : [];
+                const updatedLines = typeof newLines === "function"
+                  ? newLines(currentLines)
+                  : newLines;
+
+                return {
+                  ...prev,
+                  [task.idtask]: {
+                    ...currentTaskState,
+                    lines: updatedLines
+                  }
+                };
+              });
+            }}
+            onSave={(json) => {
+              setAnswers(prev => ({
+                ...prev,
+                [task.idtask]: json
+              }));
+            }}
+          />
+
+          {/* Näytä tallennettu piirros oppilaalle */}
+          {answers[task.idtask] && (
+            <>
+              <p className="mt-3">Tallennettu piirros:</p>
+              <DrawingReview json={answers[task.idtask]} />
+            </>
+          )}
         </div>
         <hr />
       </>
@@ -194,6 +258,8 @@ function TestQuestions() {
 
   // Variable for student's answers (both from the database and the current ones)
   const [ answers, setAnswers ] = useState({})
+  const [drawingStates, setDrawingStates] = useState({});
+  const drawingRefs = useRef({});
 
   // Variable for showing the confirmation screen for returning the exercise
   const [showConfirm, setShowConfirm ] = useState(false)
@@ -209,6 +275,7 @@ function TestQuestions() {
   const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
   const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
 
+  const { isDarkMode, toggleTheme } = useTheme();
   // Variables for detecting page focus and visibility
   const [ isPageFocused, setIsPageFocused ] = useState(true)
   const [ isPageVisible, setIsPageVisible ] = useState(true)
@@ -470,9 +537,17 @@ function TestQuestions() {
   // Function for submitting answers
   const handleSubmit = async () => {
     try {
+      const taskResults = {...answers};
+      tasks.forEach((task) => {
+        if (task.tasktype === "drawing") {
+          const drawingJson = drawingRefs.current[task.idtask]?.();
+          if (drawingJson) taskResults[task.idtask] = drawingJson;
+        }
+      });
+
       const exerciseObject = {
         idexercise: idexercise,
-        taskResults: answers
+        taskResults
       }
       
       const res = await axios.post(url + "/courses/addExerciseAndTaskResults", exerciseObject, {headers: {Authorization: "Bearer " + user.access_token}})
@@ -555,7 +630,7 @@ function TestQuestions() {
 
   if (user.role === "student" || user.role === "teacher") {
     return (
-      <div className="container-fluid min-vh-100 exercises-container">
+      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
 
           {/* Välitetään kokeen ID GazeTrackerille: */}
           <GazeTracker idexercise={exercisedata?.idexercise} />
@@ -595,7 +670,19 @@ function TestQuestions() {
                 <form noValidate>
                   {tasks.map((task, index) => {
                     return (
-                      <RenderTask task={task} index={index} key={task.idtask} answers={answers} setAnswers={setAnswers} handleCodeRun={handleCodeRun} codeRunResult={codeRunResult}/>
+
+                      <RenderTask 
+                        task={task} 
+                        index={index} 
+                        key={task.idtask} 
+                        answers={answers} 
+                        setAnswers={setAnswers} 
+                        handleCodeRun={handleCodeRun} 
+                        codeRunResult={codeRunResult}
+                        drawingStates={drawingStates}
+                        setDrawingStates={setDrawingStates}
+                        drawingRefs={drawingRefs}
+                        />
                     )
                   })}
                   <div className="text-center">

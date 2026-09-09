@@ -1,6 +1,8 @@
 import React, {useState} from "react";
 import "./calendar.css";
 import '@fortawesome/fontawesome-free/css/all.min.css';
+
+import { useTheme } from "../context/ThemeContext.js";
  
 function Calendar({ selectedDate = new Date(), onDateSelect, exams = [] }) {
     const [currentDate, setCurrentDate] = useState(new Date());
@@ -14,6 +16,9 @@ function Calendar({ selectedDate = new Date(), onDateSelect, exams = [] }) {
     const prevMonthDays = new Date(currentYear, currentMonth, 0).getDate();
 
     const monthYearString = currentDate.toLocaleString("default", { month: "long", year: "numeric" });
+
+    const { isDarkMode, toggleTheme } = useTheme();
+    
 
 
     const dates = []
@@ -65,7 +70,7 @@ function Calendar({ selectedDate = new Date(), onDateSelect, exams = [] }) {
 
   return (
 
-    <div className="calendar">
+    <div className={`calendar ${isDarkMode ? '' : 'light-theme'}`}>
         <div className="calendar-header">
             <button id="prev-month" onClick={prevMonth}>
                 <i className="fa-solid fa-chevron-left arrow-icon"></i>

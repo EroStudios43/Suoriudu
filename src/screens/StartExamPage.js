@@ -10,6 +10,9 @@ import ProgressBarTimer from "../components/progressbartimer.js";
 import CountdownTimer from "../components/CountDownTimer.js";
 import confetti from "canvas-confetti";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 
@@ -28,6 +31,8 @@ function TeacherExamPage() {
   const [confettiShown, setConfettiShown] = useState(false);
 
   const [showReturnsPopup, setShowReturnsPopup] = useState(false);
+
+  const { isDarkMode, toggleTheme } = useTheme();
    
 
   useEffect(() => {
@@ -228,7 +233,7 @@ function TeacherExamPage() {
 
   if (loading || !data?.exercise) {
     return (
-      <div className="coursepage task-overview-page">
+      <div className={`coursepage task-overview-page ${isDarkMode ? '' : 'light-theme'}`}>
         <div className="topbar task-overview-topbar">
           <div className="topbar-left">
             <div className="course-title">
@@ -262,7 +267,7 @@ function TeacherExamPage() {
   const { exercise: ex, status } = data;
 
   return (
-    <div className="coursepage task-overview-page">
+      <div className={`coursepage task-overview-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar task-overview-topbar">
         <div className="topbar-left">
           <div className="course-title">

@@ -85,7 +85,7 @@
 .password-btn {
     background: transparent;
     border: none;
-    color: white;
+    color: var(--text-color);
     cursor: pointer;
 }
 
@@ -114,6 +114,10 @@
 .back-btn {
     margin-top: 50px;
     padding: 10px 20px;
+    color: var(--text-color);
+    background-color: transparent;
+    font-size: 30px;
+    font-weight:bold;
 
     border: none;
     border-radius: 8px;
@@ -132,6 +136,9 @@
     margin:40px auto 0;
     padding:10px 30px;
     cursor:pointer;
+    background-color: transparent !important;
+    color: var(--text-color) !important;
+    font-weight: bold;
 }
 
 

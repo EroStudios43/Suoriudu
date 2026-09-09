@@ -514,6 +514,9 @@ const getStudentExerciseReview = async (req, res, next) => {
             return {
                 idtask: task.idtask,
                 idtaskresult: task.idtaskresult,
+                idexerciseresult: task.idexerciseresult,
+                attemptStartingTime: task.starting_time,
+                attemptCompleteTime: task.complete_time,
                 title: `Tehtävä ${index + 1}`,
                 instruction: task.question || "",
                 type: normalizedType,
@@ -533,6 +536,29 @@ const getStudentExerciseReview = async (req, res, next) => {
             };
         });
 
+        const attemptsById = new Map();
+        tasks.forEach((task) => {
+            if (!task.idexerciseresult) return;
+
+            if (!attemptsById.has(task.idexerciseresult)) {
+                attemptsById.set(task.idexerciseresult, {
+                    idexerciseresult: task.idexerciseresult,
+                    starting_time: task.attemptStartingTime,
+                    complete_time: task.attemptCompleteTime,
+                    tasks: [],
+                });
+            }
+
+            attemptsById.get(task.idexerciseresult).tasks.push(task);
+        });
+
+        const attempts = Array.from(attemptsById.values()).sort((firstAttempt, secondAttempt) => {
+            const firstDate = new Date(firstAttempt.complete_time || firstAttempt.starting_time || 0).getTime();
+            const secondDate = new Date(secondAttempt.complete_time || secondAttempt.starting_time || 0).getTime();
+
+            return secondDate - firstDate;
+        });
+
         return res.status(200).json({
             exercise: {
                 idexercise: exerciseRows[0].idexercise,
@@ -543,7 +569,8 @@ const getStudentExerciseReview = async (req, res, next) => {
                 allow_late_submissions: exerciseRows[0].allow_late_submissions,
             },
             student: studentRows[0] || null,
-            tasks,
+            tasks: attempts[0]?.tasks || tasks,
+            attempts,
         });
     } catch (error) {
         return next(error);
@@ -567,7 +594,8 @@ const saveStudentExerciseReview = async (req, res, next) => {
             const rows = await selectTaskResultForReview(
                 userId,
                 exerciseId,
-                review.idtask
+                review.idtask,
+                review.exerciseResultId ?? null
             );
 
             let idtaskresult = rows[0]?.idtaskresult;
@@ -583,7 +611,7 @@ const saveStudentExerciseReview = async (req, res, next) => {
                 const insertResult = await createTaskResultForReview(
                     review.idtask,
                     userId,
-                    exerciseRows[0].idexerciseresult,
+                    review.exerciseResultId ?? exerciseRows[0].idexerciseresult,
                     review.teacherPoints ?? null,
                     review.teacher_comment ?? ""
                 );
@@ -664,35 +692,24 @@ const getExerciseSubmissions = async (req, res, next) => {
         });
 
         const submissionsByUser = new Map();
+        
 
         submissionRows.forEach(row => {
             const userId = Number(row.iduser);
-            const reviewedTaskCount =
-                reviewedTaskCounts.get(userId) || 0;
-
+            const reviewedTaskCount = reviewedTaskCounts.get(userId) || 0;
             const hasTeacherReview = reviewedTaskCount > 0;
-            const isReviewed =
-                totalTasks > 0 &&
-                reviewedTaskCount >= totalTasks;
+            const isReviewed = totalTasks > 0 && reviewedTaskCount >= totalTasks;
 
             submissionsByUser.set(userId, {
                 iduser: row.iduser,
-                name:
-                    `${row.firstname || ""} ${row.lastname || ""}`.trim() ||
-                    "Opiskelija",
-                submittedAt:
-                    row.complete_time ||
-                    row.starting_time ||
-                    null,
+                name: `${row.firstname || ""} ${row.lastname || ""}`.trim() || "Opiskelija",
+                submittedAt: row.complete_time || row.starting_time || null,
                 autoCheck: "Ei vielä arvioitu",
-                ai_logs: row.ai_notes ,
+                ai_notes: row.ai_notes ,
                 reviewed: isReviewed,
-                partialReview:
-                    hasTeacherReview && !isReviewed,
+                partialReview: hasTeacherReview && !isReviewed,
                 hasTeacherReview,
-                points: isReviewed
-                    ? totalPointsByUser.get(userId) || 0
-                    : null
+                points: isReviewed ? totalPointsByUser.get(userId) || 0 : null
             });
         });
 
@@ -1429,7 +1446,8 @@ const getStudentsCompletedExerciseAndTasks = async (req, res, next) => {
 
             // Get the exerciseresult's tasks and student's answers.
             // Bring this data to a map
-            if (!exerciseresult.tasks.has(row.idtask)) {
+            const existingTask = exerciseresult.tasks.get(row.idtask)
+            if (!existingTask || Number(row.idtaskresult || 0) > Number(existingTask.idtaskresult || 0)) {
                 exerciseresult.tasks.set(row.idtask, {
                     idtask: row.idtask,
                     idtaskresult: row.idtaskresult,

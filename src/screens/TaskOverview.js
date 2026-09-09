@@ -7,6 +7,9 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { pickRandomUnreviewedSubmission } from "../utils/reviewSelection.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function TaskOverview() {
@@ -18,6 +21,8 @@ function TaskOverview() {
   const taskName = exercise.exercise_name || "Tehtävä";
   const [loading, setLoading] = useState(true);
   const [submissions, setSubmissions] = useState({ unreviewed: [], reviewed: [], totalStudents: 0 });
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!courseId || !exercise?.idexercise || !user?.access_token) {
@@ -86,7 +91,7 @@ function TaskOverview() {
   };
 
   return (
-    <div className="coursepage task-overview-page">
+    <div className={`coursepage task-overview-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="topbar task-overview-topbar">
         <div className="topbar-left">
           <div className="course-title">

@@ -4,6 +4,9 @@ import "./styles/questions.css";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function Questions() {
@@ -12,6 +15,8 @@ function Questions() {
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (!user?.access_token) {
@@ -82,7 +87,7 @@ function Questions() {
   };
 
   return (
-    <div className="questions-page">
+    <div className={`questions-page ${isDarkMode ? '' : 'light-theme'}`}>
       <div className="questions-topbar">
         <div className="questions-title-wrapper">
           <i

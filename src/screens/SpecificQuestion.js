@@ -4,6 +4,9 @@ import "./styles/specificQuestions.css";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 
+import { useTheme } from "../context/ThemeContext.js";
+
+
 const url = process.env.REACT_APP_API_URL;
 
 function SpecificQuestion() {
@@ -22,6 +25,8 @@ function SpecificQuestion() {
   const [loading, setLoading] = useState(true);
 
   const commentContainerRef = useRef(null);
+
+  const { isDarkMode, toggleTheme } = useTheme();
 
  //Kysymyksen tehtävän tarkemmat tiedot ja koko keskustelu
   useEffect(() => {
@@ -270,7 +275,7 @@ function SpecificQuestion() {
 
 
   return (
-    <div className="specific-question-page">
+    <div className={`specific-question-page ${isDarkMode ? '' : 'light-theme'}`}>
 
       <div className="specific-question-topbar">
 

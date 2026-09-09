@@ -254,6 +254,14 @@ const selectExerciseSubmissionSummary = async (courseId, exerciseId) => {
             AND cm.idcourse = ?
          WHERE er.idexercise = ?
            AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+                     AND er.complete_time IS NOT NULL
+                     AND er.idexerciseresult = (
+                             SELECT MAX(latest_er.idexerciseresult)
+                             FROM exerciseresults latest_er
+                             WHERE latest_er.iduser = er.iduser
+                                 AND latest_er.idexercise = er.idexercise
+                                 AND latest_er.complete_time IS NOT NULL
+                     )
          ORDER BY er.complete_time DESC, er.starting_time DESC`,
         [courseId, exerciseId]
     );
@@ -275,10 +283,19 @@ const selectExerciseReviewedTasks = async (courseId, exerciseId) => {
          INNER JOIN coursemembers cm
              ON cm.iduser = u.iduser
             AND cm.idcourse = ?
+                 INNER JOIN exerciseresults er
+                         ON er.idexerciseresult = tr.idexerciseresult
          WHERE t.idexercise = ?
            AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+                     AND er.idexerciseresult = (
+                             SELECT MAX(latest_er.idexerciseresult)
+                             FROM exerciseresults latest_er
+                             WHERE latest_er.iduser = tr.iduser
+                                 AND latest_er.idexercise = ?
+                                 AND latest_er.complete_time IS NOT NULL
+                     )
          ORDER BY tr.idtaskresult DESC`,
-        [courseId, exerciseId]
+                [courseId, exerciseId, exerciseId]
     );
 
     return rows;
@@ -305,12 +322,21 @@ const selectExerciseReviewSummary = async (courseId, exerciseId) => {
          INNER JOIN coursemembers cm
              ON cm.iduser = tr.iduser
             AND cm.idcourse = ?
+                 INNER JOIN exerciseresults er
+                         ON er.idexerciseresult = tr.idexerciseresult
          WHERE t.idexercise = ?
            AND LOWER(COALESCE(cm.userrole, '')) = 'student'
+                     AND er.idexerciseresult = (
+                             SELECT MAX(latest_er.idexerciseresult)
+                             FROM exerciseresults latest_er
+                             WHERE latest_er.iduser = tr.iduser
+                                 AND latest_er.idexercise = ?
+                                 AND latest_er.complete_time IS NOT NULL
+                     )
            AND tr.points IS NOT NULL
            AND TRIM(CAST(tr.points AS CHAR)) <> ''
          GROUP BY tr.iduser`,
-        [courseId, exerciseId]
+        [courseId, exerciseId, exerciseId]
     );
 
     return rows;
