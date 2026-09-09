@@ -162,8 +162,14 @@ const createCourse = async (req, res, next) => {
                                     options: task.options,
                                     correctAnswers: task.correctAnswers
                                 });
+                            } else if (tasktype === "coding") {
+                                // For coding tasks, get the wanted information from the object
+                                answer = JSON.stringify({
+                                    starterCode: task.starterCode,
+                                    testCases: task.testCases
+                                })
                             } else {
-                                // For essay, coding, and drawing tasks, just store the answer text
+                                // For essay and drawing tasks, just store the answer text
                                 answer = task.answer || "";
                             }
 

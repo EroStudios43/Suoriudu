@@ -91,7 +91,9 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             extensions={[javascript()]} 
             readOnly={true}
           />
+          
           <br />
+          <p className="float-end ms-3">{task.student_points || "Ei arvioitu"} / {task.full_points}p</p>
         </div>
         <br />
         <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
@@ -304,12 +306,14 @@ function TaskResults() {
     // Check that user has access token
     if (!user || !user.access_token) {
       console.log("User data or token missing")
+      navigate("/home")
       return null
     }
 
     // Check that the other needed variables are defined
     if (!idexercise) {
       console.log("Needed variables missing from request")
+      navigate("/home")
       return null
     }
 
@@ -341,6 +345,7 @@ function TaskResults() {
       console.log("Error fetching exercise results: ", error.response?.data || error.message)
       if (error.status === 404) {
         console.log("Course not found. Navigating to home page.")
+        navigate("/home")
       }
     } 
   }, [user?.access_token, idexercise])
@@ -567,7 +572,7 @@ function TaskResults() {
 
           if (student_points === 0) {
             progressClass = "text-danger"
-          } else if (full_points != null && student_points === full_points) {
+          } else if (full_points != null && Number(student_points) === Number(full_points)) {
             progressClass = "text-success"
           } else if (student_points > 0) {
             progressClass = "text-warning"
