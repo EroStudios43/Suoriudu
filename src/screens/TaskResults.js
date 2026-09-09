@@ -69,7 +69,9 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             extensions={[javascript()]} 
             readOnly={true}
           />
+          
           <br />
+          <p className="float-end ms-3">{task.student_points || "Ei arvioitu"} / {task.full_points}p</p>
         </div>
         <br />
         <div className="chat-text inline" onClick={(e) => {setShowCommentBox(true); setChosenTask(task.idtask)}}>Ongelmia tehtävässä?<i className="fa-regular fa-message chat-icon"></i>
@@ -540,7 +542,7 @@ function TaskResults() {
 
           if (student_points === 0) {
             progressClass = "text-danger"
-          } else if (full_points != null && student_points === full_points) {
+          } else if (full_points != null && Number(student_points) === Number(full_points)) {
             progressClass = "text-success"
           } else if (student_points > 0) {
             progressClass = "text-warning"

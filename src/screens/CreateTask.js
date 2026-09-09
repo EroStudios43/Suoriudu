@@ -4,6 +4,8 @@ import "./styles/createTask.css";
 import { useNavigate } from "react-router-dom"
 import { useLocation } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -80,6 +82,18 @@ function CreateTask() {
       };
     }
 
+    if (task.type === "coding") {
+      let parsedCodeData = JSON.parse(task.answer)
+
+      return {
+        instructions: task.instructions || task.question || "",
+        type: task.type,
+        starterCode: parsedCodeData.starterCode,
+        testCases: parsedCodeData.testCases,
+        points: task.points ?? 1
+      }
+    }
+
     return {
       instructions: task.instructions || task.question || "",
       type: task.type || task.tasktype || "essay",
@@ -110,6 +124,7 @@ function CreateTask() {
       setEndTime(toDateTimeLocal(editExercise.end_time) || "");
       setAllowLateSubmissions(!!editExercise.allow_late_submissions);
 
+      console.log(editExercise.tasks.map((task) => normalizeTaskFromBackend(task)))
       if (editExercise.tasks) {
         setTasks(editExercise.tasks.map((task) => normalizeTaskFromBackend(task)));
       }
@@ -140,6 +155,160 @@ function CreateTask() {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [isDirty]);
 
+  const addTestcase = (taskIndex) => {
+    setTasks(prev => 
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task
+
+        if (task?.testCases) {
+          return {
+            ...task,
+            testCases: [...task.testCases, {}]
+          }
+        } else {
+          return {
+            ...task,
+            testCases: [{}]
+          }
+        }
+        
+      })
+    )
+  }
+
+  const deleteTestcase = (taskIndex, testcaseIndex) => {
+    setTasks(prev =>
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task;
+        const newTestcases = task.testCases.filter((_, idx) => idx !== testcaseIndex);
+        return {...task, testCases: newTestcases};
+      })
+    );
+  };
+
+  const addTestcaseInput = (taskIndex, testcaseIndex) => {
+    setTasks(prev =>
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task;
+
+        // Get the test cases from the task
+        const testCases = task.testCases || []
+
+        // Update the input if the test case exists
+        if (testCases[testcaseIndex]) {
+          // Make a new variable for test cases that are updated
+          const updatedTestCases = [...testCases]
+
+          // Update the test case with the index we want to update
+          updatedTestCases[testcaseIndex] = {
+            ...updatedTestCases[testcaseIndex],
+            input: [...(updatedTestCases[testcaseIndex].input || []), ""]
+          }
+
+          return { ...task, testCases: updatedTestCases }
+        }
+
+        // If test case doesn't exist, return task
+        return task
+      })
+    );
+  }
+
+  const deleteTestcaseInput = (taskIndex, testcaseIndex, testcaseInputIndex) => {
+    setTasks(prev =>
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task;
+
+        // Get the test cases from the task
+        const testCases = task.testCases || []
+
+        // Update the input if the test case exists
+        if (testCases[testcaseIndex]) {
+          // Make a new variable for test cases that are updated
+          const updatedTestCases = [...testCases]
+
+          // Update the test case with the index we want to update
+          updatedTestCases[testcaseIndex] = {
+            ...updatedTestCases[testcaseIndex],
+            input: [...(updatedTestCases[testcaseIndex].input.filter((_, idx) => idx !== testcaseInputIndex))]
+          }
+
+          return { ...task, testCases: updatedTestCases }
+        }
+
+        // If test case doesn't exist, return task
+        return task
+      })
+    );
+  }
+
+  const updateTestcaseInput = (taskIndex, testcaseIndex, testcaseInputIndex, value) => [
+    setTasks(prev => 
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task
+        // Get the test cases from the task
+        const testCases = task.testCases || []
+
+        // Update the input if the test case exists
+        if (testCases[testcaseIndex]) {
+          // Make a new variable for test cases that are updated
+          const updatedTestCases = [...testCases]
+
+          // Get the test case's input options
+          const newInputs = [...testCases[testcaseIndex].input]
+          newInputs[testcaseInputIndex] = detectDatatype(value)
+
+          // Update the inputs into the updatedTestCases
+          updatedTestCases[testcaseIndex] = {
+            ...updatedTestCases[testcaseIndex],
+            input: newInputs
+          }
+
+          return { ...task, testCases: updatedTestCases }
+        }
+      })
+    )
+  ]
+
+  const updateTestcaseFunctionname = (taskIndex, testcaseIndex, value) => {
+    setTasks(prev => 
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task
+
+        // Get the test cases from the task
+        const testCases = task.testCases || []
+
+        const updatedTestcases = [...testCases]
+
+        updatedTestcases[testcaseIndex] = {
+          ...updatedTestcases[testcaseIndex],
+          functionName: value
+        }
+
+        return { ...task, testCases: updatedTestcases}
+      })
+    )
+  }
+
+  const updateTestcaseOutput = (taskIndex, testcaseIndex, value) => {
+    setTasks(prev => 
+      prev.map((task, i) => {
+        if (i !== taskIndex) return task
+
+        // Get the test cases from the task
+        const testCases = task.testCases || []
+
+        const updatedTestcases = [...testCases]
+
+        updatedTestcases[testcaseIndex] = {
+          ...updatedTestcases[testcaseIndex],
+          expectedOutput: detectDatatype(value)
+        }
+
+        return { ...task, testCases: updatedTestcases}
+      })
+    )
+  }
 
   const addOption = (taskIndex) => {
     setTasks(prev =>
@@ -229,6 +398,31 @@ function CreateTask() {
     );
   };
 
+  const detectDatatype = (value) => {
+    // Empty input
+    if (value.trim() === "") return ""
+
+    // Number with regex
+    if (/^-?\d+(\.\d+)?$/.test(value)) {
+      return Number(value);
+    }
+
+    // Null value
+    if (value === "null") return null
+
+    // JSON objects and arrays
+    if (value.startsWith("{") || value.startsWith("[")) {
+      try {
+        return JSON.parse(value);
+      } catch {
+        // If JSON is invalid, just make it string
+      }
+    }
+
+    // String (default)
+    return value
+  }
+
   const normalizeTasksForBackend = () => tasks.map((task) => {
     if (task.type === "choice") {
       return {
@@ -243,6 +437,18 @@ function CreateTask() {
       };
     }
 
+    if (task.type === "coding") {
+      return {
+        tasktype: task.type,
+        question: task.instructions || "",
+        answer: JSON.stringify({
+          starterCode: task.starterCode,
+          testCases: task.testCases,
+        }),
+        points: task.points ?? null
+      }
+    }
+
     return {
       tasktype: task.type || "essay",
       question: task.instructions || "",
@@ -255,7 +461,6 @@ function CreateTask() {
   const createTask = async () => {
     if (!validateExercise()) return;
 
-
     const exercise = {
       id: editExercise?.id || Date.now(),
       exercise_name: taskName,
@@ -267,9 +472,6 @@ function CreateTask() {
       tasks,
     };
     console.log(exercise.exercise_type)
-
-
-
     
     if (source === "weekOverview" && weekIndex && courseId && user?.access_token) {
         try {
@@ -568,7 +770,7 @@ function CreateTask() {
                   Essee
                 </button>
 
-                <button onClick={() => updateTask(taskIndex, {...task, type: "coding"})}>
+                <button onClick={() => updateTask(taskIndex, {...task, type: "coding", testCases: [{functionName: "", input: [""], expectedOutput: ""}]})}>
                   Ohjelmointi
                 </button>
 
@@ -667,18 +869,80 @@ function CreateTask() {
             )}
 
             {task.type === "coding" && (
-              <textarea
-                className="large-answer-input"
-                placeholder="Kirjoita ohjelmointitehtävän kuvaus..."
-                value={task.answer}
-                onChange={(e) => {
-                  const updatedTask = {
-                    ...task,
-                    answer: e.target.value
-                  };
-                  updateTask(taskIndex, updatedTask);
-                }}
-              />
+              <>
+              {console.log(task)}
+                <br />
+                <p><b>Opiskelijalle annettava esimerkkikoodi</b></p>
+                <CodeMirror 
+                  value={task?.starterCode}
+                  extensions={[javascript()]}
+                  onChange={(value) => {
+                    console.log(task)
+                    const updatedTask = {
+                      ...task,
+                      starterCode: value
+                    }
+                    updateTask(taskIndex, updatedTask)
+                  }}
+                />
+                <br />
+                <div className="row g-2">
+                  {task?.testCases && task?.testCases.map((testcase, index) => (
+                    <div key={`${taskIndex}-${index}`} className="col-12 option-card">
+                      <h5>Testitapaus {index + 1}</h5>
+                      <input 
+                        type="text" 
+                        placeholder="Testattavan funktion nimi: esim. add, subtract"
+                        value={testcase?.functionName}
+                        className="form-control"
+                        onChange={(e) => updateTestcaseFunctionname(taskIndex, index, e.target.value)}
+                      />
+                      <p><b>Funktion testattavat input-arvot (parametrit)</b></p>
+                      <div className="row row-cols-4 gy-2 gx-1">
+                        {testcase?.input && testcase?.input.map((input, inputIndex) => (
+                          <div className="col">
+                            <div>
+                              <input 
+                                type="text"
+                                placeholder={`Input-arvo ${inputIndex + 1}:`}
+                                value={input}
+                                className="form-control d-inline"
+                                onChange={(e) => updateTestcaseInput(taskIndex, index, inputIndex, e.target.value)}
+                              />
+                              <button className="delete-option-btn d-inline" onClick={() => deleteTestcaseInput(taskIndex, index, inputIndex)}>
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="add-option-wrapper">
+                        <button className="add-option-btn" onClick={() => addTestcaseInput(taskIndex, index)}>+ Lisää funktion input-arvo</button>
+                      </div>
+                      <p><b>Funktion odotettu output-arvo</b></p>
+                      <input 
+                        type="text" 
+                        placeholder="Output-arvo"
+                        value={testcase?.expectedOutput}
+                        className="form-control"
+                        onChange={(e) => updateTestcaseOutput(taskIndex, index, e.target.value)}
+                      />
+                      <br />
+                      <button className="delete-option-btn" onClick={() => deleteTestcase(taskIndex, index)}>
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="add-option-wrapper">
+                  <button
+                    className="add-option-btn"
+                    onClick={() => addTestcase(taskIndex)}
+                  >
+                  + Lisää testitapaus
+                  </button>
+                </div>
+              </>
             )}
 
             {task.type === "drawing" && (

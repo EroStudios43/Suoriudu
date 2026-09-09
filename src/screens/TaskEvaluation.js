@@ -6,6 +6,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
 import { getReviewDisplayName } from "../utils/reviewSelection.js";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -24,6 +26,9 @@ function TaskEvaluation({ isExamMode = false }) {
   const [tasks, setTasks] = useState([]);
   const [saving, setSaving] = useState(false);
   const commentMessagesRef = useRef(null);
+
+  // Variables for coding exercises
+  const [ codeRunResult, setCodeRunResult ] = useState({})
 
   const [commentModal, setCommentModal] = useState({
     open: false,
@@ -545,9 +550,55 @@ const handleSendComment = async () => {
     commentModal.comments,
   ]);
 
+  const runAndCheckCode = (code, testCases) => {
+    const worker = new Worker(new URL('../workers/codeworker.js', import.meta.url));
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        worker.terminate();
+        resolve([{ name: 'Timeout', passed: false, error: 'Execution took too long' }]);
+      }, 3000);
 
+      worker.onmessage = (e) => {
+        clearTimeout(timer);
+        worker.terminate();
+        resolve(e.data);
+      };
+      worker.postMessage({ code, testCases });
+    });
+  }
 
+  const handleCodeRun = async (task) => {
+    const task_code_data = JSON.parse(task.exampleAnswer)
+    const student_code = task.studentAnswer || task_code_data.starterCode
+    const test_cases = task_code_data.testCases
+    const results = await runAndCheckCode(student_code, test_cases)
+    setCodeRunResult((prev) => ({ ...prev, [task.idtask]: results }));
+  }
 
+  // Function for rendering coding exercise test results
+  const TestResults = ({ results }) => {
+    const passedCount = results.filter((r) => r.passed).length;
+
+    return (
+      <div>
+        <p>{passedCount} / {results.length} tests passed</p>
+        <ul>
+          {results.map((r, i) => (
+            <li key={i} style={{ color: r.passed ? 'green' : 'red' }}>
+              {r.passed ? <i className="fa-solid fa-check"></i> : <i className="fa-solid fa-xmark"></i>} {r.name}
+              {!r.passed && (
+                <span>
+                  {r.error
+                    ? ` — Error: ${r.error}`
+                    : ` — expected ${JSON.stringify(r.expected)}, got ${JSON.stringify(r.actual)}`}
+                </span>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   return (
     <div className="task-page">
@@ -600,7 +651,7 @@ const handleSendComment = async () => {
                     {task.instruction || "Tehtävänanto"}
                   </p>
 
-                  {task.type !== "choice" && task.exampleAnswer ? (
+                  {task.type !== "choice" && task.type !== "coding" && task.exampleAnswer ? (
                     <div className="option-card example-answer-card">
                       <strong>Esimerkkivastaus</strong>
                       <div>{task.exampleAnswer}</div>
@@ -668,6 +719,22 @@ const handleSendComment = async () => {
                           })}
                         </div>
                       </div>
+                    ) : (task.type === "coding") ? (
+                      <>
+                        <CodeMirror 
+                          value={task.studentAnswer} 
+                          extensions={[javascript()]} 
+                          readOnly={true}
+                        />
+
+                        <hr />
+                        <div>
+                          {codeRunResult[task.idtask] && <TestResults results={codeRunResult[task.idtask]} />}
+                        </div>
+                        <hr />
+                        <div className="btn btn-submit float-end" onClick={() => handleCodeRun(task)}>Suorita koodi</div>
+                        <br />
+                      </>
                     ) : (
                       <div>
                         <div className="student-answer-label">
