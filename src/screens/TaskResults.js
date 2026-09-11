@@ -16,7 +16,23 @@ const url = process.env.REACT_APP_API_URL
 
 // The function to render all task boxes.
 const RenderTask = React.memo(({task, index, correct_answer, student_answer, setShowCommentBox, setChosenTask, previousComments, uid})  => {
-  if (task.tasktype === "essay" || task.tasktype === "drawing") {
+  if (task.tasktype === "drawing") {
+    return (
+      <>
+        <div id={`scrollspy-section${task.idtask}`} className="col single-task">
+          <p className="mb-0"><b>Tehtävä {index + 1} (Piirros)</b></p>
+          <p>{task.question}</p>
+          
+          {student_answer ? (
+            <DrawingReview key={student_answer} json={student_answer} />
+          ) : (
+            <p className="text-muted fs-6"><i>Opiskelija ei jättänyt piirrosta.</i></p>
+          )}
+        </div>
+        <hr />
+      </>
+    );
+  } else if (task.tasktype === "essay") {
     const studentAnswer = student_answer
     return (
       <>
@@ -64,22 +80,6 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
       </>
     )
 
-  } else if (task.tasktype === "drawing") {
-    return (
-      <>
-        <div id={`scrollspy-section${task.idtask}`} className="col single-task">
-          <p className="mb-0"><b>Tehtävä {index + 1} (Piirros)</b></p>
-          <p>{task.question}</p>
-          
-          {student_answer ? (
-            <DrawingReview key={student_answer} json={student_answer} />
-          ) : (
-            <p className="text-muted fs-6"><i>Opiskelija ei jättänyt piirrosta.</i></p>
-          )}
-        </div>
-        <hr />
-      </>
-    );
   } else if (task.tasktype === "coding") {
     return (
       <>
