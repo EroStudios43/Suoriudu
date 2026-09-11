@@ -13,6 +13,7 @@ import selainkuva1 from "../pictures/selainkuva1.png"
 import selainkuva2 from "../pictures/selainkuva2.png"
 
 import { useTheme } from "../context/ThemeContext.js";
+import GazeTracker from "../components/GazeTracker.js";
 
 
 const url = process.env.REACT_APP_API_URL
@@ -37,6 +38,7 @@ function ExamLobby () {
   // Variables for exam form
   const [ studentPass, setStudentPass ] = useState("")
   const [ passwordValid, setPasswordValid ] = useState(true)
+  const [showCameraPreview, setShowCameraPreview] = useState(false)
 
   const { isDarkMode, toggleTheme } = useTheme();
 
@@ -205,6 +207,29 @@ function ExamLobby () {
             </div>
             <div className="col-md-2" />
           </div>
+          <div className="d-flex justify-content-center mt-4">
+            <button type="button" className="btn btn-outline-info" onClick={() => setShowCameraPreview(true)}>
+              <i className="fa-solid fa-camera me-2"></i>Kokeile kameraa
+            </button>
+          </div>
+          {showCameraPreview && (
+            <div className="modal-overlay" onClick={() => setShowCameraPreview(false)}>
+              <div className="modal-dialog" onClick={(event) => event.stopPropagation()}>
+                <div className="modal-header">
+                  <h3>Kameran kokeilu</h3>
+                  <button type="button" className="modal-close" onClick={() => setShowCameraPreview(false)} aria-label="Sulje kameran kokeilu">
+                    <i className="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+                <div className="modal-body">
+                  <p className="mb-3">Tämä on vain esikatselu. Kamerakuvaa tai huomioita ei lähetetä palvelimelle.</p>
+                  <div style={{ position: "relative", minHeight: 280 }}>
+                    <GazeTracker previewOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
       </div>
     );
   }

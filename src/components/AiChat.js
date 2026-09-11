@@ -39,6 +39,16 @@ function parseTaskContent(content) {
       type: ["choice", "essay", "coding", "drawing"].includes(task.type) ? task.type : "essay",
       options: Array.isArray(task.options) && task.options.length >= 2 ? task.options : ["", ""],
       correctAnswers: Array.isArray(task.correctAnswers) ? task.correctAnswers : [],
+      starterCode: task.type === "coding" ? String(task.starterCode || "") : undefined,
+      testCases: task.type === "coding" && Array.isArray(task.testCases)
+        ? task.testCases
+          .filter(testCase => testCase && typeof testCase === "object")
+          .map(testCase => ({
+            functionName: String(testCase.functionName || ""),
+            input: Array.isArray(testCase.input) ? testCase.input : [],
+            expectedOutput: testCase.expectedOutput
+          }))
+        : undefined,
       points: Number(task.points) > 0 ? Number(task.points) : 1
     }))
   };
@@ -112,11 +122,19 @@ Palauta vain validi JSON tässä muodossa:
       "options": ["vaihtoehto 1", "vaihtoehto 2"],
       "correctAnswers": [0],
       "answer": "opettajan mahdolliset vastausohjeet",
+      "starterCode": "function add(a, b) {\\n  // Write your code here\\n}",
+      "testCases": [
+        {
+          "functionName": "add",
+          "input": [2, 3],
+          "expectedOutput": 5
+        }
+      ],
       "points": 1
     }
   ]
 }
-Tee useita tehtäviä, jos pyynnössä niitä pyydetään. Choice-tehtävissä anna vähintään kaksi vaihtoehtoa ja oikeat indeksit correctAnswers-kenttään. Älä lisää markdownia tai selityksiä.`;
+Tee useita tehtäviä, jos pyynnössä niitä pyydetään. Choice-tehtävissä anna vähintään kaksi vaihtoehtoa ja oikeat indeksit correctAnswers-kenttään. Jos tehtävä on coding, täytä aina starterCode ja testCases. starterCodeen kirjoitetaan JavaScript-funktion runko, jonka oppilas täydentää. Jokaisessa testCasessa pitää olla functionName, input-taulukko ja expectedOutput. Käytä samaa functionName-arvoa kuin starterCodeen määritellyllä funktiolla ja anna vähintään kolme mielekästä testiä, mukaan lukien tavallinen, reunatapaus ja negatiivinen tai tyhjä syöte kun ne sopivat tehtävään. Älä lisää markdownia tai selityksiä.`;
 
       const response = await axios.post(`${apiUrl}/ai`, {
         prompt

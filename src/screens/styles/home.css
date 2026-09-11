@@ -12,6 +12,9 @@
     --search-bg: #CFD5E5;
     --search-text: #49454F;
     --shadow-color: rgba(0, 0, 0, 0.4);
+    --modal-bg: #27344d;
+    --modal-overlay-bg: rgba(5, 12, 25, 0.72);
+    --modal-border: rgba(255, 255, 255, 0.14);
 
     --course-color-0: #979DAD;
     --course-color-1: #525D7D;
@@ -41,11 +44,56 @@
     --search-bg: #E2E8F0;
     --search-text: #1E293B;
     --shadow-color: rgba(0, 0, 0, 0.08);
+    --modal-bg: #ffffff;
+    --modal-overlay-bg: rgba(15, 23, 42, 0.35);
+    --modal-border: #dbe3ef;
 
     --course-color-0: #e4f4fd;
     --course-color-1: #b9e5ff;
     --course-color-2: #99d6fc;
     --course-color-3: #98cdee;
+}
+
+.home-container .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--modal-overlay-bg);
+}
+
+.home-container .modal-dialog {
+    width: min(900px, 100%);
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-primary);
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    border-radius: 16px;
+    box-shadow: 0 25px 70px var(--shadow-color);
+}
+
+.home-container .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--modal-border);
+}
+
+.home-container .modal-header h3,
+.home-container .modal-close {
+    color: var(--text-primary);
+}
+
+.home-container .modal-body {
+    overflow: auto;
+    padding: 20px 24px 24px;
 }
 
 .topbar {

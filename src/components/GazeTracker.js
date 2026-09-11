@@ -7,7 +7,7 @@ import { useUser } from "../context/useUser.js";
 
 const url = process.env.REACT_APP_API_URL;
 
-const GazeTracker = ({ idexercise }) => {
+const GazeTracker = ({ idexercise, previewOnly = false }) => {
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
     const { user, updateToken } = useUser();
@@ -96,6 +96,10 @@ const GazeTracker = ({ idexercise }) => {
                 }
             } catch (err) {
                 console.error("Webcam-virhe:", err);
+                if (isMounted) {
+                    setAlertText("Kameran käyttö epäonnistui");
+                    setIsAlert(true);
+                }
             }
         };
 
@@ -209,7 +213,7 @@ const GazeTracker = ({ idexercise }) => {
                             setAlertText(`⚠️ ${userFriendlyMsg.toUpperCase()}!`);
                             setIsAlert(true);
 
-                            if (idexercise) {
+                            if (idexercise && !previewOnly) {
                                 // Lähetetään tietokantaan uusi muotoiltu lista
                                 sendViolationToDb(violations);
                             }
@@ -236,20 +240,20 @@ const GazeTracker = ({ idexercise }) => {
             }
             if (faceLandmarker) faceLandmarker.close();
         };
-    }, [idexercise]);
+    }, [idexercise, previewOnly]);
 
     return (
         /* Renderöinti pysyy samana... */
         <>
             <div 
                 style={{
-                    position: "fixed",
+                    position: previewOnly ? "absolute" : "fixed",
                     top: 0,
                     left: 0,
-                    width: "100vw",
-                    height: "100vh",
+                    width: previewOnly ? "100%" : "100vw",
+                    height: previewOnly ? "100%" : "100vh",
                     pointerEvents: "none",
-                    zIndex: 2000,
+                    zIndex: previewOnly ? 1 : 2000,
                     boxShadow: isAlert ? "inset 0 0 100px 30px rgba(255, 0, 0, 0.7)" : "none",
                     backgroundColor: isAlert ? "rgba(255, 0, 0, 0.08)" : "transparent",
                     transition: "all 0.2s ease-in-out",
@@ -295,8 +299,8 @@ const GazeTracker = ({ idexercise }) => {
                     </>
                 )}
             </div>
-            <div style={{ position: "fixed", bottom: "20px", right: "20px", zIndex: 2001 }}>
-                <div className="gaze-tracker-card p-3 bg-dark text-white rounded-3 shadow-lg border border-secondary" style={{ width: "320px", fontSize: "0.85rem" }}>
+            <div style={{ position: previewOnly ? "relative" : "fixed", bottom: previewOnly ? "auto" : "500px", right: previewOnly ? "auto" : "20px", zIndex: previewOnly ? 2 : 2001, width: previewOnly ? "100%" : "auto" }}>
+                <div className="gaze-tracker-card p-3 bg-dark text-white rounded-3 shadow-lg border border-secondary" style={{ width: previewOnly ? "100%" : "320px", fontSize: "0.85rem" }}>
                     <div className="position-relative rounded overflow-hidden" style={{ width: "100%", height: "210px", backgroundColor: "#000" }}>
                         <video ref={videoRef} autoPlay playsInline muted style={{ width: "100%", height: "100%", transform: "scaleX(-1)", objectFit: "cover" }} />
                         <canvas ref={canvasRef} className="position-absolute top-0 start-0" style={{ width: "100%", height: "100%", transform: "scaleX(-1)", objectFit: "cover" }} />

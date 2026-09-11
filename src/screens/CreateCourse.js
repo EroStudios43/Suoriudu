@@ -73,6 +73,7 @@ function CreateCourse() {
   const [isCreating, setIsCreating] = useState(false);
   const [usersFetched, setUsersFetched] = useState(false);
   const [showSelectedModal, setShowSelectedModal] = useState(false);
+  const [csvMessage, setCsvMessage] = useState("");
 
 
   //save info to localsrorage
@@ -328,8 +329,10 @@ function CreateCourse() {
       const res = await axios.get(url + "/users");
       setUsersList(res.data || []);
       setUsersFetched(true);
+      return res.data || [];
     } catch (err) {
       console.error('Failed to fetch users', err);
+      return [];
     }
   }
 
@@ -348,6 +351,30 @@ function CreateCourse() {
       });
     }
   }
+
+  const handleStudentCsv = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    let availableUsers = usersList;
+    if (!usersFetched) {
+      const response = await fetchAllUsers();
+      availableUsers = response || usersList;
+    }
+
+    const emails = [...new Set(
+      (await file.text())
+        .split(/[\r\n,;]+/)
+        .map(value => value.trim().replace(/^"|"$/g, "").toLowerCase())
+        .filter(Boolean)
+    )];
+    const matchedUsers = availableUsers.filter(person => emails.includes(person.email?.trim().toLowerCase()));
+    const alreadySelected = matchedUsers.filter(person => students.some(student => student.iduser === person.iduser)).length;
+    const missingCount = emails.length - matchedUsers.length;
+    matchedUsers.forEach(addStudent);
+    setCsvMessage(`${matchedUsers.length - alreadySelected} lisätty, ${alreadySelected} oli jo valittu${missingCount > 0 ? `, ${missingCount} sähköpostia ei löytynyt` : ""}.`);
+  };
 
   const removeStudent = (iduser) => {
     setStudents(prev => prev.filter(s => s.iduser !== iduser));
@@ -422,6 +449,13 @@ function CreateCourse() {
                   autoFocus
                   onChange={(e) => setUserSearchQuery(e.target.value)}
                 />
+
+                <label className="csv-upload-button">
+                  <i className="fa-solid fa-file-csv me-2"></i>
+                  Lisää CSV-tiedostosta
+                  <input type="file" accept=".csv,text/csv" onChange={handleStudentCsv} hidden />
+                </label>
+                {csvMessage && <p className="csv-message" role="status">{csvMessage}</p>}
 
                 {userSearchQuery.trim().length === 0 ? (
                   <p className="empty-message">Aloita kirjoittamalla nimi</p>

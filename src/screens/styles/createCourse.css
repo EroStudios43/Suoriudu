@@ -17,6 +17,9 @@
     --popup-bg: rgba(0, 0, 0, 0.7);
     --popup-border: #444444;
     --roster-row-bg: rgba(43, 56, 91, 0.9);
+    --modal-bg: #27344d;
+    --modal-overlay-bg: rgba(5, 12, 25, 0.72);
+    --modal-border: rgba(255, 255, 255, 0.14);
 
     min-height: 100vh;
     background-color: var(--bg-main);
@@ -45,9 +48,82 @@
     --popup-bg: rgba(255, 255, 255, 0.95);
     --popup-border: #cbd5e1;
     --roster-row-bg: rgba(255, 255, 255, 0.85);
+    --modal-bg: #ffffff;
+    --modal-overlay-bg: rgba(15, 23, 42, 0.35);
+    --modal-border: #dbe3ef;
 
     
 
+}
+
+.createCourse-container .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: var(--modal-overlay-bg);
+}
+
+.createCourse-container .modal-dialog {
+    width: min(700px, 100%);
+    max-height: calc(100vh - 80px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    color: var(--text-primary);
+    background: var(--modal-bg);
+    border: 1px solid var(--modal-border);
+    border-radius: 16px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+}
+
+.createCourse-container .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    background: var(--modal-bg);
+    border-bottom: 1px solid var(--modal-border);
+}
+
+.createCourse-container .modal-header h3,
+.createCourse-container .modal-close {
+    color: var(--text-primary);
+}
+
+.createCourse-container .modal-body {
+    overflow: auto;
+    padding: 20px 24px 24px;
+    background: var(--modal-bg);
+}
+
+.createCourse-container .search-row,
+.createCourse-container .roster-row {
+    background: var(--roster-row-bg);
+    border: 1px solid var(--modal-border);
+}
+
+.csv-upload-button {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    background: var(--card-bg);
+    cursor: pointer;
+}
+
+.csv-upload-button:hover {
+    background: var(--card-hover-bg);
+}
+
+.csv-message {
+    margin: 10px 0 0;
+    color: var(--text-secondary);
 }
 
 .topbar {
