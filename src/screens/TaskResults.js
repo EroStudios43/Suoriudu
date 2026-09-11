@@ -16,7 +16,7 @@ const url = process.env.REACT_APP_API_URL
 
 // The function to render all task boxes.
 const RenderTask = React.memo(({task, index, correct_answer, student_answer, setShowCommentBox, setChosenTask, previousComments, uid})  => {
-  if (task.tasktype === "essay" || task.tasktype === "drawing") {
+  if (task.tasktype === "essay") {
     const studentAnswer = student_answer
     return (
       <>
@@ -607,7 +607,7 @@ function TaskResults() {
 
   if (user.role === "student" || user.role === "teacher") {
     return (
-      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
+      <div className={`coursepage container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
          <div className="row">
             <div className="col-md-1" />
             { /* White box for page content */}
