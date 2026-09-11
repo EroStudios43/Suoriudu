@@ -43,7 +43,7 @@ const RenderTask = React.memo(({task, index, answers, setAnswers, setShowComment
   const taskDrawingState = drawingStates[task.idtask];
   const lines = Array.isArray(taskDrawingState?.lines) ? taskDrawingState.lines : [];
 
-  if (task.tasktype === "essay" || task.tasktype === "coding") {
+  if (task.tasktype === "essay") {
 
     return (
       <>
@@ -699,7 +699,7 @@ function TaskQuestions() {
 
   if (user?.role === "student" || user?.role === "teacher") {
     return (
-      <div className={`container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
+      <div className={`coursepage container-fluid min-vh-100 exercises-container ${isDarkMode ? '' : 'light-theme'}`}>
           <div className="row">
             <div className="col-md-1" />
             { /* White box for page content */}
