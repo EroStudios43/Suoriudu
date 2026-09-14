@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "../context/useUser.js";
 import { normalizeChoiceSelection } from "../utils/choiceSelection.js";
 import { getReviewDisplayName } from "../utils/reviewSelection.js";
+import { normalizeTeacherPoints } from "../utils/pointValidation.js";
 import CodeMirror from "@uiw/react-codemirror";
 import { javascript } from "@codemirror/lang-javascript";
 import DrawingReview from "../components/DrawingReview.js";
@@ -199,27 +200,53 @@ function TestEvaluation() {
 };
 
   const handleAiEvaluateAll = async () => {
-    const essayTasks = tasks
-      .map((task, index) => ({ task, index, studentAnswer: formatStudentAnswer(task) }))
-      .filter(({ task, studentAnswer }) =>
-        task.type === "essay" && studentAnswer && studentAnswer !== "Ei vastausta"
-      );
-
-    if (essayTasks.length === 0) {
-      alert("Kokeessa ei ole arvioitavia esseetehtäviä.");
-      return;
-    }
-
-    try {
-      setEvaluatingAll(true);
-      const results = await Promise.all(essayTasks.map(async ({ task, index, studentAnswer }) => {
-        const response = await axios.post(`${url}/ai/evaluate`, {
+    const evaluableTasks = tasks
+      .map((task, index) => {
+        const studentAnswer = formatStudentAnswer(task);
+        let payload = {
           type: task.type,
           question: task.instruction,
           studentAnswer,
           exampleAnswer: task.exampleAnswer,
           maxPoints: getMaxPoints(task),
-        }, { headers: { Authorization: `Bearer ${user.access_token}` } });
+        };
+
+        if (task.type === "coding") {
+          try {
+            const parsedExample = typeof task.exampleAnswer === "string" ? JSON.parse(task.exampleAnswer) : task.exampleAnswer || {};
+            payload = {
+              ...payload,
+              starterCode: typeof parsedExample?.starterCode === "string" ? parsedExample.starterCode : "",
+              testCases: Array.isArray(parsedExample?.testCases) ? parsedExample.testCases : [],
+            };
+          } catch (error) {
+            payload = { ...payload, starterCode: "", testCases: [] };
+          }
+        }
+
+        return { task, index, studentAnswer, payload };
+      })
+      .filter(({ task, studentAnswer, payload }) => {
+        if (task.type === "essay") {
+          return studentAnswer && studentAnswer !== "Ei vastausta";
+        }
+
+        if (task.type === "coding") {
+          return Boolean(studentAnswer && studentAnswer !== "Ei vastausta") || Boolean(payload.starterCode);
+        }
+
+        return false;
+      });
+
+    if (evaluableTasks.length === 0) {
+      alert("Kokeessa ei ole arvioitavia essee- tai ohjelmointitehtäviä.");
+      return;
+    }
+
+    try {
+      setEvaluatingAll(true);
+      const results = await Promise.all(evaluableTasks.map(async ({ task, index, payload }) => {
+        const response = await axios.post(`${url}/ai/evaluate`, payload, { headers: { Authorization: `Bearer ${user.access_token}` } });
 
         return { index, points: response.data.points, comment: response.data.comment };
       }));
@@ -231,7 +258,7 @@ function TestEvaluation() {
           : task;
       }));
     } catch (error) {
-      console.error("AI essay evaluation failed", error);
+      console.error("AI evaluation failed", error);
       alert(error.response?.data?.error || "AI-arviointi epäonnistui.");
     } finally {
       setEvaluatingAll(false);
@@ -396,7 +423,6 @@ function TestEvaluation() {
             className="fa-regular fa-circle-left back-arrow"
             onClick={handleBack}          
           ></i>
-          <h1>{exercise?.exercise_name || "Kokeen arviointi"}</h1>
           <div className="evaluation-header-actions">
             <button className="save-btn" type="button" onClick={handleAiEvaluateAll} disabled={evaluatingAll || saving || loading}>
               {evaluatingAll ? "AI arvioi koetta..." : "Arvioi koko koe tekoälyllä"}
@@ -583,7 +609,7 @@ function TestEvaluation() {
                       type="number"
                       min="0"
                       max={getMaxPoints(task)}
-                      step="any"
+                      step="0.5"
                       value={getTaskPoints(task)}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -597,20 +623,17 @@ function TestEvaluation() {
                           return;
                         }
 
-                        let points = Number(value);
                         const maxPoints = getMaxPoints(task);
+                        const parsedValue = Number(value);
 
-                        if (!Number.isFinite(points)) {
+                        if (!Number.isFinite(parsedValue)) {
                           return;
                         }
-
-                        points = Math.max(0, points);
-                        points = Math.min(points, maxPoints);
 
                         updateTaskField(
                           index,
                           "teacherPoints",
-                          points
+                          normalizeTeacherPoints(parsedValue, maxPoints)
                         );
                       }}
                       className="points-input"
