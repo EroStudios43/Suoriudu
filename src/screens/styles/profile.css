@@ -1,0 +1,455 @@
+.profile-container {
+    --bg-color: #f5f5f5;
+    --text-color: #222222;
+    --card-color: #ffffff;
+    --border-color: #dddddd;
+    --input-bg: #ffffff;
+
+    min-height: 100vh;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    padding: 30px;
+
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* DARK THEME */
+.profile-container.dark {
+    --bg-color: #1D283A;
+    --text-color: white;
+    --card-color: #243248;
+    --border-color: #3a475c;
+    --input-bg: #243248;
+}
+
+/* LIGHT THEME */
+.profile-container.light {
+    --bg-color: #f5f5f5;
+    --text-color: #222222;
+    --card-color: #ffffff;
+    --border-color: #dddddd;
+    --input-bg: #ffffff;
+}
+.profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start
+}
+
+.settings-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 2rem;
+    font-weight: 600;
+}
+
+.settings-title i {
+    font-size: 2rem;
+}
+
+.profile-picture {
+    position: relative;
+}
+
+.profilepic-icon {
+    font-size: 250px;
+    color: #d8cdea;
+}
+
+.edit-profile-icon {
+    position: absolute;
+    bottom: 25px;
+    right: 20px;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.settings-right {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.theme-switch {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.languages {
+    font-size: 2rem;
+}
+
+.password-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+}
+
+.profile-info {
+    margin-top: 40px;
+
+    display: grid;
+    grid-template-columns: repeat(2, 250px);
+
+    gap: 25px 80px;
+
+    justify-content: center; 
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 1.4rem;
+}
+
+.info-item i {
+    cursor: pointer;
+}
+.back-btn {
+    margin-top: 50px;
+    padding: 10px 20px;
+    color: var(--text-color);
+    background-color: transparent;
+    font-size: 30px;
+    font-weight:bold;
+
+    border: none;
+    border-radius: 8px;
+
+    cursor: pointer;
+}
+
+.input-group{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.save-btn{
+    display:block;
+    margin:40px auto 0;
+    padding:10px 30px;
+    cursor:pointer;
+    background-color: transparent !important;
+    color: var(--text-color) !important;
+    font-weight: bold;
+}
+
+
+/* This is for the cool theme switch*/
+.sky {
+    width: 90px;
+    height: 40px;
+    border-radius: 999px;
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    transition: 0.5s;
+}
+
+.light {
+    background: linear-gradient(#4facfe, #7ed6ff);
+}
+
+.night {
+    background: linear-gradient(#010e2e,#04133b);
+}
+
+.sun {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgb(255, 255, 98);
+    position: absolute;
+    left: 12px;
+    top: 10px;
+    transition: 0.5s;
+}
+
+.rays {
+    position: absolute;
+    width: 34px;
+    height: 34px;
+    top: -6px;
+    left: -6px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 215, 0, 0.7);
+    animation: spin 7s linear infinite;
+    opacity: 1;
+}
+
+.night .sun {
+    transform: translateX(50px) scale(1);
+    opacity: 0;
+}
+
+.moon {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    right: 5px;
+    top: 3px;
+    opacity: 0;
+    transition: 0.5s;
+    overflow: hidden;
+}
+.crater {
+  position: absolute;
+  background: rgb(83, 83, 83);
+  border-radius: 50%;
+}
+.c1 {
+  width: 9px;
+  height: 9px;
+  top: 6px;
+  left: 5px;
+  opacity: 0.8;
+}
+
+.c2 {
+  width: 7px;
+  height: 7px;
+  top: 14px;
+  left: 4px;
+  opacity: 0.6;
+}
+
+.c3 {
+  width: 12px;
+  height: 12px;
+  top: 6px;
+  left: -3px;
+  opacity: 0.5;
+}
+.c4 {
+  width: 5px;
+  height: 5px;
+  top: 3.5px;
+  left: 14px;
+  opacity: 0.7;
+}
+
+.c5 {
+  width: 4px;
+  height: 4px;
+  top: 21px;
+  left: 5px;
+  opacity: 0.9;
+}
+
+.c6 {
+  width: 5px;
+  height: 5px;
+  top: 18px;
+  left: 11px;
+  opacity: 0.7;
+}
+
+.c7 {
+  width: 3px;
+  height: 3px;
+  top: 25px;
+  left: 10px;
+  opacity: 0.5;
+}
+
+.c8 {
+  width: 14px;
+  height: 14px;
+  top: 15.5px;
+  left: 2px;
+  opacity: 0.3;
+}
+.c9 {
+  width: 5px;
+  height: 5px;
+  top: 7px;
+  left: 20.5px;
+  opacity: 0.8;
+}
+
+.c10 {
+  width: 3.5px;
+  height: 3.5px;
+  top: 23.4px;
+  left: 2.3px;
+  opacity: 0.9;
+}
+.c11 {
+  width: 13px;
+  height: 13px;
+  top: 1.5px;
+  left: 12px;
+  opacity: 0.2;
+}
+.c12 {
+  width: 3px;
+  height: 3px;
+  top: 12px;
+  left: 26px;
+  opacity: 0.7;
+
+}.c13{
+  width: 3px;
+  height: 3px;
+  top: 13px;
+  left: 21.5px;
+}.c14 {
+  width: 3px;
+  height: 3px;
+  top: 19px;
+  left: 26px;
+  opacity: 0.9;
+}
+
+.night .moon {
+    opacity: 1;
+}
+
+.stars span {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0;
+    transition: 0.4s;
+}
+
+.stars span:nth-child(1) {
+    width: 9px;
+    height: 9px;
+
+    clip-path: polygon(
+        50% 0%,
+        60% 40%,
+        100% 50%,
+        60% 60%,
+        50% 100%,
+        40% 60%,
+        0% 50%,
+        40% 40%
+    );
+    top: 10px;
+    left: 12px;
+}
+
+.stars span:nth-child(2) {
+    top: 30px;
+    left: 18px;
+
+    clip-path: polygon(
+        50% 0%,
+        60% 40%,
+        100% 50%,
+        60% 60%,
+        50% 100%,
+        40% 60%,
+        0% 50%,
+        40% 40%
+    );
+
+    width: 6px;
+    height: 6px;
+    }
+
+.stars span:nth-child(3) {
+    top: 17px;
+    left: 27px;
+
+    clip-path: polygon(
+        50% 0%,
+        60% 40%,
+        100% 50%,
+        60% 60%,
+        50% 100%,
+        40% 60%,
+        0% 50%,
+        40% 40%
+    );
+    
+    width: 12px;
+    height: 13px;
+}
+.stars span:nth-child(4) {
+    top: 25px;
+    left: 42px;
+    clip-path: polygon(
+        50% 0%,
+        60% 40%,
+        100% 50%,
+        60% 60%,
+        50% 100%,
+        40% 60%,
+        0% 50%,
+        40% 40%
+    ); 
+
+    width: 8px;
+    height: 8px;
+}
+.stars span:nth-child(5) {
+    top: 6px;
+    left: 35px;
+    clip-path: polygon(
+        50% 0%,
+        60% 40%,
+        100% 50%,
+        60% 60%,
+        50% 100%,
+        40% 60%,
+        0% 50%,
+        40% 40%
+    );
+
+    width: 7px;
+    height: 7px;
+}
+
+.night .stars span {
+    opacity: 1;
+}
+
+
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes twinkle {
+    0% { transform: scale(1); opacity: 0.3; }
+    50% { transform: scale(1.4); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.3; }
+}
+
+.night .star-1 {
+  opacity: 1;
+  animation: twinkle 1.8s infinite ease-in-out;
+}
+
+.night .star-2 {
+  opacity: 1;
+  animation: twinkle 2.6s infinite ease-in-out;
+}
+
+.night .star-3 {
+  opacity: 1;
+  animation: twinkle 3.2s infinite ease-in-out;
+}
+
+.night .star-4 {
+  opacity: 1;
+  animation: twinkle 2s infinite ease-in-out;
+}
+
+.night .star-5 {
+  opacity: 1;
+  animation: twinkle 3.4s infinite ease-in-out;
+}

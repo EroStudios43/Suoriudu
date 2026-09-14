@@ -17,6 +17,18 @@
     z-index: 1;
 }
 
+.container-welcomepage {
+  margin-top: 250px;
+}
+
+.container-welcomepage > h1 {
+  font-size: 62px;
+}
+
+.container-welcomepage > div > button {
+  font-size: 25px;
+}
+
 .buttons {
     margin-top: 20px;
 
@@ -44,6 +56,8 @@
     transform-origin: top left;
     pointer-events: none;
     z-index: 0;
+    overflow: visible;
+
 }
 
 
@@ -91,7 +105,7 @@
     height: 30vh;
   }
 
-  h1 {
-    font-size: 24px;
+  .container-welcomepage > h1 {
+    font-size: 52px;
   }
 }

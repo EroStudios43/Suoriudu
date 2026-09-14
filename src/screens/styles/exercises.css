@@ -1,0 +1,359 @@
+/* Styles for the Exercise pages */
+
+/* ----- WeeksExercises -----*/
+.exercises-container {
+  --bg-main: #1D283A;
+  --text-main: #ffffff;
+  --text-muted: #ababab;
+  
+  --btn-to-exercise-bg: #2B385B;
+  --btn-to-exercise-hover: #3c4a7a;
+  --btn-to-exercise-text: #ffffff;
+  --btn-to-exercise-shadow: rgba(0, 0, 0, 0.8);
+  
+  --card-shadow: rgba(0, 0, 0, 0.3);
+  
+  --course-color-0: #979DAD;
+  --course-color-1: #525D7D;
+  --course-color-2: #2B385B;
+  --course-color-3: #20294A;
+
+  --tasks-box-bg: #ffffff;
+  --tasks-box-text: #000000;
+  
+  --back-icon-color: #000000;
+  --back-icon-hover: #5c5c5c;
+  
+  --star-complete: #00F3FB;
+  
+  --btn-submit-bg: #6752AD;
+  --btn-submit-text: #ffffff;
+  
+  --btn-cancel-bg: #B9AFD9;
+  
+  --modal-dialog-bg: #D4CEE8;
+  --modal-text: #000000;
+  --modal-white-bg: #ffffff;
+  
+  --choice-bg: #F0EEF7;
+  --choice-hover-bg: #D4CEE8;
+  --choice-accent: #6752AD;
+  
+  --comment-border: #B9AFD9;
+  --comment-box-border: #6752AD;
+  --comment-own-bg: #9E90CB;
+  --comment-other-border: #D4CEE8;
+  --comment-other-bg: #F0EEF7;
+  --comment-shadow: rgba(0, 0, 0, 0.5);
+  
+  --status-correct: #28a745;
+  --status-incorrect: #dc3545;
+  --status-partially: #ffc107;
+  
+  --btn-exam-bg: #979DAD;
+  --btn-exam-text: #ffffff;
+  --btn-exam-hover: #525D7D;
+  --btn-exam-active: #3c4a7a;
+
+  background: var(--bg-main);
+  color: var(--text-main);
+  padding: 30px;
+  font-family: Arial, sans-serif;
+}
+
+.exercises-container.light-theme {
+  --bg-main: linear-gradient(#4facfe, #7ed6ff);
+  --text-main: #1D283A;
+  --text-muted: #64748b;
+  
+  --btn-to-exercise-bg: #69bbf1;
+  --btn-to-exercise-hover: #c9d7eb;
+  --btn-to-exercise-text: #1e293b;
+  --btn-to-exercise-shadow: rgba(0, 0, 0, 0.15);
+  
+  --card-shadow: rgba(0, 0, 0, 0.1);
+  
+  --course-color-0: #e4f4fd;
+  --course-color-1: #b9e5ff;
+  --course-color-2: #99d6fc;
+  --course-color-3: #98cdee;
+
+  --tasks-box-bg: rgba(255, 255, 255, 0.95);
+  --tasks-box-text: #1e293b;
+  
+  --back-icon-color: #1e293b;
+  --back-icon-hover: #475569;
+  
+  --star-complete: #0284c7;
+  
+  --btn-submit-bg: #5b21b6;
+  --btn-submit-text: #ffffff;
+  
+  --btn-cancel-bg: #ddd6fe;
+  
+  --modal-dialog-bg: #f1f5f9;
+  --modal-text: #0f172a;
+  --modal-white-bg: #ffffff;
+  
+  --choice-bg: #f8fafc;
+  --choice-hover-bg: #e2e8f0;
+  --choice-accent: #6d28d9;
+  
+  --comment-border: #cbd5e1;
+  --comment-box-border: #6d28d9;
+  --comment-own-bg: #ddd6fe;
+  --comment-other-border: #e2e8f0;
+  --comment-other-bg: #f8fafc;
+  --comment-shadow: rgba(0, 0, 0, 0.08);
+  
+  --status-correct: #16a34a;
+  --status-incorrect: #dc2626;
+  --status-partially: #d97706;
+  
+  --btn-exam-bg: #e2e8f0;
+  --btn-exam-text: #0f172a;
+  --btn-exam-hover: #cbd5e1;
+  --btn-exam-active: #94a3b8;
+}
+
+/* Box for individual exercises */
+.exercise-box {
+  box-shadow: 4px 4px 12px var(--card-shadow) !important;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.exercise-box:hover {
+  filter: brightness(0.9);
+}
+
+.to-exercise-btn {
+  padding: 10px 20px;
+  font-size: 18px;
+  color: var(--btn-to-exercise-text);
+  background-color: var(--btn-to-exercise-bg) !important;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 5px 5px 12px var(--btn-to-exercise-shadow);
+  max-width: 50%;
+}
+
+.to-exercise-btn:hover {
+    background-color: var(--btn-to-exercise-hover);
+}
+
+.course-color-0 { background-color: var(--course-color-0); }
+.course-color-1 { background-color: var(--course-color-1); }
+.course-color-2 { background-color: var(--course-color-2); }
+.course-color-3 { background-color: var(--course-color-3); }
+
+
+/* ----- TaskQuestions -----*/
+.allTasksBox {
+  background-color: var(--tasks-box-bg);
+  color: var(--tasks-box-text);
+}
+
+.back-icon-light {
+  color: var(--back-icon-color);
+  box-shadow: none;
+  font-size: 40px;
+  cursor: pointer;
+}
+
+.back-icon-light:hover {
+  color: var(--back-icon-hover);
+}
+
+.single-task {
+  scroll-margin-top: 50px;
+}
+
+.single-task p {
+  font-size: 18px;
+}
+
+.essay {
+  width: 100%;
+}
+
+.progress-star {
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.progress-star.complete {
+  color: var(--star-complete);
+}
+
+.btn-submit {
+  background-color: var(--btn-submit-bg);
+  color: var(--btn-submit-text)
+}
+
+.btn-submit:hover {
+  background-color: var(--btn-submit-bg);
+  filter: brightness(80%);
+}
+
+.btn-cancel {
+  background-color: var(--btn-cancel-bg);
+}
+
+.btn-cancel:hover {
+  background-color: var(--btn-cancel-bg);
+  filter: brightness(80%);
+}
+
+.modal-dialog-light {
+  background-color: var(--modal-dialog-bg);
+}
+
+.modal-header-light > h3 {
+  color: var(--modal-text);
+}
+
+.modal-close-light {
+  color: var(--modal-text);
+}
+
+.modal-white {
+  background-color: var(--modal-white-bg);
+  color: var(--modal-text);
+}
+
+.chat-icon {
+  font-size: 24px;
+}
+
+.chat-text {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.new-question {
+  font-size: 18px;
+  cursor: pointer;
+}
+
+/* Multiple and single choice box */
+.student-multiple-choice, .student-single-choice {
+  background-color: var(--choice-bg);
+  margin: 0;
+}
+.student-multiple-choice:hover, .student-single-choice:hover {
+  background-color: var(--choice-hover-bg);
+}
+
+.student-multiple-choice > input, .student-single-choice > input {
+  float: none;
+}
+
+.student-multiple-choice > input[type="checkbox"]:checked , .student-single-choice > input[type="radio"]:checked {
+  background-color: var(--choice-accent);
+  border-color: var(--choice-accent);
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.student-comment-container {
+  border: 1px solid var(--comment-border);
+  overflow-y: scroll;
+  height: 50vh;
+}
+
+.student-comment-box {
+  border: 1px solid var(--comment-box-border);
+}
+
+.student-own-comment {
+  background-color: var(--comment-own-bg);
+  box-shadow: 5px 5px 12px var(--comment-shadow);
+  border-radius: 30px 15px 5px 30px;
+}
+
+.other-comment {
+  border: 1px solid var(--comment-other-border);
+  background-color: var(--comment-other-bg);
+  box-shadow: 5px 5px 12px var(--comment-shadow);
+  border-radius: 15px 30px 30px 5px;
+}
+
+/* ----- TaskResults ----- */
+.student-multiple-choice-answer, .student-single-choice-answer {
+  background-color: var(--choice-bg);
+  margin: 0;
+}
+
+.student-multiple-choice-answer > input, .student-single-choice-answer > input {
+  float: none;
+}
+
+.student-multiple-choice-answer.correct input[type="checkbox"]:checked , .student-single-choice-answer.correct input[type="radio"]:checked {
+  background-color: var(--status-correct);
+  border-color: var(--status-correct);
+}
+
+.student-multiple-choice-answer.incorrect input[type="checkbox"]:checked , .student-single-choice-answer.incorrect input[type="radio"]:checked {
+  background-color: var(--status-incorrect);
+  border-color: var(--status-incorrect);
+}
+
+.student-multiple-choice-answer.partiallycorrect input[type="checkbox"]:checked , .student-single-choice-answer.partiallycorrect input[type="radio"]:checked {
+  background-color: var(--status-partially);
+  border-color: var(--status-partially);
+}
+
+.student-multiple-choice > label, .student-single-choice > label {
+  cursor: pointer;
+}
+
+.show-timer {
+  font-size: 32px;
+}
+
+.show-timer.hide {
+  color: var(--text-muted);
+}
+
+/* ----- ExamLobby.js ----- */
+.warning-picture {
+  height: 150px;
+}
+
+.warning-text {
+  font-size: 20px;
+}
+
+.btn-exam {
+  background-color: var(--btn-exam-bg);
+  color: var(--btn-exam-text);
+}
+
+.btn-exam:hover {
+  background-color: var(--btn-exam-hover);
+}
+
+.btn-exam:active {
+  background-color: var(--btn-exam-active);
+}
+
+.btn-exam:disabled {
+  background-color: var(--btn-exam-bg);
+  color: var(--btn-exam-text);
+  opacity: 0.7;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}

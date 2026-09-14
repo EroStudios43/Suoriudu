@@ -1,0 +1,821 @@
+.coursepage {
+    --bg-main: #1D283A;
+    --submit-btn-gb: #2B385B;
+    --submit-btn-hover: #3c4a7a;
+
+    --text-normal: #ffffff;
+    --text-muted: #8b8b8b;
+
+    --progress-bar: linear-gradient(90deg, #00F3FB 0%, #66BB6A 100%);
+    --progress-bar-number: #00F3FB;
+    --question-bg: rgba(43, 56, 91, 0.8);
+
+    --card-bg: linear-gradient(180deg, #2B385B 0%, #202B44 100%);
+    --card-border: rgba(255, 255, 255, 0.12);
+    --sidebar-item-bg: #1D283A;
+    --sidebar-item-active: #525d7d;
+
+    --question-bg: rgba(43, 56, 91, 0.8);
+    --question-text: #c7d0ea;
+    --question-bttn: #eff5f0;
+    --question-bttn-h: #3e9943;
+
+    --modal-bg-bg: rgba(0, 0, 0, 0.65);
+    --modal-bg: #1E2940;
+    --modal-message: #8b8b8b;
+
+    --search-input: rgba(255, 255, 255, 0.07);
+    --search-row-bg: rgba(43, 56, 91, 0.9);
+    --search-bttn: #4CAF50;
+    --search-input-placeholder: rgba(255, 255, 255, 0.6);
+
+    background-color: var(--bg-main);
+    min-height: 100vh;
+    color: var(--text-normal);
+    padding: 30px;
+    font-family: Arial, sans-serif;
+}
+.coursepage.light-theme {
+    --bg-main: linear-gradient(#4facfe, #7ed6ff);
+    --text-normal: #2B385B;
+    --text-muted: #4a5568;
+
+    --submit-btn-bg: #2a64d6;
+    --submit-btn-hover: #1e4bb0;
+
+    --progress-bar: linear-gradient(90deg, #37edfa 0%, #8255ff 100%);
+    --progress-bar-number: #784eec;
+    --question-bg: rgba(255, 255, 255, 0.726);
+
+    --card-bg: linear-gradient(180deg, #ffffff 0%, #f0f4f8 100%);
+    --card-border: rgba(43, 56, 91, 0.15);
+    --sidebar-item-bg: transparent;
+    --sidebar-item-active: #a7b8dd;
+
+    --question-bg: rgba(255, 255, 255, 0.726);
+    --question-text: #2a3041;
+    --question-bttn: #9990c9;
+    --question-bttn-h: #433b72;
+
+    --modal-bg-bg: rgba(4, 16, 68, 0.459);
+    --modal-bg: #a7b8dd;
+    --modal-message: #ffffff;
+    --search-input: rgba(255, 255, 255, 0.39);
+    --search-row-bg: rgb(114, 131, 179);
+    --search-bttn: #4c5eaf;
+    --search-input-placeholder: rgba(42, 48, 65, 0.7);
+
+
+}
+
+
+
+.topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.topbar-right {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.topbar-left {
+    display: flex;
+    flex-direction: column;
+}
+.course-title {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.course-name {
+    font-size: 60px;
+    color: var(--text-normal);
+}
+
+.course-description {
+    font-size: 30px;
+    color: var(--text-muted);
+    padding: 10px;
+}
+/* ----- */
+/* Student topbar text styles */
+.course-description-student {
+    font-size: 1.5em;
+    margin: .75em;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.student-course-titles {
+    max-width: 450px;
+    display: block;
+}
+
+/* Student left sidebar styles */
+
+.student-sidebar-item {
+    background-color: var(--sidebar-item-bg);
+    border: none;
+    color:  var(--text-normal);
+    font-size: 20px;
+    padding-left: 0;
+}
+
+.student-sidebar {
+    color: var(--text-normal);
+}
+
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    background-color: var(--sidebar-item-active);
+    color:  var(--text-normal);
+    border-bottom-color: rgb(222, 226, 230) !important; /* Needs important since bootstrap overrides otherwise*/
+    filter: brightness(110%);
+    border-right: none;
+}
+
+.student-sidebar > .student-sidebar-item:hover {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    padding-left: 3px;
+    overflow: hidden;
+}
+
+.student-sidebar > .student-sidebar-item:focus,
+.student-sidebar > .student-sidebar-item.active {
+    margin-bottom: 0;
+    border-radius: 12px 0 0 12px;
+    border-bottom: 1px solid transparent;
+    overflow: hidden;
+}
+
+.student-sidebar.nav-tabs {
+    border-bottom: none;
+}
+
+.student-left-side-sidebar {
+    border-right: 1px solid rgb(222, 226, 230);
+}
+
+@media only screen and (min-width: 768px){
+    .student-left-side-sidebar {
+        display: none;
+    }
+
+    
+}
+
+/* Student content page styles */
+.student-page-content {
+    padding: 15px;
+}
+
+.exercises {
+    cursor: pointer;
+}
+
+.disabled-div {
+    opacity: 0.65;
+}
+
+.student-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background-color: black;
+    color:  var(--text-normal);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 5;
+    pointer-events: none;
+}
+
+/* ----- */
+
+.back-icon {
+    font-size: 40px;
+    color:  var(--text-normal);
+    cursor: pointer;
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8)
+}
+.back-icon:hover {
+    color: var(--text-normal);
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 1);
+    transform: translateX(-10px);
+
+}
+.course-people {
+    display: flex;
+    gap: 20px;
+}
+
+.user-icon {
+    font-size: 40px;
+    color:  var(--text-normal);
+    cursor: pointer;
+    text-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8);
+    transition: transform 0.2s ease;
+
+}
+.user-icon:hover {
+    transform: scale(1.2);
+}
+
+.edit-btn {
+    padding: 10px 20px;
+    font-size: 18px;
+    color:  var(--text-normal);
+    background-color: var(--submit-btn-bg);
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    box-shadow: 5px 5px 12px rgba(0, 0, 0, 0.8);
+
+}
+.edit-btn:hover {
+    background-color: var(--submit-btn-hover);
+    box-shadow: 7px 7px 15px rgba(0, 0, 0, 1);
+    transform: translateY(-3px);
+}
+
+.pen {
+    margin-left: 10px;
+    font-size: 18px;
+    color:  var(--text-normal);
+}
+
+
+.divider {
+    width: 100%;
+    height: 3px;
+    background-color: #4b4b4b;
+    margin: 25px 0;
+}
+
+
+
+.task-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 22px;
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.task-menu-icon {
+    font-size: 20px;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.task-menu-icon:hover {
+    color:  var(--text-normal);
+}
+
+.task-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+
+.task-title {
+    font-size: 18px;
+    font-weight: 700;
+    color:  var(--text-normal);
+}
+
+.task-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    flex: 1;
+}
+
+.task-menu {
+    display: flex;
+    align-items: center;
+    margin-left: 20px;
+}
+
+.no-tasks-message {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 40px 20px;
+    font-size: 16px;
+}
+
+
+
+/* Progress Section Styles */
+.progress-section {
+    margin: 30px 0;
+    display: flex;
+    justify-content: center;
+}
+
+.progress-container {
+    width: 100%;
+    max-width: 600px;
+}
+
+.progress-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.progress-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar {
+    flex: 1;
+    height: 20px;
+    background-color: var(--progress-bg);
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--progress-bar);
+    transition: width 0.3s ease;
+}
+
+.progress-percentage {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--progress-bar-number);
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Progress bar of student */
+.progress-container-student {
+    width: 100%;
+    max-width: 750px;
+}
+
+.progress-bar-wrapper-student {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.progress-bar-student {
+    position: relative;
+    background-color: var(--progress-bg);
+    flex: 1;
+    height: 25px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+}
+
+.progress-fill-student {
+    height: 100%;
+    background: var(--progress-bar);
+    transition: width 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.progress-star-mask {
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-main);
+    z-index: 2;
+}
+
+/* Content Row Styles */
+.content-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 30px 0;
+}
+
+.behind-schedule-section,
+.questions-section {
+    background-color: transparent;
+  
+    padding: 25px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #ffffff;
+}
+
+.student-list,
+.question-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.student-item {
+    background: var(--question-bg);
+    
+    padding: 12px 15px;
+    border-radius: 10px;
+    border-left: 3px solid #FF6B6B;
+    font-size: 16px;
+    color: var(--question-text);
+    
+}
+
+.question-item {
+    background: var(--question-bg);
+    padding: 12px 15px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-left: 3px solid #4CAF50;
+}
+
+.question-task {
+    font-size: 16px;
+    color:  var(--question-text);
+    font-weight: 550;
+    flex: 1;
+}
+
+.question-author {
+    font-size: 14px;
+    color: var(--question-text);
+    margin: 0 15px;
+}
+
+.question-arrow {
+    font-size: 16px;
+    color: var(--question-bttn) !important;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+}
+
+.question-arrow:hover {
+    transform: translateX(5px);
+    color: var(--question-bttn-h) !important;
+}
+
+.empty-message {
+    text-align: center;
+    color: var(--modal-message);
+    font-style: italic;
+    padding: 30px 0;
+}
+
+@media (max-width: 900px) {
+    .content-row {
+        grid-template-columns: 1fr;
+    }
+
+    .task-list {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+
+@media (max-width: 600px) {
+    .task-list {
+        grid-template-columns: 1fr;
+    }
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--modal-bg-bg);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 20px;
+    pointer-events: auto;
+}
+
+.modal-dialog {
+    width: min(900px, 100%);
+    background: var(--modal-bg);
+    border-radius: 22px;
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+    border: 1px solid var(--card-border);
+    z-index: 1001;
+    pointer-events: auto;
+}
+
+/* Keep modal dialog from growing beyond viewport and make body scrollable */
+.modal-dialog {
+    max-height: calc(100vh - 80px);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    background: rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 24px;
+    color:  var(--text-normal);
+}
+
+.modal-close,
+.modal-close i,
+.roster-remove {
+    cursor: pointer !important;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    color:  var(--text-normal);
+    font-size: 22px;
+    padding: 10px;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.modal-close:hover {
+    color: #ff6b6b;
+    transform: scale(1.05);
+}
+
+.roster-remove {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    color:  var(--text-normal);
+    padding: 8px 14px;
+    transition: background-color 0.2s ease;
+}
+
+.roster-remove:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.modal-body {
+    padding: 20px 28px 28px;
+}
+
+
+/* Make modal body scrollable when content is large */
+.modal-body {
+    overflow: auto;
+}
+
+.edit-modal-dialog {
+    max-width: 760px;
+}
+
+.edit-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color:  var(--text-normal);
+}
+
+.edit-field span {
+    font-weight: 600;
+}
+
+.edit-field input,
+.edit-field textarea {
+    width: 100%;
+    border-radius: 12px;
+    border: 1px solid var(--card-border);
+    padding: 12px 14px;
+    background: rgba(255,255,255,0.08);
+    color:  var(--text-normal);
+}
+
+.edit-field textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.edit-date-section {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.edit-date-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--search-row-bg);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.edit-date-block span {
+    font-weight: 600;
+    color:  var(--text-normal);
+}
+
+.edit-date-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.date-picker-btn,
+.time-picker-btn,
+.save-course-btn,
+.delete-course-btn {
+    border: none;
+    border-radius: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    color:  var(--text-normal);
+}
+
+.date-picker-btn,
+.time-picker-btn {
+    background: rgba(255,255,255,0.1);
+}
+
+.save-course-btn {
+    background: #4CAF50;
+}
+
+.delete-course-btn {
+    background: #d9534f;
+}
+
+.edit-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.inline-picker {
+    margin-top: 10px;
+}
+
+.roster-list {
+    display: grid;
+    gap: 12px;
+}
+
+.roster-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--search-row-bg);
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+}
+
+.roster-name {
+    font-size: 16px;
+    color:  var(--text-normal);
+    font-weight: 500;
+}
+
+.roster-remove {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    color:  var(--text-normal);
+    padding: 8px 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.roster-remove:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.search-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+    background: var(--search-input);
+    color:  var(--text-normal);
+    font-size: 16px;
+    margin-bottom: 18px;
+}
+
+.search-input::placeholder {
+    color: var(--search-input-placeholder);
+}
+
+.search-results {
+    display: grid;
+    gap: 12px;
+    max-height: 360px;
+    overflow: auto;
+    padding-right: 6px;
+}
+
+.search-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--search-row-bg);
+    padding: 12px 16px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+}
+
+.search-name {
+    color:  var(--text-normal);
+    font-size: 16px;
+    font-weight: 500;
+}
+
+.search-add-button {
+    min-width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: none;
+    background: var(--search-bttn);
+    color:  var(--text-normal);
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.search-add-button:hover {
+    transform: scale(1.05);
+    background: #66BB6A;
+}
+
+@media (max-width: 600px) {
+    .modal-dialog {
+        width: 100%;
+    }
+
+    .modal-header,
+    .modal-body {
+        padding-left: 18px;
+        padding-right: 18px;
+    }
+}
+
+
+.task-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+
+.week-col {
+    display: flex;
+}
