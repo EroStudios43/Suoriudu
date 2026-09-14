@@ -80,7 +80,7 @@ function Register() {
       newErrors.email = "Virheellinen sähköpostiosoite"
     }
 
-    if (user.phone && !/^\+?\d{7,15}$/.test(user.phone.trim())) {
+    if (user.phone && !/^\+\d{7,15}$/.test(user.phone.trim())) {
       newErrors.phone = "Virheellinen puhelinnumero. Käytäthän kansainvälistä muotoa (+358401234567)"
     }
 
