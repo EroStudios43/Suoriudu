@@ -40,7 +40,7 @@ function ExamLobby () {
   const [ passwordValid, setPasswordValid ] = useState(true)
   const [showCameraPreview, setShowCameraPreview] = useState(false)
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   const fetchExerciseData = useCallback(async (signal) => {
     // Check that user has access token

@@ -37,7 +37,7 @@ function CreateTask() {
 
   const week = location.state?.week || {};
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
 
   const [drawingStates, setDrawingStates] = useState({});

@@ -18,7 +18,7 @@ function WeeksExercises() {
   // Variables from the previous page, as well as user from useUser
   const { idweek } = useParams()
   const { user, updateToken } = useUser();
-  const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
+    const idcourse = location.state?.idcourse || ""
   const [ week, setWeek ] = useState(location.state?.week || {})
   const [ studentExerciseResults, setStudentExerciseResults ] = useState(location.state?.exerciseresults || [])
 
@@ -29,7 +29,7 @@ function WeeksExercises() {
   // Variable for opening and closing the exercise boxes
   const [openBoxes, setOpenBoxes] = useState({})
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   // Fetch required data from database
   // -> Get week data in case the object didn't get passed through the state
@@ -44,7 +44,7 @@ function WeeksExercises() {
     }
 
     // Check that the other variables are defined
-    if (!idcourse || !week) {
+    if (!idcourse) {
       console.log("Variables not set yet")
       return null
     }
@@ -60,7 +60,7 @@ function WeeksExercises() {
         }
       )
       console.log("WeekExercises: ", response.data)
-      setWeek({...week, exercises: response.data.exercises, exerciseresults: response.data.exerciseresults})
+      setWeek(previousWeek => ({...previousWeek, exercises: response.data.exercises, exerciseresults: response.data.exerciseresults}))
       setStudentExerciseResults(response.data.exerciseresults)
     } catch (error) {
       console.log("Error fetching exercise data:", error.response?.data || error.message)
@@ -68,9 +68,9 @@ function WeeksExercises() {
         console.log("Course not found. Navigating to home page.")
       }
     }
-  }, [user?.access_token, idweek])
+  }, [user, idcourse, idweek])
 
-  const { data, loading, error } = useFetchData(fetchWeekExercises)
+  useFetchData(fetchWeekExercises)
 
   useEffect(() => {
     // Check that user has access token
@@ -116,7 +116,7 @@ function WeeksExercises() {
     if (user.role === "student" || user.role === "teacher") {
       getWeekTasks()
     }
-  }, [idweek, user?.access_token])
+  }, [idcourse, idweek, location.state?.idcourse, updateToken, user, week])
 
   // Function for opening and closing the exercise boxes. 
   // The object with the id of the box get's either collapsed or opened.
@@ -156,10 +156,6 @@ function WeeksExercises() {
                               <p className="mb-0">
                                 {(() => {
                                   // Get all the task ids from the taskresults
-                                  const taskResultTaskIds = new Set(
-                                    taskResults?.map(t => t.idtask)
-                                  )
-
                                   // Get all tasks that are in this exercise
                                   const exerciseTasks = tasks?.filter(t => t.idexercise === exercise.idexercise) || []
 
@@ -282,6 +278,7 @@ function WeeksExercises() {
                       </div>
                     </div>
                   )}
+                  return null
                 })}
 
                 </div>
@@ -301,10 +298,6 @@ function WeeksExercises() {
                               <p className="mb-0">
                                 {(() => {
                                   // Get all the task ids from the taskresults
-                                  const taskResultTaskIds = new Set(
-                                    taskResults?.map(t => t.idtask)
-                                  )
-
                                   // Get all tasks that are in this exercise
                                   const exerciseTasks = tasks?.filter(t => t.idexercise === exercise.idexercise) || []
 
@@ -425,6 +418,7 @@ function WeeksExercises() {
                       </div>
                     </div>
                   )}
+                  return null
                 })}
                 {week.exercises?.length < 1 && <p>Viikolla ei ole tehtäviä.</p>}
               </div>

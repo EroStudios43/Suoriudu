@@ -150,8 +150,45 @@ const userLogin = async (req, res, next) => {
 
 const updateProfile = async (req,res,next)=>{
     try{
+        const errors = {};
+        const payload = {
+            ...req.body,
+            firstname: (req.body.firstname || "").trim(),
+            lastname: (req.body.lastname || "").trim(),
+            email: (req.body.email || "").trim(),
+            phone: req.body.phone ? req.body.phone.trim() : null,
+            role: req.body.role || "student"
+        };
+
+        if (!payload.firstname) {
+            errors.firstname = "Etunimi on pakollinen kenttä";
+        }
+
+        if (!payload.lastname) {
+            errors.lastname = "Sukunimi on pakollinen kenttä";
+        }
+
+        if (!payload.email) {
+            errors.email = "Sähköposti on pakollinen kenttä";
+        }
+
+        if (payload.email && !validator.isEmail(payload.email)) {
+            errors.email = "Virheellinen sähköpostiosoite";
+        }
+
+        if (payload.phone && !validator.isMobilePhone(payload.phone, "any", { strictMode: true })) {
+            errors.phone = "Virheellinen puhelinnumero. Käytä kansainvälistä muotoa (+358401234567)";
+        }
+
+        if (Object.keys(errors).length > 0) {
+            const error = new Error("Validation failed");
+            error.statusCode = 401;
+            error.errors = errors;
+            return next(error);
+        }
+
         const email = req.user.email;
-        const result = await updateUser(req.user.email, req.body);
+        const result = await updateUser(email, payload);
         res.json({ success: true, result });
     }catch(err){
         next(err);

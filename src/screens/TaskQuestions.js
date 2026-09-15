@@ -346,7 +346,7 @@ function TaskQuestions() {
   const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
   const [ idweek, setIdWeek ] = useState(location.state?.idweek)
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
 
   // Data for tasks and exercise
@@ -496,6 +496,15 @@ function TaskQuestions() {
         if (task.tasktype === "drawing") {
           const drawingJson = drawingRefs.current[task.idtask]?.();
           if (drawingJson) taskResults[task.idtask] = drawingJson;
+        }
+
+        if (task.tasktype === "coding") {
+          // If the student has not written any code, use the starter code
+          if (!taskResults[task.idtask]) {
+            const task_code_data = JSON.parse(task.answer)
+            const student_code = task_code_data.starterCode
+            taskResults[task.idtask] = student_code
+          }
         }
       });
 

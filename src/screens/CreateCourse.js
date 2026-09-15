@@ -40,9 +40,7 @@ function CreateCourse() {
   const [showStartTime, setShowStartTime] = useState(false);
   const [showEndTime, setShowEndTime] = useState(false);
 
-  const [startTime, setStartTime] = useState("12:00");
-
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
 
 

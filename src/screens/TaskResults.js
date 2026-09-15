@@ -29,6 +29,17 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             <p className="text-muted fs-6"><i>Opiskelija ei jättänyt piirrosta.</i></p>
           )}
         </div>
+        {
+          task?.teacher_comment && (
+            <>
+            <br />
+            <div className="large-answer-input feedback-input">
+              {task.teacher_comment}
+            </div>
+            <br />
+            </>
+          )
+        }
         <hr />
       </>
     );
@@ -76,7 +87,18 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
           <p className="float-end ms-3">{task.student_points || "Ei arvioitu"} / {task.full_points}p</p>
           <span className="text-muted text-end d-block"><small>{student_answer?.length || 0} merkkiä</small></span>
         </div>
-        <hr />
+        {
+          task?.teacher_comment && (
+            <>
+            <br />
+            <div className="large-answer-input feedback-input">
+              {task.teacher_comment}
+            </div>
+            <br />
+            </>
+          )
+        }
+        <hr className="mt-3" />
       </>
     )
 
@@ -123,7 +145,18 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             }
           })()}
         </div>
-        <hr />
+        {
+          task?.teacher_comment && (
+            <>
+            <br />
+            <div className="large-answer-input feedback-input">
+              {task.teacher_comment}
+            </div>
+            <br />
+            </>
+          )
+        }
+        <hr className="mt-3" />
       </>
     )
   } else if (task.tasktype === "multiple_choice") {
@@ -197,6 +230,17 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             })()}
           </div>
           <p className="float-end">{task.student_points || automaticPoints } / {task.full_points}p</p>
+          {
+            task?.teacher_comment && (
+              <>
+              <br />
+              <div className="large-answer-input feedback-input">
+                {task.teacher_comment}
+              </div>
+              <br />
+              </>
+            )
+          }
         </div>
         <hr />
       </>
@@ -265,6 +309,17 @@ const RenderTask = React.memo(({task, index, correct_answer, student_answer, set
             })()}
           </div>
           <p className="float-end">{task.student_points || automaticPoints } / {task.full_points}p</p>
+          {
+            task?.teacher_comment && (
+              <>
+              <br />
+              <div className="large-answer-input feedback-input">
+                {task.teacher_comment}
+              </div>
+              <br />
+              </>
+            )
+          }
         </div>
         <hr />
       </>
@@ -290,7 +345,7 @@ function TaskResults() {
   // Variable for currently chosen attempt
   const [chosenAttemptId, setChosenAttemptId ] = useState(null)
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   // Variable for the help / comment box
   const [ showCommentBox, setShowCommentBox ] = useState(false)
   const [ showNewQuestionBox, setShowNewQuestionBox ] = useState(false)
