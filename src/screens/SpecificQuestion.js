@@ -26,7 +26,7 @@ function SpecificQuestion() {
 
   const commentContainerRef = useRef(null);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
  //Kysymyksen tehtävän tarkemmat tiedot ja koko keskustelu
   useEffect(() => {

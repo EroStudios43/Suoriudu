@@ -275,7 +275,7 @@ function TestQuestions() {
   const [ showFiveMinuteWarning, setShowFiveMinuteWarning ] = useState(false) // Used to determine whether the 5-minute warning box should be shown.
   const [ zeroTimeRemaining, setZeroTimeRemaining ] = useState(false) // Used when the exam time has ended and answers have automatically been submitted.
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   // Variables for detecting page focus and visibility
   const [ isPageFocused, setIsPageFocused ] = useState(true)
   const [ isPageVisible, setIsPageVisible ] = useState(true)

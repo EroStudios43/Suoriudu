@@ -42,7 +42,7 @@ function CoursePage() {
   const [courseNameLoaded, setCourseNameLoaded] = useState(false);
   const [questions, setQuestions] = useState([]);
   const [questionsLoading, setQuestionsLoading] = useState(false);
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   const refreshCourseData = async () => {
     if (!user || !user.access_token || !courseId) {

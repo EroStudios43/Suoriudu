@@ -23,7 +23,7 @@ function TestOverview() {
   const [notesOpen, setNotesOpen] = useState(false);
   const [submissions, setSubmissions] = useState({ unreviewed: [], reviewed: [], totalStudents: 0 });
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     if (!courseId || !exercise?.idexercise || !user?.access_token) {

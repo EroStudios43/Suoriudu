@@ -290,7 +290,7 @@ function TaskResults() {
   // Variable for currently chosen attempt
   const [chosenAttemptId, setChosenAttemptId ] = useState(null)
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   // Variable for the help / comment box
   const [ showCommentBox, setShowCommentBox ] = useState(false)
   const [ showNewQuestionBox, setShowNewQuestionBox ] = useState(false)

@@ -35,7 +35,7 @@ function CreateExam() {
   const courseId = location.state?.courseId;
   const initialFormRef = useRef(null);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
   const [drawingStates, setDrawingStates] = useState({});
   const drawingRefs = useRef({});
 

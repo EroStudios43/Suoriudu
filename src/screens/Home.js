@@ -63,7 +63,7 @@ export default function Home() {
 
     const [unreadQuestions, setUnreadQuestions] = useState(0);
 
-    const { isDarkMode, toggleTheme } = useTheme();
+    const { isDarkMode } = useTheme();
     
 
     const handleMarathonStart = async () => {
