@@ -41,8 +41,6 @@ export default function Profile() {
   const [avatarSvg, setAvatarSvg] = useState("");
   const initialSeed = user.avatar_seed || "default";
 
-  const [darkMode, setDarkMode] = useState(true);
-
   const [editMode, setEditMode] = useState(null);
 
   const [saving, setSaving] = useState(false);

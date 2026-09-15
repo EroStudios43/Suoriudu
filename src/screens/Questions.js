@@ -16,7 +16,7 @@ function Questions() {
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     if (!user?.access_token) {

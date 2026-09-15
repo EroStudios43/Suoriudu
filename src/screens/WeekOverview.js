@@ -33,7 +33,7 @@ function WeekOverview() {
   const [exerciseToDelete, setExerciseToDelete] = useState(null);
   const [deletingExercise, setDeletingExercise] = useState(false);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     const fetchExercises = async () => {

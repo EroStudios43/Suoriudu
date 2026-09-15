@@ -346,7 +346,7 @@ function TaskQuestions() {
   const [ idcourse, setIdCourse ] = useState(location.state?.idcourse || "")
   const [ idweek, setIdWeek ] = useState(location.state?.idweek)
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
 
 
   // Data for tasks and exercise

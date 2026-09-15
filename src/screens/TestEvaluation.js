@@ -28,7 +28,7 @@ function TestEvaluation() {
   const [saving, setSaving] = useState(false);
   const [evaluatingAll, setEvaluatingAll] = useState(false);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode} = useTheme();
 
   // Variables for coding exercises
   const [ codeRunResult, setCodeRunResult ] = useState({})

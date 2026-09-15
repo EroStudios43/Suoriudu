@@ -38,7 +38,7 @@ function TaskEvaluation({ isExamMode = false }) {
   // Variables for coding exercises
   const [ codeRunResult, setCodeRunResult ] = useState({})
   
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode  } = useTheme();
 
   const [commentModal, setCommentModal] = useState({
     open: false,

@@ -32,7 +32,7 @@ function TeacherExamPage() {
 
   const [showReturnsPopup, setShowReturnsPopup] = useState(false);
 
-  const { isDarkMode, toggleTheme } = useTheme();
+  const { isDarkMode } = useTheme();
    
 
   useEffect(() => {
