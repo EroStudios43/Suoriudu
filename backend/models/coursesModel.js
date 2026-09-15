@@ -8,6 +8,9 @@ const selectUsersCourses = async (id) => {
             e.idexercise,
             e.start_time,
             e.end_time,
+            e.exercise_type,
+            e.exercise_name,
+            e.allow_late_submissions,
 
             er.idexerciseresult,
             er.starting_time,
