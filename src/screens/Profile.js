@@ -5,6 +5,7 @@ import { useUser } from "../context/useUser.js";
 import axios from "axios";
 
 import { useTheme } from "../context/ThemeContext.js";
+import { validateProfileData } from "../utils/profileValidation.js";
 
 const url = process.env.REACT_APP_API_URL;
 
@@ -46,6 +47,7 @@ export default function Profile() {
   const [editMode, setEditMode] = useState(null);
 
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   const [formData, setFormData] = useState({
       firstname: user.firstname,
@@ -69,11 +71,22 @@ export default function Profile() {
 
 
   const saveProfile = async () => {
+    const validationErrors = validateProfileData(formData);
+    setFormErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
+
     try{
         setSaving(true);
         const payload = {
             ...formData,
-            role: normalizeRole(formData.role)
+            role: normalizeRole(formData.role),
+            phone: formData.phone ? formData.phone.trim() : null,
+            email: formData.email.trim(),
+            firstname: formData.firstname.trim(),
+            lastname: formData.lastname.trim()
         };
 
         console.log("SENDING:", payload);
@@ -90,10 +103,14 @@ export default function Profile() {
         };
 
         setUser(updatedUser);
-        sessionStorage.setItem("user", JSON.stringify(updatedUser));  
+        sessionStorage.setItem("user", JSON.stringify(updatedUser));
+        setFormErrors({});
         setEditMode(null)
     }catch(err){
-        alert("Talletuksessa ongelma")
+        const backendErrors = err.response?.data?.errors || {};
+        const nextErrors = Object.keys(backendErrors).length > 0 ? backendErrors : { general: "Talletuksessa ongelma" };
+        setFormErrors(nextErrors);
+        alert(nextErrors.email || nextErrors.phone || nextErrors.general || "Talletuksessa ongelma");
         console.log("SAVE ERROR:", err.response?.data || err.message);
     } finally {
       setSaving(false);
@@ -202,14 +219,25 @@ export default function Profile() {
           <i className="fa-regular fa-pen-to-square"></i>
           {editMode === "firstname" ? (
             <div className="input-group">
-              <input name="firstname" value={formData.firstname} onChange={handleChange}/>
-              <input name="lastname" value={formData.lastname} onChange={handleChange}/>
+              <input
+                name="firstname"
+                value={formData.firstname}
+                onChange={handleChange}
+                className={formErrors.firstname ? "is-invalid" : ""}
+              />
+              <input
+                name="lastname"
+                value={formData.lastname}
+                onChange={handleChange}
+                className={formErrors.lastname ? "is-invalid" : ""}
+              />
+              {formErrors.firstname && <small className="text-danger d-block">{formErrors.firstname}</small>}
+              {formErrors.lastname && <small className="text-danger d-block">{formErrors.lastname}</small>}
             </div>
           ) : (
             <span>{formData.firstname} {formData.lastname}</span>
           )}
         </div>
-
 
         <div className="info-item" onClick={() => setEditMode("role")}>
           <i className="fa-regular fa-pen-to-square"></i>
@@ -219,14 +247,23 @@ export default function Profile() {
               <option value="student">Oppilas</option>
             </select>
           ) : (
-          <span>{getRoleLabel(formData.role)}</span>
+            <span>{getRoleLabel(formData.role)}</span>
           )}
         </div>
 
         <div className="info-item" onClick={() => setEditMode("email")}>
           <i className="fa-regular fa-pen-to-square"></i>
           {editMode === "email" ? (
-            <input type="email" name="email" value={formData.email} onChange={handleChange}/>
+            <>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={formErrors.email ? "is-invalid" : ""}
+              />
+              {formErrors.email && <small className="text-danger d-block">{formErrors.email}</small>}
+            </>
           ) : (
             <span>Sähköposti: {formData.email}</span>
           )}
@@ -235,7 +272,15 @@ export default function Profile() {
         <div className="info-item" onClick={() => setEditMode("phone")}>
           <i className="fa-regular fa-pen-to-square"></i>
           {editMode === "phone" ? (
-            <input name="phone" value={formData.phone} onChange={handleChange}/>
+            <>
+              <input
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className={formErrors.phone ? "is-invalid" : ""}
+              />
+              {formErrors.phone && <small className="text-danger d-block">{formErrors.phone}</small>}
+            </>
           ) : (
             <span>Puhelin: {formData.phone || "-"}</span>
           )}
@@ -249,11 +294,8 @@ export default function Profile() {
       }
 
       <button className="back-btn" onClick={e => navigate("/home")}>
-                Takaisin
-        </button>
-
-            
-
+        Takaisin
+      </button>
     </div>
   );
 }

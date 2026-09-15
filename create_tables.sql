@@ -9,7 +9,8 @@ CREATE TABLE users (
   email varchar(60) NOT NULL,
   phone varchar(45),
   role varchar(45) NOT NULL,
-  password varchar(255) NOT NULL
+  password varchar(255) NOT NULL,
+  avatar_seed varchar(255)
 );
 
 -- Create courses-table
