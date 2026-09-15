@@ -756,11 +756,40 @@ export default function Home() {
                 <br />
                 
                 <h2>Tulossa</h2>
-                <div className="info-card">
-                    <p>Tähän tulee myöhemmin backendistä tietoa</p>
-                    <br />
-                    <br />
-                    <br />
+                <div className="info-card overflow-y-auto" style={{ maxHeight: '300px' }}>
+                    {/* Info-card box */}
+                    {exercises.filter((ex) => {
+                        if (!ex.start_time) return false;
+                        const dt = new Date(ex.end_time);
+                        const sel = new Date(selectedDate);
+                        if (dt >= sel && ex.complete_time === null) return true;
+                    }).length === 0 ? (
+                        <p>Kokeita tai tehtäviä ei ole tulossa</p>
+                    ) : (
+                        exercises.filter((ex) => {
+                            if (!ex.start_time) return false;
+                            const dt = new Date(ex.end_time);
+                            const sel = new Date(selectedDate);
+                            if (dt >= sel && ex.complete_time === null) return true;
+                        }).map((ex) => {
+                            const end = new Date(ex.end_time).toLocaleString("fi-FI", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                            })
+
+                            return (
+                                <div className="exam-row mb-2" key={ex.idexercise}>
+                                    <i className="fa-solid fa-graduation-cap hat"></i>
+                                    <div className="exam-time">{end ? `${end}` : ''}</div>
+                                    <div className="exam-course">{ex.coursename}</div>
+                                    <div className="exam-name">{ex.exercise_name}</div>
+                                </div>
+                            );
+                        })
+                    )}
                 </div>
             </div>
         </div>

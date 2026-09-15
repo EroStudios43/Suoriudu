@@ -57,6 +57,11 @@ const getUsersCourses = async(req, res, next) => {
                     idcourse: row.idcourse,
                     start_time: row.start_time,
                     end_time: row.end_time,
+                    exercise_type: row.exercise_type,
+                    exercise_name: row.exercise_name,
+                    allow_late_submissions: row.allow_late_submissions,
+                    complete_time: row?.complete_time || null,
+                    coursename: row.coursename,
                 })
             }
 
